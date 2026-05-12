@@ -1,0 +1,99 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: white;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      box-sizing: border-box;
+    }
+    .logo-container {
+      margin-bottom: 24px;
+      animation: pulse 2s infinite ease-in-out;
+    }
+    .app-name {
+      font-size: 24px;
+      font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 8px;
+      letter-spacing: -0.025em;
+    }
+    .app-subtitle {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 32px;
+    }
+    .loader {
+      width: 40px;
+      height: 4px;
+      background: #f1f5f9;
+      border-radius: 2px;
+      position: relative;
+      overflow: hidden;
+    }
+    .loader-bar {
+      width: 40%;
+      height: 100%;
+      background: #00854b;
+      position: absolute;
+      animation: loading 1.5s infinite ease-in-out;
+      border-radius: 2px;
+    }
+    .version {
+      position: absolute;
+      bottom: 20px;
+      font-size: 10px;
+      color: #94a3b8;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    @keyframes loading {
+      0% { left: -40%; }
+      100% { left: 100%; }
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.9; }
+    }
+  </style>
+</head>
+<body>
+  <div class="logo-container">
+    <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 114.3" style="height: 60px; width: auto;">
+        <path fill="#00854b" d="M99.3 45.2 68.6 74.8 29 113h117.1V0z"/>
+        <path fill="#00854b" d="m94.7 49.7 5.6-5.5H25.2v5.5z"/>
+        <path fill="#fff" d="M125.6 49.7v-5.5h-25.3l-5.6 5.5z"/>
+        <path fill="#00854b" d="m83.3 60.6 5.6-5.4H12.2v5.4z"/>
+        <path fill="#fff" d="M125.6 60.6v-5.4H88.9l-5.6 5.4z"/>
+        <path fill="#00854b" d="M0 66.7v5.5h71.4l5.6-5.5z"/>
+        <path fill="#fff" d="M71.4 72.2h54.2v-5.5H77z"/>
+        <path fill="#00854b" d="M195.7 67.4h56.2c.4-2.1.6-4.3.8-6.5h-69.1v-5.4h69.2c-.1-2-.2-4-.5-6h-56.5V44h55.5C245.3 18.9 222.8.1 195.8.1c-17.7 0-33.6 8.1-44.1 20.8v72.6c10.5 12.7 26.3 20.8 44.1 20.8 26.1 0 48.1-17.6 54.9-41.5h-54.9v-5.4z"/>
+        <path fill="#00854b" d="M252.7 60.9h34.6v-5.4h-34.5c0 .6.1 1.2.1 1.8 0 1.2-.1 2.4-.2 3.6z"/>
+        <path fill="#fff" d="M183.6 60.8h69.1c.1-1.2.2-2.4.2-3.6 0-.6-.1-1.2-.1-1.8h-69.2v5.4z"/>
+        <path fill="#00854b" d="M300 67.4h-48.1c-.3 1.8-.8 3.6-1.3 5.4H300v-5.4z"/>
+        <path fill="#fff" d="M195.7 67.4v5.4h54.9c.5-1.8.9-3.6 1.3-5.4h-56.2z"/>
+        <path fill="#00854b" d="M299.6 49.5V44h-48.4c.4 1.8.8 3.6 1 5.4h47.4z"/>
+        <path fill="#fff" d="M195.7 49.5h56.5c-.2-1.8-.6-3.7-1-5.4h-55.5v5.4z"/>
+    </svg>
+  </div>
+  <div class="app-name">AuditSample Pro</div>
+  <div class="app-subtitle">Ініціалізація компонентів МСА 530...</div>
+  <div class="loader">
+    <div class="loader-bar"></div>
+  </div>
+  <div class="version">Версія 1.1</div>
+</body>
+</html>

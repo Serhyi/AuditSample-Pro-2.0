@@ -1,0 +1,7 @@
+{
+  "name": "AuditSample Pro 2.0",
+  "version": "1.1.0",
+  "description": "Professional audit sampling tool compliant with ISA 530 standards. Features MUS, CVS, Attribute, and Random sampling methods with statistical misstatement extrapolation. Offline-first and Electron-ready.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

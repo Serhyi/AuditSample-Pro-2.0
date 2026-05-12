@@ -1,0 +1,100 @@
+{
+  "name": "audit-sample-pro",
+  "version": "1.1.0",
+  "description": "Professional audit sampling tool compliant with ISA 530 standards.",
+  "author": "Serhii Minin <serhii.minin@example.com>",
+  "type": "module",
+  "main": "main.cjs",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "start": "vite",
+    "clean": "rimraf dist release coverage",
+    "build:worker": "esbuild src/main/workers/ImportWorker.ts --bundle --platform=node --external:duckdb --external:exceljs --outfile=ImportWorker.js",
+    "build:main": "esbuild src/main/index.ts --bundle --platform=node --external:electron --external:duckdb --outfile=main.cjs",
+    "build": "vite build && npm run build:main && npm run build:worker",
+    "preview": "vite preview",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "coverage": "vitest run --coverage",
+    "electron:dev": "npm run build:main && concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "@types/papaparse": "^5.5.2",
+    "clsx": "^2.1.0",
+    "duckdb": "^1.4.4",
+    "duckdb-async": "^1.4.2",
+    "exceljs": "^4.4.0",
+    "file-saver": "^2.0.5",
+    "lucide-react": "^0.561.0",
+    "papaparse": "^5.5.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.12.2",
+    "tailgrids": "^2.1.0",
+    "tailwind-merge": "^2.2.1"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.4.0",
+    "@testing-library/react": "^15.0.0",
+    "@types/file-saver": "^2.0.7",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@typescript-eslint/eslint-plugin": "^8.56.0",
+    "@typescript-eslint/parser": "^8.56.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/ui": "^1.6.0",
+    "autoprefixer": "^10.4.18",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "esbuild": "^0.28.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "eslint-plugin-react-refresh": "^0.4.6",
+    "globals": "^15.0.0",
+    "jsdom": "^24.0.0",
+    "postcss": "^8.4.35",
+    "rimraf": "^5.0.5",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.5.0",
+    "typescript-eslint": "^8.0.0",
+    "vite": "^6.0.0",
+    "vitest": "^1.6.0",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.auditpro.app",
+    "productName": "AuditSample Pro",
+    "copyright": "Copyright © 2025 Serhii Minin",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "main.cjs",
+      "preload.cjs",
+      "splash.html"
+    ],
+    "win": {
+      "target": [
+        "portable",
+        "nsis"
+      ],
+      "icon": "/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "AuditSample Pro",
+      "uninstallDisplayName": "Uninstall AuditSample Pro"
+    }
+  }
+}
