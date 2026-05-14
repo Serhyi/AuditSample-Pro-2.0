@@ -258,7 +258,6 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
         } catch (e: any) {
             console.error("IPC Import Preview Error", e);
             setFileError(e.message);
-        } finally {
             setIsLoadingFile(false);
         }
         return;
@@ -310,7 +309,6 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
                             } catch (err: any) {
                                 console.error(err);
                                 setFileError(err.message || t('errUnknownFileError', lang));
-                            } finally {
                                 setIsLoadingFile(false);
                             }
                         },
@@ -366,12 +364,11 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
                 setRawData(data);
                 setStartRow(detStartRow);
                 setActiveIndices(detIndices);
-                setIsLoadingFile(false);
                 
             } catch (err: any) { 
                 console.error(err);
                 setFileError(err.message || t('errUnknownFileError', lang));
-                if (!isCsv) setIsLoadingFile(false);
+                setIsLoadingFile(false);
             }
         }, 50);
     };
