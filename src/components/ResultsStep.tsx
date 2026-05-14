@@ -452,7 +452,17 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         container.scrollLeft = container.scrollWidth;
       }
     });
-  }, [currentResults.samplingItems.length]); // Dependencies to trigger scroll when items change
+    
+    // Add another try after a short delay to account for rendering tab switch
+    const timer = setTimeout(() => {
+      tableContainerRefs.current.forEach(container => {
+        if (container) {
+          container.scrollLeft = container.scrollWidth;
+        }
+      });
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [currentResults.samplingItems.length, currentResults.keyItems.length, activeTab]);
 
   const renderTable = (items: SampledItem[], title?: string, isKey: boolean = false) => (
     <div className="mb-10">
@@ -544,7 +554,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
             {t('sampleSize', lang)}
           </div>
           <div className="flex items-baseline gap-2 justify-end mb-6">
-            <span className="text-3xl font-mono font-bold text-brand-600 tracking-tighter">{currentResults.sampleSize}</span>
+            <span className="text-2xl font-mono font-bold text-brand-600 tracking-tighter">{currentResults.sampleSize}</span>
             <span className="text-[10px] font-black text-slate-400 uppercase">{t('items', lang)}</span>
           </div>
           <div className="mt-auto pt-4 border-t border-slate-50 space-y-1.5">
@@ -582,7 +592,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                     <StopCircle className={`w-4 h-4 ${stage2Errors > 0 ? 'text-red-600' : 'text-brand-600'}`} />
                     {t('sogStage2TitleShort', lang)}
                 </div>
-                <div className={`text-lg xl:text-xl 2xl:text-2xl font-mono font-bold text-right mb-6 break-all ${stage2Errors > 0 ? 'text-red-700' : 'text-brand-700'}`}>
+                <div className={`text-base xl:text-lg 2xl:text-xl font-mono font-bold text-right mb-6 break-all ${stage2Errors > 0 ? 'text-red-700' : 'text-brand-700'}`}>
                     {stage2Errors} {t('items', lang)}
                 </div>
                 <div className="mt-auto pt-4 border-t border-white/50 flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
@@ -598,7 +608,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                     <ShieldCheck className={`w-4 h-4 ${isExceeded ? 'text-red-600' : 'text-brand-600'}`} />
                     {t('upperBound', lang)}
                 </div>
-                <div className={`text-lg xl:text-xl 2xl:text-2xl font-mono font-bold text-right mb-6 break-all ${isExceeded ? 'text-red-700' : 'text-brand-700'}`}>
+                <div className={`text-base xl:text-lg 2xl:text-xl font-mono font-bold text-right mb-6 break-all ${isExceeded ? 'text-red-700' : 'text-brand-700'}`}>
                     {isAttribute ? `${extrapolation.ub.toFixed(2)}%` : formatMoney(extrapolation.ub, settings)}
                     {!isAttribute && <span className="text-sm font-medium opacity-60 ml-1">{currency}</span>}
                 </div>
@@ -643,7 +653,7 @@ const StatCard = ({ label, value, subValue, icon, currency }: { label: string, v
         {icon}
         {label}
       </div>
-      <div className="text-lg xl:text-xl 2xl:text-2xl font-mono font-bold text-neutral-900 text-right mb-6 group-hover:text-brand-600 transition-colors break-all">
+      <div className="text-base xl:text-lg 2xl:text-xl font-mono font-bold text-neutral-900 text-right mb-6 group-hover:text-brand-600 transition-colors break-all">
           {value}
           {currency && <span className="text-sm font-medium text-slate-400 ml-1">{currency}</span>}
       </div>
