@@ -25,7 +25,7 @@ export function formatDate(val: string, settings?: GlobalSettings): string {
     return val;
 }
 
-export function smartFormat(val: any, settings?: GlobalSettings): string {
+export function smartFormat(val: any): string {
     if (val === null || val === undefined) return '';
     if (typeof val === 'number') {
         if (Number.isInteger(val)) return val.toString();
@@ -49,8 +49,8 @@ export function calculateExtrapolation(results: SamplingResult, config: Sampling
     
     // Sample items projected errors
     const sampleProjected = (results.samplingItems || []).reduce((acc, item) => {
-        let diff = item.difference || 0;
-        let tainting = item.bookValue !== 0 ? diff / item.bookValue : 0;
+        const diff = item.difference || 0;
+        const tainting = item.bookValue !== 0 ? diff / item.bookValue : 0;
         return acc + (tainting * results.samplingInterval);
     }, 0);
 
@@ -103,9 +103,14 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
     const trivialItems: TransactionItem[] = [];
     const regularItems: TransactionItem[] = [];
     
+    let trivialCount = 0;
+    let trivialValue = 0;
+    
     population.forEach((item) => {
         if (config.clearlyTrivialThreshold && Math.abs(item.amount) < config.clearlyTrivialThreshold) {
-            trivialItems.push(item);
+            if (trivialItems.length < 10) trivialItems.push(item);
+            trivialCount++;
+            trivialValue += item.amount;
         } else if (config.tolerableMisstatement && Math.abs(item.amount) >= config.tolerableMisstatement) {
             keyItems.push({
                 ...item,
@@ -128,37 +133,135 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
     else if (config.confidenceLevel === 99) rf = 4.61;
 
     let sampleSize = 10;
-    const remPopValue = popValue - keyItems.reduce((acc, curr) => acc + Math.abs(curr.amount), 0) - trivialItems.reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
+    const remPopValue = popValue - keyItems.reduce((acc, curr) => acc + Math.abs(curr.amount), 0) - Math.abs(trivialValue);
     
-    if (config.method === 'MUS') {
-        const pm = config.tolerableMisstatement || 1;
-        sampleSize = Math.ceil((remPopValue * rf) / pm);
-    } else if (config.method === 'FixedRandom') {
-        sampleSize = config.fixedSampleSize || 10;
-    } else if (config.method === 'StopOrGo') {
-        sampleSize = (config.stopOrGoInitialSize || 25) + (config.stopOrGoExpansionSize || 25);
-    } else if (config.method === 'RiskAssessment') {
-        sampleSize = config.riskRandomCount || 5;
-    } else if (config.method === 'Attribute') {
-        sampleSize = 25; // simplified
+    let sampleItems: SampledItem[] = [];
+
+    const getRandomSamples = <T>(array: T[], count: number): T[] => {
+        const result: T[] = [];
+        const n = array.length;
+        count = Math.min(count, n);
+        if (count === 0) return result;
+        
+        if (n > 10000 && count < 1000) {
+            const picked = new Set<number>();
+            while(picked.size < count) {
+                picked.add(Math.floor(Math.random() * n));
+            }
+            for (const idx of picked) {
+                result.push(array[idx]);
+            }
+        } else {
+            const copy = array.slice();
+            for(let i=0; i<count; i++) {
+                const r = i + Math.floor(Math.random() * (n - i));
+                const temp = copy[i];
+                copy[i] = copy[r];
+                copy[r] = temp;
+                result.push(copy[i]);
+            }
+        }
+        return result;
+    };
+
+    if (config.method === 'RiskAssessment') {
+        const closingDays = config.riskClosingDays ?? 5;
+        const includeWeekend = config.riskWeekend !== false;
+        
+        const UA_HOLIDAYS = new Set(['01-01', '03-08', '05-01', '05-08', '05-09', '06-28', '08-24', '10-01', '12-25']);
+        const includeHoliday = config.riskHoliday !== false;
+        
+        const riskMatched: TransactionItem[] = [];
+        const riskUnmatched: TransactionItem[] = [];
+        
+        regularItems.forEach(item => {
+            let isRisk = false;
+            
+            if (item.date && item.date.length >= 10) {
+                const yyyy = parseInt(item.date.substring(0, 4), 10);
+                const mm = parseInt(item.date.substring(5, 7), 10);
+                const dd = parseInt(item.date.substring(8, 10), 10);
+                
+                if (includeWeekend) {
+                    const t = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4];
+                    let y = yyyy;
+                    if (mm < 3) y -= 1;
+                    const dow = Math.floor(y + Math.floor(y/4) - Math.floor(y/100) + Math.floor(y/400) + t[mm-1] + dd) % 7;
+                    if (dow === 0 || dow === 6) isRisk = true;
+                }
+                
+                if (!isRisk && includeHoliday) {
+                    const strMMDD = item.date.substring(5, 10);
+                    if (UA_HOLIDAYS.has(strMMDD)) isRisk = true;
+                }
+                
+                if (!isRisk && closingDays > 0) {
+                    const isLeap = (yyyy % 4 === 0 && yyyy % 100 !== 0) || yyyy % 400 === 0;
+                    const dim = [31, isLeap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mm - 1];
+                    if ((dim - dd) <= closingDays) {
+                        isRisk = true;
+                    }
+                }
+            }
+            
+            if (isRisk) {
+                riskMatched.push(item);
+            } else {
+                riskUnmatched.push(item);
+            }
+        });
+
+        const riskSampled = riskMatched.slice(0, 5000).map(item => ({
+            ...item,
+            bookValue: item.amount,
+            auditedValue: '',
+            difference: item.amount,
+            tainting: 1,
+            isSampled: true,
+            selectionReason: 'Risk Criteria'
+        }));
+        
+        sampleItems = sampleItems.concat(riskSampled);
+        
+        const randomCount = config.riskRandomCount ?? 5;
+        const randomSampled = getRandomSamples(riskUnmatched, randomCount).map(item => ({
+            ...item,
+            bookValue: item.amount,
+            auditedValue: '',
+            difference: item.amount,
+            tainting: 1,
+            isSampled: true,
+            selectionReason: 'Random (Risk)'
+        }));
+        
+        sampleItems = sampleItems.concat(randomSampled);
     } else {
-        sampleSize = config.fixedSampleSize || 25; // fallback for others like CVS, Random
+        if (config.method === 'MUS') {
+            const pm = config.tolerableMisstatement || 1;
+            sampleSize = Math.ceil((remPopValue * rf) / pm);
+        } else if (config.method === 'FixedRandom') {
+            sampleSize = config.fixedSampleSize || 10;
+        } else if (config.method === 'StopOrGo') {
+            sampleSize = (config.stopOrGoInitialSize || 25) + (config.stopOrGoExpansionSize || 25);
+        } else if (config.method === 'Attribute') {
+            sampleSize = 25; // simplified
+        } else {
+            sampleSize = config.fixedSampleSize || 25; // fallback for others like CVS, Random
+        }
+        
+        if (sampleSize > 5000) sampleSize = 5000;
+        if (sampleSize > regularItems.length) sampleSize = regularItems.length;
+
+        sampleItems = getRandomSamples(regularItems, sampleSize).map((item, idx) => ({
+            ...item,
+            bookValue: item.amount,
+            auditedValue: '',
+            difference: item.amount,
+            tainting: 1,
+            isSampled: true,
+            selectionReason: config.method === 'StopOrGo' ? (idx < (config.stopOrGoInitialSize || 25) ? 'Stage 1' : 'Stage 2') : 'Sampled'
+        }));
     }
-
-    if (sampleSize > regularItems.length) sampleSize = regularItems.length;
-
-    // Shuffle regular items for random selection
-    const shuffled = [...regularItems].sort(() => 0.5 - Math.random());
-    
-    const sampleItems: SampledItem[] = shuffled.slice(0, sampleSize).map((item, idx) => ({
-        ...item,
-        bookValue: item.amount,
-        auditedValue: '',
-        difference: item.amount,
-        tainting: 1,
-        isSampled: true,
-        selectionReason: config.method === 'StopOrGo' ? (idx < (config.stopOrGoInitialSize || 25) ? 'Stage 1' : 'Stage 2') : 'Sampled'
-    }));
 
     const interval = sampleItems.length > 0 ? (remPopValue / sampleItems.length) : 1;
     
@@ -169,8 +272,8 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
     const preResult: SamplingResult = {
         populationSize: population.length,
         populationValue: popValue,
-        trivialCount: trivialItems.length,
-        trivialValue: trivialItems.reduce((acc, curr) => acc + curr.amount, 0),
+        trivialCount: trivialCount,
+        trivialValue: trivialValue,
         areTrivialExcluded: true,
         sampleSize: sampleItems.length,
         sampleValue: sampleItems.reduce((acc, curr) => acc + curr.bookValue, 0),

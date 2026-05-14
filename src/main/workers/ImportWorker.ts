@@ -1,6 +1,5 @@
 import { parentPort, workerData } from 'worker_threads';
 import * as fs from 'fs';
-import * as path from 'path';
 
 async function startTask() {
   const { filePath, config, dbPath, mode } = workerData;
@@ -14,6 +13,7 @@ async function startTask() {
               const headers = data.length > 0 ? data[0] : [];
               parentPort?.postMessage({ type: 'done', headers, data });
           } else if (filePath.endsWith('.xlsx')) {
+              // eslint-disable-next-line @typescript-eslint/no-require-imports
               const ExcelJS = require('exceljs');
               const workbook = new ExcelJS.Workbook();
               await workbook.xlsx.readFile(filePath);
@@ -44,11 +44,11 @@ async function startTask() {
     
     // Convert mapping config
     const { activeIndices, startRow } = config;
-    const idIdx = activeIndices.id + 1; // duckdb column indexing 1-based (Wait, SQL columns are named)
-    
+
     if (filePath.endsWith('.csv')) {
       parentPort?.postMessage({ type: 'progress', pct: 50, stage: 'Importing via DuckDB...' });
       
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const duckdb = require('duckdb');
       const db = new duckdb.Database(dbPath);
       const con = db.connect();
@@ -104,12 +104,14 @@ async function startTask() {
       });
 
     } else if (filePath.endsWith('.xlsx')) {
+       // eslint-disable-next-line @typescript-eslint/no-require-imports
        const ExcelJS = require('exceljs');
        const workbook = new ExcelJS.stream.xlsx.WorkbookReader(filePath, {
           worksheets: "emit",
           styles: "drop",
        });
        
+       // eslint-disable-next-line @typescript-eslint/no-require-imports
        const duckdb = require('duckdb');
        const db = new duckdb.Database(dbPath);
        const con = db.connect();

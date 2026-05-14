@@ -50,7 +50,7 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
     return { vars, subst };
 }
 
-export function getStaticFormula(method: string, lang: string): string {
+export function getStaticFormula(method: string): string {
     if (method === 'MUS') {
         return 'n = (BV × RF) / PM';
     }

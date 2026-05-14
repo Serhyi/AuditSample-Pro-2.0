@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { ChevronRight, Check, Globe, Info, X, Settings as SettingsIcon, Loader2, Award, BookOpen, AlertCircle, Save, FolderOpen } from 'lucide-react';
 import ImportStep from './components/ImportStep';
 import ConfigStep from './components/ConfigStep';
@@ -10,6 +10,7 @@ import { runSampling } from './utils/samplingEngine';
 import { t } from './utils/translations';
 import { useAppStorage } from './contexts/StorageContext';
 import { usePopulationAdapter } from './adapters/usePopulationAdapter';
+import { isElectron } from './utils/isElectron';
 
 const LogoFull = ({ height = 40 }: { height?: number }) => {
   return (
@@ -49,7 +50,7 @@ const App: React.FC = () => {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'about' | 'license'>('about');
   
-  const { population, setPopulation, clearData, fetchPage, refreshStats, totalRowCount, totalPopValue, isVirtual } = usePopulationAdapter([]);
+  const { getFullPopulation, setPopulation, refreshStats, totalPopValue, isVirtual } = usePopulationAdapter([]);
   const [sourceHeaders, setSourceHeaders] = useState<string[]>([]);
   const [columnIndices, setColumnIndices] = useState<ColumnIndices>({id: -1, date: -1, amount: -1});
 
@@ -71,12 +72,12 @@ const App: React.FC = () => {
 
   const steps = [t('step1', lang), t('step2', lang), t('step3', lang)];
 
-  const exportProject = () => {
+  const exportProject = async () => {
     const projectData = {
       version: "1.1",
       timestamp: Date.now(),
       currentStep,
-      population,
+      population: getFullPopulation(),
       sourceHeaders,
       columnIndices,
       config,
@@ -84,6 +85,15 @@ const App: React.FC = () => {
       settings
     };
     
+    if (isElectron() && window.api && isVirtual) {
+        try {
+            await window.api.export.project(projectData);
+        } catch (e) {
+            console.error(e);
+        }
+        return;
+    }
+
     const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -95,10 +105,30 @@ const App: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const importProject = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const importProject = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
+    // Electron optimized path for DuckDB .audsmpl
+    if (file.name.endsWith('.audsmpl') && isElectron() && window.api) {
+        try {
+            const rawFilePath = (file as any).path;
+            const data = await window.api.import.project(rawFilePath);
+            
+            await refreshStats();
+            setSourceHeaders(data.sourceHeaders || []);
+            setColumnIndices(data.columnIndices || {id: -1, date: -1, amount: -1});
+            setConfig(data.config);
+            setResults(data.results);
+            if (data.settings) updateSettings(data.settings);
+            setCurrentStep(data.currentStep || 0);
+        } catch (e: any) {
+            console.error(e);
+            setSamplingError(t('errInvalidProjectFormat', lang));
+        }
+        return;
+    }
+
     const reader = new FileReader();
 
     reader.onload = async (event) => {
@@ -212,7 +242,7 @@ const App: React.FC = () => {
                            }
                        }
 
-                       if (window.api && isVirtual) {
+                       if (isElectron() && window.api && isVirtual) {
                            await window.api.query.insertRows('population', metadata.population);
                            await refreshStats();
                        } else {
@@ -238,7 +268,7 @@ const App: React.FC = () => {
             const data = JSON.parse(content as string);
             
             if (data.version && Array.isArray(data.population)) {
-               if (window.api && isVirtual) {
+               if (isElectron() && window.api && isVirtual) {
                    await window.api.query.insertRows('population', data.population);
                    await refreshStats();
                } else {
@@ -271,11 +301,13 @@ const App: React.FC = () => {
   };
 
   const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
+  const [currentParsedData, setCurrentParsedData] = useState<TransactionItem[]>([]);
 
   const [currentStartRow, setCurrentStartRow] = useState<number>(2);
 
-  const handleDataLoaded = useCallback(async (filePath: string | null, headers: string[], indices: ColumnIndices, startRow: number) => {
+  const handleDataLoaded = useCallback(async (filePath: string | null, headers: string[], indices: ColumnIndices, startRow: number, parsedData?: TransactionItem[]) => {
     if (filePath) setCurrentFilePath(filePath);
+    if (parsedData) setCurrentParsedData(parsedData);
     setSourceHeaders(headers);
     setColumnIndices(indices);
     setCurrentStartRow(startRow);
@@ -284,12 +316,14 @@ const App: React.FC = () => {
   const handleContinueFromImport = async () => {
       setIsProcessing(true);
       try {
-          if (currentFilePath && window.api) {
+          if (isElectron() && currentFilePath && window.api) {
               await window.api.import.start(currentFilePath, { 
                   activeIndices: columnIndices, 
                   startRow: currentStartRow
               });
               await refreshStats();
+          } else if (currentParsedData.length > 0) {
+              setPopulation(currentParsedData);
           }
           setCurrentStep(1);
       } catch (e) {
@@ -303,19 +337,19 @@ const App: React.FC = () => {
     if (totalPopValue > 0 && config.tolerableMisstatement === 0) {
         setConfig(prev => ({ ...prev, tolerableMisstatement: Math.floor(totalPopValue * 0.01) }));
     }
-  }, [totalPopValue]);
+  }, [totalPopValue, config.tolerableMisstatement]);
 
   const handleRunSampling = async () => {
     setIsProcessing(true);
     setSamplingError(null);
     try {
         let res;
-        if (window.api && isVirtual) {
+        if (isElectron() && window.api && isVirtual) {
             console.log('Dispatching sampling to DuckDB engine via IPC');
             res = await window.api.sampling.execute(config);
         } else {
             console.log('Running sampling in browser memory');
-            res = runSampling(population, config);
+            res = runSampling(getFullPopulation(), config);
         }
         setResults(res);
         setCurrentStep(2);
@@ -452,7 +486,7 @@ const App: React.FC = () => {
                 />
                 <div className="flex justify-end">
                     <button 
-                        disabled={!currentFilePath}
+                        disabled={!currentFilePath && currentParsedData.length === 0}
                         onClick={handleContinueFromImport}
                         className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:bg-slate-200 disabled:text-slate-400 text-white px-10 py-3.5 rounded-xl text-sm font-bold transition-all shadow-[0_4px_12px_rgba(0,133,75,0.25)] active:scale-95"
                     >
@@ -488,7 +522,7 @@ const App: React.FC = () => {
                   currency={currency}
                   sourceHeaders={sourceHeaders}
                   colIndices={columnIndices}
-                  population={population}
+                  getFullPopulation={getFullPopulation}
                   settings={settings}
                 />
                 <div className="flex justify-start">

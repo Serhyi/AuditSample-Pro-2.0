@@ -1,41 +1,42 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { TransactionItem } from '../types';
+import { isElectron } from '../utils/isElectron';
 
 export function usePopulationAdapter(initialData: TransactionItem[] = []) {
-  const [population, setPopulation] = useState<TransactionItem[]>(initialData);
+  const populationRef = useRef<TransactionItem[]>(initialData);
   const [isVirtual, setIsVirtual] = useState(false);
   const [totalRowCount, setTotalRowCount] = useState<number>(0);
   const [totalPopValue, setTotalPopValue] = useState<number>(0);
 
   useEffect(() => {
-    if (window.api && window.api.query) {
+    if (isElectron() && window.api && window.api.query) {
       setIsVirtual(true);
     }
   }, []);
 
   const loadData = useCallback(async (data: TransactionItem[]) => {
-    setPopulation(data);
+    populationRef.current = data;
     setTotalRowCount(data.length);
     setTotalPopValue(data.reduce((acc, i) => acc + Math.abs(i.amount), 0));
   }, []);
 
   const clearData = useCallback(() => {
-    setPopulation([]);
+    populationRef.current = [];
     setTotalRowCount(0);
     setTotalPopValue(0);
   }, []);
 
   const fetchPage = useCallback(async (limit: number, offset: number) => {
-    if (isVirtual && window.api) {
+    if (isElectron() && isVirtual && window.api) {
       const rows = await window.api.query.getRows('population', limit, offset);
       return rows;
     } else {
-      return population.slice(offset, offset + limit);
+      return populationRef.current.slice(offset, offset + limit);
     }
-  }, [isVirtual, population]);
+  }, [isVirtual]);
 
   const refreshStats = useCallback(async () => {
-    if (isVirtual && window.api) {
+    if (isElectron() && isVirtual && window.api) {
       try {
         const stats = await window.api.query.getAggregates('population');
         setTotalRowCount(stats.rowCount);
@@ -46,8 +47,12 @@ export function usePopulationAdapter(initialData: TransactionItem[] = []) {
     }
   }, [isVirtual]);
 
+  const getFullPopulation = useCallback(() => {
+    return isVirtual ? [] : populationRef.current;
+  }, [isVirtual]);
+
   return {
-    population, // Legacy full array
+    getFullPopulation,
     setPopulation: loadData,
     clearData,
     fetchPage,

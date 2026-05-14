@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { ipcMain, dialog } from 'electron';
 import { DatabaseService } from '../services/DatabaseService';
 import { ImportService } from '../services/ImportService';
 import { SamplingService } from '../services/SamplingService';
@@ -17,7 +17,7 @@ export class AppOrchestrator {
     this.workerPool = new WorkerPool();
     this.importService = new ImportService(this.dbService, this.workerPool);
     this.samplingService = new SamplingService(this.dbService);
-    this.exportService = new ExportService(this.dbService);
+    this.exportService = new ExportService(this.dbService, this.workerPool);
   }
 
   public registerIpcHandlers() {
@@ -30,7 +30,55 @@ export class AppOrchestrator {
       return await this.importService.previewFile(filePath);
     });
 
-    ipcMain.handle('query:getRows', async (event, table, limit, offset, filters) => {
+    ipcMain.handle('import:project', async (event, filePath) => {
+      console.log('IPC import:project received', filePath);
+      
+      try {
+          // Verify it's a duckdb project file by reading audit_metadata
+          const dbPath = filePath;
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const tempDb = require('duckdb');
+          const db = new tempDb.Database(dbPath);
+          const conn = db.connect();
+          
+          const stateJson = await new Promise<any>((resolve, reject) => {
+              conn.all('SELECT data FROM audit_metadata', (err: any, res: any) => {
+                  if (err) return reject(new Error('Invalid project file (no audit_metadata)'));
+                  if (res && res.length > 0) resolve(res[0].data);
+                  else reject(new Error('Empty audit_metadata'));
+              });
+          });
+          
+          await new Promise<void>(res => db.close(() => res()));
+          
+          // Replace current dbPath with imported file essentially by copying it over
+          // Wait, the current dbPath is this.dbService.dbPath
+          if (!this.dbService.dbPath) {
+              // eslint-disable-next-line @typescript-eslint/no-require-imports
+              await this.dbService.initialize('imported_project', require('os').tmpdir());
+          }
+          
+          // close current DB
+          await this.dbService.close();
+          // copy the new file over
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          require('fs').copyFileSync(filePath, this.dbService.dbPath!);
+          // Re-open DB
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const directory = require('path').dirname(this.dbService.dbPath!);
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const id = require('path').basename(this.dbService.dbPath!, '.duckdb');
+          await this.dbService.initialize(id, directory);
+          
+          const state = JSON.parse(stateJson);
+          return state;
+      } catch (e: any) {
+          console.error(e);
+          throw new Error('Failed to load project DB: ' + e.message);
+      }
+    });
+
+    ipcMain.handle('query:getRows', async (event, table, limit, offset) => {
       return await this.dbService.query(`SELECT * FROM ${table} LIMIT ? OFFSET ?`, [limit, offset]);
     });
 
@@ -62,7 +110,7 @@ export class AppOrchestrator {
         const min_amt = result[0]?.min_amt || 0;
         const max_amt = result[0]?.max_amt || 0;
         return { totalAmount: val, rowCount: cnt, minAmount: min_amt, maxAmount: max_amt };
-      } catch (e) {
+      } catch {
         return { totalAmount: 0, rowCount: 0, minAmount: 0, maxAmount: 0 };
       }
     });
@@ -72,14 +120,29 @@ export class AppOrchestrator {
       return await this.samplingService.runSampling(config);
     });
 
-    ipcMain.handle('export:project', async (event, projectPath) => {
-      console.log('IPC export:project received', projectPath);
-      await this.exportService.exportProject(projectPath);
+    ipcMain.handle('export:project', async (event, state) => {
+      console.log('IPC export:project received');
+      const { canceled, filePath: projectPath } = await dialog.showSaveDialog({
+         title: 'Save Project',
+         filters: [{ name: 'Audit Sample Project', extensions: ['audsmpl'] }]
+      });
+      if (!canceled && projectPath) {
+         await this.exportService.exportProject(projectPath, state);
+      }
     });
 
-    ipcMain.handle('export:excel', async (event, excelPath) => {
-      console.log('IPC export:excel received', excelPath);
-      await this.exportService.exportExcel(excelPath);
+    ipcMain.handle('export:excel', async (event, state) => {
+      console.log('IPC export:excel received');
+      const { canceled, filePath: excelPath } = await dialog.showSaveDialog({
+         title: 'Export to Excel',
+         filters: [{ name: 'Excel Workbook', extensions: ['xlsx'] }]
+      });
+      if (!canceled && excelPath) {
+         const dbPath = this.dbService.dbPath;
+         if (dbPath) {
+            await this.exportService.exportExcel(excelPath, dbPath, state.results);
+         }
+      }
     });
   }
 }

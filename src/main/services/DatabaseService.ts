@@ -4,12 +4,13 @@ import * as path from 'path';
 export class DatabaseService {
   private db: duckdb.Database | null = null;
   private connection: duckdb.Connection | null = null;
+  public dbPath: string | null = null;
 
   public async initialize(projectId: string, directory: string): Promise<void> {
-    const dbPath = path.join(directory, `${projectId}.duckdb`);
+    this.dbPath = path.join(directory, `${projectId}.duckdb`);
     
     return new Promise((resolve, reject) => {
-      this.db = new duckdb.Database(dbPath, (err) => {
+      this.db = new duckdb.Database(this.dbPath!, (err) => {
         if (err) return reject(err);
         
         this.connection = this.db!.connect();

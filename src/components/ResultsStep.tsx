@@ -1,6 +1,7 @@
 
 // ResultsStep component
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { isElectron } from '../utils/isElectron';
 
 const SyncedScrollContainer = ({ children, setRefs }: any) => {
     const topScrollRef = React.useRef<HTMLDivElement>(null);
@@ -66,7 +67,7 @@ interface ResultsStepProps {
   currency: Currency;
   sourceHeaders: string[];
   colIndices: ColumnIndices;
-  population: TransactionItem[];
+  getFullPopulation: () => TransactionItem[];
   settings: GlobalSettings;
 }
 
@@ -142,14 +143,54 @@ const MoneyInput: React.FC<{
 
 
 
-const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onResultsUpdate, config, lang, currency, sourceHeaders, colIndices, population, settings }) => {
+const TablePagination: React.FC<{ items: SampledItem[], title?: string, isKey?: boolean, renderTable: (items: SampledItem[], title?: string, isKey?: boolean) => React.ReactNode }> = ({ items, title, isKey, renderTable }) => {
+   const [page, setPage] = useState(0);
+   const PAGE_SIZE = 50;
+   
+   React.useEffect(() => { setPage(0); }, [items.length, title]);
+
+   const paginated = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+   const totalPages = Math.ceil(items.length / PAGE_SIZE);
+
+   return (
+       <div className="flex flex-col h-full relative space-y-4 pb-4">
+          <div className="flex-1">
+              {renderTable(paginated, title, isKey)}
+          </div>
+          {totalPages > 1 && (
+              <div className="flex items-center justify-between px-6 py-4 bg-white border border-slate-200 shadow-sm rounded-xl mx-6 mt-4">
+                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                      Page {page + 1} of {totalPages} <span className="mx-2">|</span> {items.length} items total
+                  </span>
+                  <div className="flex items-center gap-2">
+                      <button 
+                         disabled={page === 0} 
+                         onClick={() => setPage(p => p - 1)}
+                         className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 text-[11px] font-bold hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                      >
+                         &larr; Prev
+                      </button>
+                      <button 
+                         disabled={page >= totalPages - 1} 
+                         onClick={() => setPage(p => p + 1)}
+                         className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 text-[11px] font-bold hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200 disabled:opacity-50 transition-colors"
+                      >
+                         Next &rarr;
+                      </button>
+                  </div>
+              </div>
+          )}
+       </div>
+   );
+};
+
+const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onResultsUpdate, config, lang, currency, sourceHeaders, colIndices, getFullPopulation, settings }) => {
   const [activeTab, setActiveTab] = useState<'sample' | 'key'>('sample');
 
   const extrapolation = useMemo(() => calculateExtrapolation(currentResults, config), [currentResults, config]);
   
   const isAttribute = config.method === 'Attribute';
   const isStopOrGo = config.method === 'StopOrGo';
-  const isRiskAssessment = config.method === 'RiskAssessment';
   
   const mPrefix = useMemo(() => {
       return METHOD_PREFIX_MAP[config.method] || config.method.toLowerCase();
@@ -230,7 +271,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         version: "1.1",
         timestamp: Date.now(),
         currentStep: 2,
-        population: window.api ? [] : population,
+        population: getFullPopulation(),
         sourceHeaders,
         columnIndices: colIndices,
         config,
@@ -238,7 +279,8 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         settings
     };
 
-    if (window.api) {
+    if (isElectron() && window.api) {
+        // Assume virtual if in Electron with API for project export
         try {
             await (window as any).api.export.project(fullState);
         } catch (e) {
@@ -263,7 +305,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         settings
     };
 
-    if (window.api) {
+    if (isElectron() && window.api) {
         try {
             await (window as any).api.export.excel(clientState);
         } catch (e) {
@@ -370,7 +412,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                     <div className="space-y-1">
                         <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('mnFormula', lang)}</div>
                         <div className="font-mono text-[11px] text-brand-700 bg-brand-50/50 p-3 rounded-xl border border-brand-100/50 text-center shadow-inner italic">
-                          {getStaticFormula(config.method, lang)}
+                          {getStaticFormula(config.method)}
                         </div>
                     </div>
                     <div className="space-y-1">
@@ -584,8 +626,8 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
           </div>
           <div className="flex-1 overflow-auto custom-scrollbar">
             {activeTab === 'key' ? 
-                renderTable(currentResults.keyItems, t('tabKey', lang), true) : 
-                (config.method === 'StopOrGo' ? <StopOrGoView currentResults={currentResults} lang={lang} renderTable={renderTable} /> : renderTable(currentResults.samplingItems))
+                <TablePagination items={currentResults.keyItems} title={t('tabKey', lang)} isKey={true} renderTable={renderTable} /> : 
+                (config.method === 'StopOrGo' ? <StopOrGoView currentResults={currentResults} lang={lang} renderTable={renderTable} /> : <TablePagination items={currentResults.samplingItems} renderTable={renderTable} />)
             }
           </div>
         </div>
@@ -647,10 +689,10 @@ const StopOrGoView = ({ currentResults, lang, renderTable }: { currentResults: S
                 </div>
             </div>
 
-            {renderTable(stage1Items, t('sogStage1Title', lang))}
+            <TablePagination items={stage1Items} title={t('sogStage1Title', lang)} renderTable={renderTable} />
 
             <div className={`transition-all duration-700 ${isStage1Clean ? 'opacity-30 grayscale blur-[2px] pointer-events-none scale-[0.98]' : 'opacity-100'}`}>
-                {renderTable(stage2Items, t('sogStage2Title', lang))}
+                <TablePagination items={stage2Items} title={t('sogStage2Title', lang)} renderTable={renderTable} />
                 
                 {!isStage1Clean && (stage2Errors > 0 || isStage2Complete) && (
                   <div className={`mx-6 mt-4 p-5 rounded-2xl border flex items-start gap-4 animate-fade-in ${stage2Errors > 0 ? 'bg-red-50 border-red-200 text-red-800 shadow-[0_10px_30px_rgba(239,68,68,0.1)]' : 'bg-brand-50 border-brand-200 text-brand-800'}`}>

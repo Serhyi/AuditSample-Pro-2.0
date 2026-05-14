@@ -8,7 +8,7 @@ import { t } from '../utils/translations';
 import { formatMoney, formatDate } from '../utils/samplingEngine';
 
 interface ImportStepProps {
-  onDataLoaded: (filePath: string | null, headers: string[], indices: ColumnIndices, startRow: number) => void;
+  onDataLoaded: (filePath: string | null, headers: string[], indices: ColumnIndices, startRow: number, parsedData?: TransactionItem[]) => void;
   onImportProject?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   lang: Language;
   currency: Currency;
@@ -181,7 +181,7 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
               });
               
               if (res.normalized.length > 0) {
-                  onDataLoadedRef.current(currentFile, headersRef.current, activeIndices, startRow);
+                  onDataLoadedRef.current(currentFile, headersRef.current, activeIndices, startRow, res.normalized);
               }
           } catch (e) {
               console.error(e);
@@ -241,7 +241,8 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
     setRawData([]);
     setFileError(null);
     
-    if (window.api && (file as any).path) {
+    const isElectron = navigator.userAgent.toLowerCase().indexOf(' electron/') > -1;
+    if (isElectron && window.api && (file as any).path) {
         try {
             const filePath = (file as any).path;
             setCurrentFile(filePath);
@@ -263,8 +264,122 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
         return;
     }
 
-    setFileError("Desktop environment required for import.");
-    setIsLoadingFile(false);
+    const isCsv = file.name.toLowerCase().endsWith('.csv') || file.type === 'text/csv';
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        setTimeout(async () => {
+            try {
+                const buffer = e.target?.result as ArrayBuffer;
+
+                if (isCsv) {
+                    const uint8 = new Uint8Array(buffer);
+                    const hasBOM = uint8.length >= 3 && uint8[0] === 0xEF && uint8[1] === 0xBB && uint8[2] === 0xBF;
+                    let isUtf8 = hasBOM;
+                    if (!hasBOM) {
+                        try {
+                            new TextDecoder('utf-8', { fatal: true }).decode(uint8.slice(0, Math.min(4096, uint8.length)));
+                            isUtf8 = true; 
+                        } catch { isUtf8 = false; }
+                    }
+                    
+                    const text = isUtf8 
+                        ? new TextDecoder('utf-8').decode(uint8)
+                        : new TextDecoder('windows-1251').decode(uint8);
+
+                    Papa.parse(text, {
+                        skipEmptyLines: true,
+                        complete: (results) => {
+                            try {
+                                let data = results.data as any[][];
+                                if (!data || data.length === 0) throw new Error(t('errFileEmpty', lang));
+                                
+                                data = data.map(row => {
+                                    const r = [...row];
+                                    while(r.length > 0 && (r[r.length - 1] === null || r[r.length - 1] === undefined || String(r[r.length - 1]).trim() === '')) {
+                                        r.pop();
+                                    }
+                                    return r;
+                                });
+
+                                const { startRow: detStartRow, indices: detIndices } = detectTableStructure(data);
+                                
+                                setRawData(data);
+                                setStartRow(detStartRow);
+                                setActiveIndices(detIndices);
+                            } catch (err: any) {
+                                console.error(err);
+                                setFileError(err.message || t('errUnknownFileError', lang));
+                            } finally {
+                                setIsLoadingFile(false);
+                            }
+                        },
+                        error: (err) => {
+                            console.error(err);
+                            setFileError(err.message || t('errParseCsv', lang));
+                            setIsLoadingFile(false);
+                        }
+                    });
+                    return;
+                }
+
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.load(buffer);
+                
+                const sheet = workbook.worksheets[0];
+                const data: any[][] = [];
+                
+                const getCellValue = (val: any): any => {
+                    if (val === null || val === undefined) return null;
+                    if (typeof val === 'object') {
+                        if ('error' in val) return null;
+                        if ('result' in val) return getCellValue(val.result);
+                        if ('richText' in val) return val.richText.map((rt: any) => rt.text).join('');
+                        if ('text' in val) return val.text;
+                    }
+                    return val.valueOf();
+                };
+                
+                const isCellEmpty = (val: any): boolean => {
+                    const v = getCellValue(val);
+                    if (v === null || v === undefined) return true;
+                    return String(v).trim() === '';
+                };
+
+                sheet.eachRow({ includeEmpty: true }, (row) => {
+                    const rowData: any[] = [];
+                    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                        rowData[colNumber - 1] = getCellValue(cell.value);
+                    });
+                    
+                    while(rowData.length > 0 && isCellEmpty(rowData[rowData.length - 1])) {
+                        rowData.pop();
+                    }
+                    
+                    data.push(rowData);
+                });
+                
+                if (!data || data.length === 0) throw new Error(t('errFileEmpty', lang));
+
+                const { startRow: detStartRow, indices: detIndices } = detectTableStructure(data);
+                
+                setRawData(data);
+                setStartRow(detStartRow);
+                setActiveIndices(detIndices);
+                setIsLoadingFile(false);
+                
+            } catch (err: any) { 
+                console.error(err);
+                setFileError(err.message || t('errUnknownFileError', lang));
+                if (!isCsv) setIsLoadingFile(false);
+            }
+        }, 50);
+    };
+    reader.onerror = () => {
+        setFileError(t('errUnknownFileError', lang));
+        setIsLoadingFile(false);
+    };
+    reader.readAsArrayBuffer(file);
   };
 
   const renderPreviewRows = () => {

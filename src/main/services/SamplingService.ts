@@ -26,7 +26,7 @@ export class SamplingService {
       const trivAgg: any[] = await this.db.query(`SELECT COUNT(*) as cnt, SUM(amount) as val FROM population WHERE ABS(amount) < ?`, [ctt]);
       trivialCount = trivAgg[0]?.cnt || 0;
       trivialValue = trivAgg[0]?.val || 0;
-      trivialItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) < ?`, [ctt]); // Optional: limit this if it's too large, but for UI backwards compat phase 3 we return them
+      trivialItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) < ? LIMIT 10`, [ctt]);
     }
 
     // 3. Key items
@@ -53,44 +53,108 @@ export class SamplingService {
     else if (config.confidenceLevel === 95) rf = 3.00;
     else if (config.confidenceLevel === 99) rf = 4.61;
 
-    let sampleSize = 10;
-    if (config.method === 'MUS') {
-      const pm = config.tolerableMisstatement || 1;
-      sampleSize = Math.ceil((remPopValue * rf) / Math.max(pm, 0.01));
-    } else if (config.method === 'FixedRandom') {
-      sampleSize = config.fixedSampleSize || 10;
-    } else if (config.method === 'StopOrGo') {
-      sampleSize = (config.stopOrGoInitialSize || 25) + (config.stopOrGoExpansionSize || 25);
-    } else if (config.method === 'RiskAssessment') {
-      sampleSize = config.riskRandomCount || 5;
-    } else if (config.method === 'Attribute') {
-      sampleSize = 25;
+    let sampleItems: any[] = [];
+    
+    if (config.method === 'RiskAssessment') {
+        const closingDays = config.riskClosingDays ?? 5;
+        const includeWeekend = config.riskWeekend !== false;
+        const includeHoliday = config.riskHoliday !== false;
+        
+        const riskQueryConds = [];
+        if (includeWeekend) {
+            riskQueryConds.push(`DAYOFWEEK(CAST(date AS DATE)) IN (0, 6)`);
+        }
+        if (includeHoliday) {
+            riskQueryConds.push(`strftime(CAST(date AS DATE), '%m-%d') IN ('01-01', '03-08', '05-01', '05-08', '05-09', '06-28', '08-24', '10-01', '12-25')`);
+        }
+        if (closingDays > 0) {
+            // DuckDB last_day works for end of month
+            riskQueryConds.push(`date_diff('day', CAST(date AS DATE), last_day(CAST(date AS DATE))) <= ${closingDays}`);
+        }
+        
+        const riskWhereStr = riskQueryConds.length > 0 ? `(${riskQueryConds.join(' OR ')})` : 'FALSE';
+        
+        // Find risk matched
+        const riskMatchedQuery = `
+          SELECT * FROM population 
+          WHERE ABS(amount) < ? AND ABS(amount) >= ? AND ${riskWhereStr}
+          LIMIT 5000
+        `;
+        const riskMatched = await this.db.query(riskMatchedQuery, [tm > 0 ? tm : 999999999999, ctt]);
+        
+        for (const item of riskMatched) {
+            sampleItems.push({
+                ...item,
+                bookValue: item.amount,
+                auditedValue: '',
+                difference: item.amount,
+                tainting: 1,
+                isSampled: true,
+                selectionReason: 'Risk Criteria'
+            });
+        }
+        
+        // Find risk unmatched (random ones)
+        const randomCount = config.riskRandomCount ?? 5;
+        const riskUnmatchedQuery = `
+          SELECT * FROM population 
+          WHERE ABS(amount) < ? AND ABS(amount) >= ? AND NOT ${riskWhereStr}
+          ORDER BY random() 
+          LIMIT ?
+        `;
+        const randomMatched = await this.db.query(riskUnmatchedQuery, [tm > 0 ? tm : 999999999999, ctt, randomCount]);
+        
+        for (const item of randomMatched) {
+            sampleItems.push({
+                ...item,
+                bookValue: item.amount,
+                auditedValue: '',
+                difference: item.amount,
+                tainting: 1,
+                isSampled: true,
+                selectionReason: 'Random (Risk)'
+            });
+        }
+        
     } else {
-      sampleSize = config.fixedSampleSize || 25;
+        let sampleSize = 10;
+        if (config.method === 'MUS') {
+          const pm = config.tolerableMisstatement || 1;
+          sampleSize = Math.ceil((remPopValue * rf) / Math.max(pm, 0.01));
+        } else if (config.method === 'FixedRandom') {
+          sampleSize = config.fixedSampleSize || 10;
+        } else if (config.method === 'StopOrGo') {
+          sampleSize = (config.stopOrGoInitialSize || 25) + (config.stopOrGoExpansionSize || 25);
+        } else if (config.method === 'Attribute') {
+          sampleSize = 25;
+        } else {
+          sampleSize = config.fixedSampleSize || 25;
+        }
+
+        // Adjust sample size against remaining population size limit
+        const remPopSize = popSize - keyItems.length - trivialCount;
+        if (sampleSize > remPopSize) sampleSize = remPopSize;
+        if (sampleSize > 5000) sampleSize = 5000;
+
+        // 4. Regular items sampled using SQL Random ordering
+        const sampleItemsQuery = `
+          SELECT * FROM population 
+          WHERE ABS(amount) < ? AND ABS(amount) >= ?
+          ORDER BY random() 
+          LIMIT ?
+        `;
+        const rawSampleItems: any[] = await this.db.query(sampleItemsQuery, [tm > 0 ? tm : 999999999999, ctt, sampleSize]);
+
+        sampleItems = rawSampleItems.map((item, idx) => ({
+          ...item,
+          bookValue: item.amount,
+          auditedValue: '',
+          difference: item.amount,
+          tainting: 1,
+          isSampled: true,
+          selectionReason: config.method === 'StopOrGo' ? (idx < (config.stopOrGoInitialSize || 25) ? 'Stage 1' : 'Stage 2') : 'Sampled'
+        }));
     }
-
-    // Adjust sample size against remaining population size limit
-    const remPopSize = popSize - keyItems.length - trivialCount;
-    if (sampleSize > remPopSize) sampleSize = remPopSize;
-
-    // 4. Regular items sampled using SQL Random ordering
-    let sampleItemsQuery = `
-      SELECT * FROM population 
-      WHERE ABS(amount) < ? AND ABS(amount) >= ?
-      ORDER BY random() 
-      LIMIT ?
-    `;
-    let rawSampleItems: any[] = await this.db.query(sampleItemsQuery, [tm > 0 ? tm : 999999999999, ctt, sampleSize]);
-
-    const sampleItems = rawSampleItems.map((item, idx) => ({
-      ...item,
-      bookValue: item.amount,
-      auditedValue: '',
-      difference: item.amount,
-      tainting: 1,
-      isSampled: true,
-      selectionReason: config.method === 'StopOrGo' ? (idx < (config.stopOrGoInitialSize || 25) ? 'Stage 1' : 'Stage 2') : 'Sampled'
-    }));
 
     const interval = sampleItems.length > 0 ? (remPopValue / sampleItems.length) : 1;
 
@@ -121,8 +185,8 @@ export class SamplingService {
     const keyMisstatements = (results.keyItems || []).reduce((acc: any, item: any) => acc + (item.difference || 0), 0);
     
     const sampleProjected = (results.samplingItems || []).reduce((acc: any, item: any) => {
-        let diff = item.difference || 0;
-        let tainting = item.bookValue !== 0 ? diff / item.bookValue : 0;
+        const diff = item.difference || 0;
+        const tainting = item.bookValue !== 0 ? diff / item.bookValue : 0;
         return acc + (tainting * results.samplingInterval);
     }, 0);
 

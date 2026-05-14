@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import { Language, GlobalSettings, SamplingConfig, SamplingResult, TransactionItem } from '../types';
+import { Language, TransactionItem } from '../types';
 import { t } from '../utils/translations';
 import { formatMoney, methodsSupportingAnomalies, calculateExtrapolation } from '../utils/samplingEngine';
 import { METHOD_PREFIX_MAP, getStaticFormula, getCalculationDetails } from '../components/resultsUtils';
@@ -125,7 +125,6 @@ export async function exportToExcel(
     addSectionHeader(isUa ? '3. РЕЗУЛЬТАТИ ТА ЕКСТРАПОЛЯЦІЯ' : '3. RESULTS AND EXTRAPOLATION', 'FF0F172A');
     addDetailRow(isUa ? 'ОБСЯГ ВИБІРКИ' : 'SAMPLE SIZE', results.sampleSize, '0');
     
-    const isRiskAssessment = config.method === 'RiskAssessment';
     const isAttribute = config.method === 'Attribute';
     
     // Calculate live extraction based on current audited values
@@ -198,7 +197,7 @@ export async function exportToExcel(
     let temp = index;
     let letter = '';
     while (temp > 0) {
-      let modulo = (temp - 1) % 26;
+      const modulo = (temp - 1) % 26;
       letter = String.fromCharCode(65 + modulo) + letter;
       temp = Math.floor((temp - modulo) / 26);
     }
@@ -235,7 +234,6 @@ export async function exportToExcel(
     
     const bookColIdx = (sourceHeaders?.length || 0) + 1;
     const auditColIdx = (sourceHeaders?.length || 0) + 2;
-    const diffColIdx = (sourceHeaders?.length || 0) + 3;
     
     const bookColName = sheetLetter(bookColIdx);
     const auditColName = sheetLetter(auditColIdx);
