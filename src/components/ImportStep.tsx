@@ -1,11 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
-import ExcelJS from 'exceljs';
-import Papa from 'papaparse';
+import React, { useState, useEffect, useRef } from 'react';
 import { Upload, Download, AlertTriangle, CheckCircle, FileSpreadsheet, Loader2, Database, Info, Settings2, ChevronDown, ChevronUp, XCircle } from 'lucide-react';
 import { TransactionItem, ValidationResult, Language, Currency, ColumnIndices, GlobalSettings } from '../types';
 import { t } from '../utils/translations';
 import { formatMoney, formatDate } from '../utils/samplingEngine';
+import WebImportWorker from './ImportWorker?worker';
 
 interface ImportStepProps {
   onDataLoaded: (filePath: string | null, headers: string[], indices: ColumnIndices, startRow: number, parsedData?: TransactionItem[]) => void;
@@ -15,20 +14,6 @@ interface ImportStepProps {
   setCurrency: (c: Currency) => void;
   settings: GlobalSettings;
 }
-
-interface ValidationRun {
-    normalized: TransactionItem[];
-    invalidAmountRows: number[];
-    invalidDateRows: number[];
-    totalVal: number;
-    negativeCount: number;
-    zeroCount: number;
-    duplicateCount: number;
-}
-
-// ... existing helper functions (parseExcelRawDate, parseAmount, getColName, detectTableStructure) ...
-// Re-implementing them briefly to keep file context valid or use existing if not changed. 
-// Assuming I need to output full file content, I will include them.
 
 const parseExcelRawDate = (rawVal: any): string | null => {
     if (rawVal === undefined || rawVal === null || rawVal === '') return null;
@@ -124,6 +109,15 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
   
   const [validation, setValidation] = useState<ValidationResult | null>(null);
 
+  const workerRef = useRef<Worker | null>(null);
+
+  useEffect(() => {
+      workerRef.current = new WebImportWorker();
+      return () => {
+          workerRef.current?.terminate();
+      };
+  }, []);
+
   useEffect(() => {
       if (rawData.length > 0) {
           const headerRowIdx = Math.max(0, startRow - 1);
@@ -162,78 +156,34 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
 
   // Debounced Validation Effect
   useEffect(() => {
-      if (rawData.length === 0) return;
+      if (rawData.length === 0 || !workerRef.current) return;
 
       setIsLoadingFile(true);
       setValidation(null);
 
-      const timer = setTimeout(async () => {
-          try {
-              const res = await validateRows(rawData, startRow, activeIndices);
-              setValidation({ 
-                  isValid: res.normalized.length > 0, 
-                  errors: [], 
-                  itemCount: res.normalized.length, 
-                  totalValue: res.totalVal, 
-                  negativeCount: res.negativeCount, 
-                  zeroCount: res.zeroCount, 
-                  duplicateCount: res.duplicateCount 
-              });
-              
-              if (res.normalized.length > 0) {
-                  onDataLoadedRef.current(currentFile, headersRef.current, activeIndices, startRow, res.normalized);
+      const timer = setTimeout(() => {
+          workerRef.current!.onmessage = (e) => {
+              if (e.data.type === 'VALIDATE_SUCCESS') {
+                  const res = e.data.payload;
+                  setValidation(res);
+                  if (res.isValid) {
+                      onDataLoadedRef.current(currentFile, headersRef.current, activeIndices, startRow, res.normalized);
+                  }
+                  setIsLoadingFile(false);
+              } else if (e.data.type === 'VALIDATE_ERROR') {
+                  console.error(e.data.payload);
+                  setIsLoadingFile(false);
               }
-          } catch (e) {
-              console.error(e);
-          } finally {
-              setIsLoadingFile(false);
-          }
-      }, 300); // 300ms debounce
+          };
+          
+          workerRef.current!.postMessage({
+              type: 'VALIDATE_DATA',
+              payload: { data: rawData, startRow, indices: activeIndices }
+          });
+      }, 300);
 
       return () => clearTimeout(timer);
   }, [rawData, startRow, activeIndices, currentFile]);
-
-  const validateRows = async (data: any[][], sRow: number, indices: ColumnIndices): Promise<ValidationRun> => {
-      const normalized: TransactionItem[] = [];
-      const invalidAmountRows: number[] = [];
-      const invalidDateRows: number[] = [];
-      let totalVal = 0, negCount = 0, zeroCount = 0, dupCount = 0;
-      const seenIds = new Set<string>();
-      
-      const startIndex = sRow; 
-      
-      for (let i = startIndex; i < data.length; i++) {
-          const row = data[i];
-          if (!row || row.length === 0) continue;
-          
-          const idVal = row[indices.id];
-          const idStr = (idVal !== undefined && idVal !== null) ? String(idVal).trim() : `row-${i+1}`;
-          
-          if (seenIds.has(idStr)) dupCount++;
-          seenIds.add(idStr);
-          
-          const rawAmt = row[indices.amount];
-          const val = parseAmount(rawAmt);
-          
-          if (isNaN(val)) { 
-              invalidAmountRows.push(i + 1); 
-              continue; 
-          }
-          
-          if (val < 0) negCount++;
-          if (val === 0) zeroCount++;
-          
-          const dateStr = parseExcelRawDate(row[indices.date]);
-          if (!dateStr) {
-              invalidDateRows.push(i + 1);
-              continue; 
-          }
-          
-          totalVal += Math.abs(val);
-          normalized.push({ id: idStr, amount: val, date: dateStr, originalRow: row });
-      }
-      return { normalized, invalidAmountRows, invalidDateRows, totalVal, negativeCount: negCount, zeroCount, duplicateCount: dupCount };
-  };
 
   const handleFile = async (file: File) => {
     setIsLoadingFile(true);
@@ -267,110 +217,35 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
 
     const reader = new FileReader();
     reader.onload = (e) => {
-        setTimeout(async () => {
-            try {
-                const buffer = e.target?.result as ArrayBuffer;
+        const buffer = e.target?.result as ArrayBuffer;
 
-                if (isCsv) {
-                    const uint8 = new Uint8Array(buffer);
-                    const hasBOM = uint8.length >= 3 && uint8[0] === 0xEF && uint8[1] === 0xBB && uint8[2] === 0xBF;
-                    let isUtf8 = hasBOM;
-                    if (!hasBOM) {
-                        try {
-                            new TextDecoder('utf-8', { fatal: true }).decode(uint8.slice(0, Math.min(4096, uint8.length)));
-                            isUtf8 = true; 
-                        } catch { isUtf8 = false; }
-                    }
-                    
-                    const text = isUtf8 
-                        ? new TextDecoder('utf-8').decode(uint8)
-                        : new TextDecoder('windows-1251').decode(uint8);
-
-                    Papa.parse(text, {
-                        skipEmptyLines: true,
-                        complete: (results) => {
-                            try {
-                                let data = results.data as any[][];
-                                if (!data || data.length === 0) throw new Error(t('errFileEmpty', lang));
-                                
-                                data = data.map(row => {
-                                    const r = [...row];
-                                    while(r.length > 0 && (r[r.length - 1] === null || r[r.length - 1] === undefined || String(r[r.length - 1]).trim() === '')) {
-                                        r.pop();
-                                    }
-                                    return r;
-                                });
-
-                                const { startRow: detStartRow, indices: detIndices } = detectTableStructure(data);
-                                
-                                setRawData(data);
-                                setStartRow(detStartRow);
-                                setActiveIndices(detIndices);
-                            } catch (err: any) {
-                                console.error(err);
-                                setFileError(err.message || t('errUnknownFileError', lang));
-                                setIsLoadingFile(false);
-                            }
-                        },
-                        error: (err) => {
-                            console.error(err);
-                            setFileError(err.message || t('errParseCsv', lang));
-                            setIsLoadingFile(false);
-                        }
-                    });
-                    return;
-                }
-
-                const workbook = new ExcelJS.Workbook();
-                await workbook.xlsx.load(buffer);
+        workerRef.current!.onmessage = (msgEvent) => {
+            if (msgEvent.data.type === 'PARSE_SUCCESS') {
+                const { data, startRow: detStartRow, indices: detIndices, validation: valInfo } = msgEvent.data.payload;
                 
-                const sheet = workbook.worksheets[0];
-                const data: any[][] = [];
-                
-                const getCellValue = (val: any): any => {
-                    if (val === null || val === undefined) return null;
-                    if (typeof val === 'object') {
-                        if ('error' in val) return null;
-                        if ('result' in val) return getCellValue(val.result);
-                        if ('richText' in val) return val.richText.map((rt: any) => rt.text).join('');
-                        if ('text' in val) return val.text;
-                    }
-                    return val.valueOf();
-                };
-                
-                const isCellEmpty = (val: any): boolean => {
-                    const v = getCellValue(val);
-                    if (v === null || v === undefined) return true;
-                    return String(v).trim() === '';
-                };
-
-                sheet.eachRow({ includeEmpty: true }, (row) => {
-                    const rowData: any[] = [];
-                    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-                        rowData[colNumber - 1] = getCellValue(cell.value);
-                    });
-                    
-                    while(rowData.length > 0 && isCellEmpty(rowData[rowData.length - 1])) {
-                        rowData.pop();
-                    }
-                    
-                    data.push(rowData);
-                });
-                
-                if (!data || data.length === 0) throw new Error(t('errFileEmpty', lang));
-
-                const { startRow: detStartRow, indices: detIndices } = detectTableStructure(data);
-                
-                setRawData(data);
                 setStartRow(detStartRow);
                 setActiveIndices(detIndices);
+                setRawData(data); // this will trigger the useEffect for headers and then validation
                 
-            } catch (err: any) { 
-                console.error(err);
-                setFileError(err.message || t('errUnknownFileError', lang));
+                // We don't call setIsLoadingFile(false) here, we let the validate_success effect do it
+                // Actually wait! The Parse step ALREADY did the first validation! We can use it!
+                setValidation(valInfo);
+                if (valInfo.isValid) {
+                   // headersRef is not ready yet because we just setRawData! 
+                   // So we let the useEffect handle validation on rawData change, OR we can wait for headers.
+                   // The easiest is just to let the normal useEffect pick it up. We do nothing here except setRawData.
+                }
+            } else if (msgEvent.data.type === 'PARSE_ERROR') {
+                const errMessage = msgEvent.data.payload;
+                setFileError(errMessage === 'errFileEmpty' ? t('errFileEmpty', lang) : errMessage);
                 setIsLoadingFile(false);
             }
-        }, 50);
+        };
+
+        workerRef.current!.postMessage({
+            type: 'PARSE_FILE',
+            payload: { buffer, isCsv, lang }
+        });
     };
     reader.onerror = () => {
         setFileError(t('errUnknownFileError', lang));

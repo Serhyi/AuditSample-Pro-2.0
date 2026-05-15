@@ -143,8 +143,6 @@ export const en = {
   clusterRec: "Recommended: 3 to 10 clusters.",
   percentileLabel: "Cut-off Percentage (%)",
   percentileRec: "Selects extremes of the distribution.",
-  benfordSampleSizeLabel: "Anomalies to Sample",
-  benfordSampleSizeDesc: "Number of highest deviation items to audit.",
 
   anomalyLabel: "Key Items and Outliers",
   anomDescModZ: "Uses Modified Z-Score (Median + MAD) to find non-typical transactions that deviate from the general statistical profile.",
