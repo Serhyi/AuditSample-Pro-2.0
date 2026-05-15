@@ -280,9 +280,9 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
     };
 
     if (isElectron() && window.api) {
-        // Assume virtual if in Electron with API for project export
+        // Assume virtual if in Electron with API for excel export
         try {
-            await (window as any).api.export.project(fullState);
+            await (window as any).api.export.excel(fullState);
         } catch (e) {
             console.error(e);
         }

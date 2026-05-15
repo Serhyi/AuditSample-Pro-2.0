@@ -307,11 +307,14 @@ const App: React.FC = () => {
 
   const handleDataLoaded = useCallback(async (filePath: string | null, headers: string[], indices: ColumnIndices, startRow: number, parsedData?: TransactionItem[]) => {
     if (filePath) setCurrentFilePath(filePath);
-    if (parsedData) setCurrentParsedData(parsedData);
+    if (parsedData) {
+        setCurrentParsedData(parsedData);
+        setPopulation(parsedData);
+    }
     setSourceHeaders(headers);
     setColumnIndices(indices);
     setCurrentStartRow(startRow);
-  }, []);
+  }, [setPopulation]);
 
   const handleContinueFromImport = async () => {
       setIsProcessing(true);
@@ -322,8 +325,6 @@ const App: React.FC = () => {
                   startRow: currentStartRow
               });
               await refreshStats();
-          } else if (currentParsedData.length > 0) {
-              setPopulation(currentParsedData);
           }
           setCurrentStep(1);
       } catch (e) {
