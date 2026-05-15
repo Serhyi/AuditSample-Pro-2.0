@@ -268,7 +268,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
 
   const handleExport = async () => {
     const fullState = {
-        version: "1.1",
+        version: "2.0",
         timestamp: Date.now(),
         currentStep: 2,
         population: getFullPopulation(),
@@ -295,7 +295,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
 
   const handleExportClient = async () => {
     const clientState = {
-        version: "1.1",
+        version: "2.0",
         timestamp: Date.now(),
         currentStep: 2,
         sourceHeaders,

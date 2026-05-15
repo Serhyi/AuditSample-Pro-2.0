@@ -74,7 +74,7 @@ const App: React.FC = () => {
 
   const exportProject = async () => {
     const projectData = {
-      version: "1.1",
+      version: "2.0",
       timestamp: Date.now(),
       currentStep,
       population: getFullPopulation(),

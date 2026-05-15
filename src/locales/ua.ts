@@ -1,6 +1,6 @@
 
 export const ua = {
-  appVersion: "ВЕРСІЯ 1.1",
+  appVersion: "ВЕРСІЯ 2.0",
   appTitle: "AuditSample Pro",
   appSubtitle: "Інструмент згідно МСА 530",
   isaCompliant: "ВІДПОВІДНІСТЬ МСА 530",
