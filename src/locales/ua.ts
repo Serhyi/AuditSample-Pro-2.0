@@ -115,6 +115,15 @@ export const ua = {
   riskWeekendLabel: "Включати вихідні",
   riskHolidayLabel: "Включати свята",
   
+  paretoCoverageLabel: "Цільове покриття (%)",
+  paretoCoverageDesc: "Відсоток від загальної суми, який потрібно покрити (напр., 80 для правила 80/20)",
+  percentileCountLabel: "Відсоток хвостів (%)",
+  percentileCountDesc: "Відсоток елементів для відбору з верхнього та нижнього хвостів розподілу",
+  grubbsAlphaLabel: "Рівень значущості (α)",
+  grubbsAlphaDesc: "Поріг для виявлення статистичних викидів (напр., 0.05)",
+  benfordSampleSizeLabel: "Макс. розмір вибірки",
+  benfordSampleSizeDesc: "Максимальна кількість елементів для відбору з виявлених аномалій",
+  
   cvsSubMethod: "Під-метод CVS",
   mpuName: "Середнє на одиницю (MPU)",
   diffName: "Оцінка різниць",

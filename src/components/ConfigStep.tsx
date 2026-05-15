@@ -65,6 +65,11 @@ const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulat
   const showAttributeParams = config.method === 'Attribute';
   const showFixedSize = config.method === 'FixedRandom';
   const showRiskParams = config.method === 'RiskAssessment';
+  
+  const showPareto = config.method === 'Pareto';
+  const showPercentile = config.method === 'Percentile';
+  const showGrubbs = config.method === 'Grubbs';
+  const showBenford = config.method === 'Benford';
 
   const getConfidenceHelp = () => { if (config.method === 'MUS') return t('clHelpMUS', lang); if (config.method === 'CVS') return t('clHelpCVS', lang); return t('clHelpRandom', lang); };
 
@@ -136,6 +141,57 @@ const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulat
                     <p className="text-[12px] font-medium text-slate-400 mt-2.5 flex items-start gap-2 italic">
                         <Info className="w-4 h-4 flex-shrink-0 text-brand-400" />
                         {t('fixedSizeDesc', lang)}
+                    </p>
+                </div>
+            )}
+
+            {showPareto && (
+                <div className="animate-fade-in">
+                    <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">{t('paretoCoverageLabel', lang)}</label>
+                    <NumberInput min={1} max={100} value={config.paretoCoverage || 80} onChange={(val) => handleChange('paretoCoverage', Math.max(1, Math.min(100, val)))} className="w-full px-5 py-3 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-bold text-[13px]" />
+                    <p className="text-[12px] font-medium text-slate-400 mt-2.5 flex items-start gap-2 italic">
+                        <Info className="w-4 h-4 flex-shrink-0 text-brand-400" />
+                        {t('paretoCoverageDesc', lang)}
+                    </p>
+                </div>
+            )}
+
+            {showPercentile && (
+                <div className="animate-fade-in">
+                    <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">{t('percentileCountLabel', lang)}</label>
+                    <NumberInput min={1} max={50} value={config.percentileCount || 5} onChange={(val) => handleChange('percentileCount', Math.max(1, Math.min(50, val)))} className="w-full px-5 py-3 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-bold text-[13px]" />
+                    <p className="text-[12px] font-medium text-slate-400 mt-2.5 flex items-start gap-2 italic">
+                        <Info className="w-4 h-4 flex-shrink-0 text-brand-400" />
+                        {t('percentileCountDesc', lang)}
+                    </p>
+                </div>
+            )}
+
+            {showGrubbs && (
+                <div className="animate-fade-in">
+                    <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">{t('grubbsAlphaLabel', lang)}</label>
+                    <div className="relative">
+                        <select value={config.grubbsAlpha || 0.05} onChange={(e) => handleChange('grubbsAlpha', parseFloat(e.target.value))} className="w-full px-5 py-3 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white shadow-sm font-bold text-[13px] appearance-none cursor-pointer transition-all">
+                            <option value={0.10}>0.10 (10%)</option>
+                            <option value={0.05}>0.05 (5%)</option>
+                            <option value={0.01}>0.01 (1%)</option>
+                            <option value={0.001}>0.001 (0.1%)</option>
+                        </select>
+                    </div>
+                    <p className="text-[12px] font-medium text-slate-400 mt-2.5 flex items-start gap-2 italic">
+                        <Info className="w-4 h-4 flex-shrink-0 text-brand-400" />
+                        {t('grubbsAlphaDesc', lang)}
+                    </p>
+                </div>
+            )}
+
+            {showBenford && (
+                <div className="animate-fade-in">
+                    <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">{t('benfordSampleSizeLabel', lang)}</label>
+                    <NumberInput min={5} value={config.benfordSampleSize || 25} onChange={(val) => handleChange('benfordSampleSize', Math.max(5, val))} className="w-full px-5 py-3 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-bold text-[13px]" />
+                    <p className="text-[12px] font-medium text-slate-400 mt-2.5 flex items-start gap-2 italic">
+                        <Info className="w-4 h-4 flex-shrink-0 text-brand-400" />
+                        {t('benfordSampleSizeDesc', lang)}
                     </p>
                 </div>
             )}

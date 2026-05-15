@@ -56,6 +56,8 @@ export interface SamplingConfig {
   // New Params for additional methods
   fixedSampleSize?: number; // For Fixed Random
   percentileCount?: number; // e.g. 5 for Top 5% / Bottom 5%
+  paretoCoverage?: number; // e.g. 80 for Pareto
+  grubbsAlpha?: number; // e.g. 0.05
   stopOrGoInitialSize?: number; // Stage 1
   stopOrGoExpansionSize?: number; // Stage 2
   benfordSampleSize?: number; // Sample size for Benford anomalies

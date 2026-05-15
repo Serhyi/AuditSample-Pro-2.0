@@ -114,6 +114,15 @@ export const en = {
   riskRandomCountLabel: "Random Items Count",
   riskWeekendLabel: "Include Weekends",
   riskHolidayLabel: "Include Holidays",
+  
+  paretoCoverageLabel: "Target Coverage (%)",
+  paretoCoverageDesc: "Percentage of total value to cover (e.g., 80 for 80/20 rule)",
+  percentileCountLabel: "Tail Percentage (%)",
+  percentileCountDesc: "Percentage of items to select from the top and bottom tails",
+  grubbsAlphaLabel: "Significance Level (α)",
+  grubbsAlphaDesc: "Threshold for identifying outliers (e.g., 0.05)",
+  benfordSampleSizeLabel: "Max Sample Size",
+  benfordSampleSizeDesc: "Maximum number of items to select from identified anomalies",
 
   cvsSubMethod: "CVS Sub-method",
   mpuName: "Mean-per-Unit",
