@@ -88,21 +88,28 @@ const App: React.FC = () => {
     if (isElectron() && window.api && isVirtual) {
         try {
             await window.api.export.project(projectData);
-        } catch (e) {
+            alert(lang === 'ua' ? 'Проєкт успішно збережено!' : 'Project saved successfully!');
+        } catch (e: any) {
             console.error(e);
+            alert((lang === 'ua' ? 'Помилка збереження: ' : 'Export error: ') + e.message);
         }
         return;
     }
 
-    const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Audit_Sample_${config.method}_${new Date().toISOString().slice(0,10)}.audsmpl`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+        const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Audit_Sample_${config.method}_${new Date().toISOString().slice(0,10)}.audsmpl`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (e: any) {
+        console.error(e);
+        alert((lang === 'ua' ? 'Помилка збереження: ' : 'Export error: ') + e.message);
+    }
   };
 
   const importProject = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,6 +129,7 @@ const App: React.FC = () => {
             setResults(data.results);
             if (data.settings) updateSettings(data.settings);
             setCurrentStep(data.currentStep || 0);
+            alert(lang === 'ua' ? 'Проєкт успішно відкрито!' : 'Project opened successfully!');
         } catch (e: any) {
             console.error(e);
             setSamplingError(t('errInvalidProjectFormat', lang));
@@ -134,6 +142,23 @@ const App: React.FC = () => {
     reader.onload = async (event) => {
       try {
         const content = event.target?.result;
+        
+        if (file.name.endsWith('.audsmpl')) {
+            try {
+                const data = JSON.parse(content as string);
+                setPopulation(data.population || []);
+                setSourceHeaders(data.sourceHeaders || []);
+                setColumnIndices(data.columnIndices || {id: -1, date: -1, amount: -1});
+                setConfig(data.config);
+                setResults(data.results || null);
+                if (data.settings) updateSettings(data.settings);
+                setCurrentStep(data.currentStep || 0);
+                alert(lang === 'ua' ? 'Проєкт успішно відкрито!' : 'Project opened successfully!');
+            } catch (err) {
+                alert(lang === 'ua' ? 'Помилка: файл .audsmpl є базою даних DuckDB, і його потрібно відкривати в десктопній версії програми.' : 'Error: .audsmpl file is a DuckDB database and must be opened in the desktop application.');
+            }
+            return;
+        }
         
         if (file.name.endsWith('.xlsx')) {
             const workbook = new ExcelJS.Workbook();

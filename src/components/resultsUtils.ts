@@ -30,29 +30,61 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
     const bv = results.populationValue - results.keyItems.reduce((acc, curr) => acc + Math.abs(curr.amount), 0) - results.trivialValue;
     const pm = config.tolerableMisstatement || 1;
 
-    let vars: Record<string, string|number> = {};
+    const vars: Record<string, string|number> = {};
     let subst = '';
 
+    const bvStr = formatMoney(bv, settings);
+    const pmStr = formatMoney(pm, settings);
+    const methodStr = isUa ? 'Метод:' : 'Method:';
+    const confLevelStr = isUa ? 'Рівень впевненості:' : 'Confidence Level:';
+    
     if (config.method === 'MUS') {
-        const bvStr = formatMoney(bv, settings);
-        const pmStr = formatMoney(pm, settings);
         vars[isUa ? 'Залишкова сукупність (BV):' : 'Residual Book Value (BV):'] = bvStr;
         vars[isUa ? `Коефіцієнт RF (${config.confidenceLevel}%):` : `Reliability Factor RF (${config.confidenceLevel}%):`] = rf;
         vars[isUa ? 'Допустиме викривлення (PM):' : 'Tolerable Misstatement (PM):'] = pmStr;
         
         const calcN = Math.ceil((bv * rf) / pm);
         subst = `n = (${bvStr} × ${rf}) / ${pmStr}\nn = ${calcN}`;
+    } else if (config.method === 'Random' || config.method === 'FixedRandom') {
+        vars[methodStr] = config.method;
+        if (config.method === 'Random') {
+            vars[confLevelStr] = `${config.confidenceLevel}%`;
+            vars[isUa ? 'Допустиме викривлення (PM):' : 'Tolerable Misstatement (PM):'] = pmStr;
+        }
+        vars[isUa ? 'Кількість відібраних елементів (n):' : 'Sample Size (n):'] = results.samplingItems.length;
+        subst = `n = ${results.samplingItems.length}`;
+    } else if (config.method === 'CVS') {
+        vars[isUa ? 'Залишкова сукупність (BV):' : 'Residual Book Value (BV):'] = bvStr;
+        vars[confLevelStr] = `${config.confidenceLevel}%`;
+        vars[isUa ? 'Допустиме викривлення (PM):' : 'Tolerable Misstatement (PM):'] = pmStr;
+        vars[isUa ? 'Кількість відібраних елементів (n):' : 'Sample Size (n):'] = results.samplingItems.length;
+        subst = `n = ${results.samplingItems.length}`;
+    } else if (config.method === 'RiskAssessment') {
+        vars[isUa ? 'Суттєвість (PM):' : 'Materiality (PM):'] = pmStr;
+        vars[isUa ? 'Оцінка ризику:' : 'Risk Assessment:'] = config.riskFactor;
+        subst = isUa ? 'Відібрано записи за індикаторами ризику' : 'Selected entries based on risk indicators.';
     } else {
-        vars = { "Method": config.method };
-        subst = isUa ? 'Спрощений розрахунок' : 'Calculation details are simplified.';
+        vars[methodStr] = config.method;
+        subst = isUa ? `Тестування алгоритмом ${config.method}` : `Testing with ${config.method} algorithm.`;
     }
 
     return { vars, subst };
 }
 
 export function getStaticFormula(method: string): string {
-    if (method === 'MUS') {
-        return 'n = (BV × RF) / PM';
+    switch(method) {
+        case 'MUS': return 'n = (BV × RF) / PM';
+        case 'Random': return 'n = (N × Z² × p × (1-p)) / (E²)';
+        case 'FixedRandom': return 'n = const';
+        case 'CVS': return 'n = ((N × Z × σ) / PM)²';
+        case 'Attribute': return 'n = AICPA_Table(ROR, TDR, EDR)';
+        case 'StopOrGo': return 'n = n1 + n2';
+        case 'Cluster': return 'k-Means++ Sampling';
+        case 'Benford': return 'Z-score First Digit Analysis';
+        case 'Pareto': return 'Cumulative Sum Threshold (80%)';
+        case 'Percentile': return 'Top/Bottom Cut-off';
+        case 'Grubbs': return 'Iterative Grubbs Test';
+        case 'RiskAssessment': return 'n = Benford + Grubbs + Calendar + Cut-off + Random';
+        default: return '';
     }
-    return '';
 }
