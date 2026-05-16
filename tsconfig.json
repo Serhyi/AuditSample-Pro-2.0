@@ -16,14 +16,13 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "allowSyntheticDefaultImports": true,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@sampling/*": ["src/sampling/*"],
-      "@statistics/*": ["src/statistics/*"],
-      "@types/*": ["src/types/*"],
-      "@utils/*": ["src/utils/*"],
-      "@export/*": ["src/export/*"]
+      "@/*": ["./src/*"],
+      "@sampling/*": ["./src/sampling/*"],
+      "@statistics/*": ["./src/statistics/*"],
+      "@types/*": ["./src/types/*"],
+      "@utils/*": ["./src/utils/*"],
+      "@export/*": ["./src/export/*"]
     }
   },
   "include": ["src/**/*", "main.cjs", "splash.html"],
