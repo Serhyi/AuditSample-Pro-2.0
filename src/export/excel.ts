@@ -250,15 +250,13 @@ export async function exportToExcel(
       let diffValObj: any = null;
       const targetRowIdx = idx + 2; // header is row 1
       
-      if (!isClientVersion) {
-        if (item.auditedValue !== undefined && item.auditedValue !== '' && item.auditedValue !== null) {
-            auditValNum = Number(item.auditedValue);
-        } else {
-            auditValNum = null; // Blank cell if not audited yet
-        }
-        
-        diffValObj = { formula: `${bookColName}${targetRowIdx}-${auditColName}${targetRowIdx}`, result: item.bookValue - Number(auditValNum || 0) };
+      if (item.auditedValue !== undefined && item.auditedValue !== '' && item.auditedValue !== null) {
+          auditValNum = Number(item.auditedValue);
+      } else {
+          auditValNum = null; // Blank cell if not audited yet
       }
+      
+      diffValObj = { formula: `IF(ISBLANK(${auditColName}${targetRowIdx}), "", ${bookColName}${targetRowIdx}-${auditColName}${targetRowIdx})` };
 
       rowData.push(
         item.bookValue,
@@ -336,22 +334,7 @@ export async function exportToExcel(
     sheet.views = [{ state: 'frozen', ySplit: 1 }];
   }
 
-  if (!isClientVersion) {
-    const metadataSheet = workbook.addWorksheet('_metadata', { state: 'hidden' });
-    let metaString = '';
-    try {
-        metaString = JSON.stringify(fullState);
-    } catch (e) {
-        console.warn("State too large to stringify, omitting population from metadata", e);
-        const stateWithoutPop = { ...fullState, population: [] };
-        metaString = JSON.stringify(stateWithoutPop);
-    }
-    
-    const chunkSize = 30000;
-    for (let i = 0; i < metaString.length; i += chunkSize) {
-      metadataSheet.addRow([metaString.slice(i, i + chunkSize)]);
-    }
-  }
+  // Removed _metadata sheet as it's no longer used for project state loading (now using .audsmpl)
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer as any], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });

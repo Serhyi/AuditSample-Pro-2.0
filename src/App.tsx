@@ -97,7 +97,8 @@ const App: React.FC = () => {
     }
 
     try {
-        const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+        const isHuge = projectData.population && projectData.population.length > 50000;
+        const blob = new Blob([isHuge ? JSON.stringify(projectData) : JSON.stringify(projectData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -160,155 +161,29 @@ const App: React.FC = () => {
             return;
         }
         
-        if (file.name.endsWith('.xlsx')) {
-            const workbook = new ExcelJS.Workbook();
-            workbook.xlsx.load(content as ArrayBuffer).then(async () => {
-                const metadataSheet = workbook.getWorksheet('_metadata');
-                
-                if (metadataSheet) {
-                    let jsonString = '';
-                    metadataSheet.eachRow((row) => {
-                        const cell = row.getCell(1);
-                        if (cell && cell.value) {
-                            jsonString += String(cell.value);
-                        }
-                    });
-                    
-                    try {
-                        const metadata = JSON.parse(jsonString);
-                        if (metadata.version && Array.isArray(metadata.population)) {
-                           const parseAmount = (rawAmt: any): number => {
-                               if (typeof rawAmt === 'number') return rawAmt;
-                               if (rawAmt === null || rawAmt === undefined) return NaN;
-                               let str = String(rawAmt).trim();
-                               if (str === '') return NaN;
-                               if (str.startsWith('(') && str.endsWith(')')) str = '-' + str.slice(1, -1);
-                               const cleanStr = str.replace(/[\s\u00A0\u200B$€£₴]/g, ''); 
-                               if (cleanStr.includes(',') && !cleanStr.includes('.')) return parseFloat(cleanStr.replace(',', '.'));
-                               if (cleanStr.includes(',') && cleanStr.includes('.')) {
-                                   const lastDot = cleanStr.lastIndexOf('.');
-                                   const lastComma = cleanStr.lastIndexOf(',');
-                                   if (lastComma > lastDot) return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.'));
-                                   else return parseFloat(cleanStr.replace(/,/g, ''));
-                               }
-                               return parseFloat(cleanStr);
-                           };
-
-                           const updateItemsFromSheet = (items: any[], sheetNameEn: string, sheetNameUa: string) => {
-                               const sheet = workbook.getWorksheet(sheetNameEn) || workbook.getWorksheet(sheetNameUa);
-                               if (sheet && items && items.length > 0) {
-                                   const data: any[][] = [];
-                                   sheet.eachRow((row) => {
-                                       const rowData: any[] = [];
-                                       row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-                                           rowData[colNumber - 1] = cell.value?.valueOf() ?? null;
-                                       });
-                                       data.push(rowData);
-                                   });
-                                   
-                                   const N = metadata.sourceHeaders.length;
-                                   const idColIdx = metadata.columnIndices.id;
-                                   
-                                   const rowMap = new Map<string, any[][]>();
-                                   for (let i = 1; i < data.length; i++) {
-                                   const row = data[i];
-                                   if (row && row.length > idColIdx) {
-                                       const idVal = String(row[idColIdx]).trim().replace('.0', '');
-                                       if (!rowMap.has(idVal)) rowMap.set(idVal, []);
-                                       rowMap.get(idVal)!.push(row);
-                                   }
-                               }
-
-                               for (let i = 0; i < items.length; i++) {
-                                   const item = items[i];
-                                   const idVal = String(item.id).trim().replace('.0', '');
-                                   let row;
-                                   
-                                   if (rowMap.has(idVal) && rowMap.get(idVal)!.length > 0) {
-                                       row = rowMap.get(idVal)!.shift();
-                                   } else if (data[i + 1]) {
-                                       const fallbackRow = data[i + 1];
-                                       if (fallbackRow && fallbackRow.length > N) {
-                                           const fallbackBookVal = parseAmount(fallbackRow[N]);
-                                           if (!isNaN(fallbackBookVal) && Math.abs(fallbackBookVal - item.bookValue) < 0.01) {
-                                               row = fallbackRow;
-                                           }
-                                       }
-                                   }
-
-                                   if (row) {
-                                       const auditVal = row[N + 1];
-                                       const comments = row[N + 3];
-                                       
-                                       if (auditVal !== undefined && auditVal !== null && auditVal !== '') {
-                                           const parsedAuditVal = parseAmount(auditVal);
-                                           if (!isNaN(parsedAuditVal)) {
-                                               item.auditedValue = parsedAuditVal;
-                                               item.difference = item.bookValue - parsedAuditVal;
-                                           } else {
-                                               item.auditedValue = '';
-                                               item.difference = item.bookValue; // If empty, diff is bookValue
-                                           }
-                                       } else {
-                                           item.auditedValue = '';
-                                           item.difference = item.bookValue; // If empty, diff is bookValue
-                                       }
-                                       
-                                       item.comments = comments !== undefined && comments !== null ? String(comments) : '';
-                                   }
-                               }
-                           }
-                       };
-
-                       if (metadata.results) {
-                           updateItemsFromSheet(metadata.results.samplingItems, 'Sample', 'Вибірка');
-                           if (metadata.results.keyItems) {
-                               updateItemsFromSheet(metadata.results.keyItems, 'Key', 'Ключові');
-                           }
-                       }
-
-                       if (isElectron() && window.api && isVirtual) {
-                           await window.api.query.insertRows('population', metadata.population);
-                           await refreshStats();
-                       } else {
-                           setPopulation(metadata.population);
-                       }
-                       setSourceHeaders(metadata.sourceHeaders || []);
-                       setColumnIndices(metadata.columnIndices || {id: -1, date: -1, amount: -1});
-                       setConfig(metadata.config);
-                       setResults(metadata.results);
-                       if (metadata.settings) updateSettings(metadata.settings);
-                       setCurrentStep(metadata.currentStep || 0);
-                    } else {
-                       setSamplingError(t('errInvalidExcelProject', lang));
-                    }
-                } catch {
-                    setSamplingError(t('errParseExcelMeta', lang));
-                }
-            } else {
-                setSamplingError(t('errNoExcelMeta', lang));
-            }
-        }).catch(() => setSamplingError(t('errLoadExcel', lang)));
-        } else {
-            const data = JSON.parse(content as string);
-            
-            if (data.version && Array.isArray(data.population)) {
-               if (isElectron() && window.api && isVirtual) {
-                   await window.api.query.insertRows('population', data.population);
-                   await refreshStats();
-               } else {
-                   setPopulation(data.population);
-               }
-               setSourceHeaders(data.sourceHeaders || []);
-               setColumnIndices(data.columnIndices || {id: -1, date: -1, amount: -1});
-               setConfig(data.config);
-               setResults(data.results);
-               if (data.settings) updateSettings(data.settings);
-               setCurrentStep(data.currentStep || 0);
-            } else {
-               setSamplingError(t('errInvalidProjectFormat', lang));
-            }
-        }
+          if (file.name.endsWith('.xlsx')) {
+              alert(lang === 'ua' ? 'Файли XLSX з перевіреними даними потрібно імпортувати на кроці "Результати". Проєкти можна завантажити тільки у форматі .audsmpl.' : 'XLSX files with audited data should be imported at the "Results" step. Projects can only be loaded in .audsmpl format.');
+              return;
+          }
+          
+          const data = JSON.parse(content as string);
+          
+          if (data.version && Array.isArray(data.population)) {
+             if (isElectron() && window.api && isVirtual) {
+                 await window.api.query.insertRows('population', data.population);
+                 await refreshStats();
+             } else {
+                 setPopulation(data.population);
+             }
+             setSourceHeaders(data.sourceHeaders || []);
+             setColumnIndices(data.columnIndices || {id: -1, date: -1, amount: -1});
+             setConfig(data.config);
+             setResults(data.results);
+             if (data.settings) updateSettings(data.settings);
+             setCurrentStep(data.currentStep || 0);
+          } else {
+             setSamplingError(t('errInvalidProjectFormat', lang));
+          }
       } catch (err) {
         console.error("Error importing project:", err);
         setSamplingError(t('errReadProject', lang));
@@ -455,7 +330,7 @@ const App: React.FC = () => {
                 </button>
                 <label title={lang === 'ua' ? "Відкрити проєкт" : "Open Project"} className="p-2 text-slate-500 hover:text-brand-600 hover:bg-slate-50 rounded-full transition-all cursor-pointer">
                   <FolderOpen className="w-5 h-5" />
-                  <input type="file" accept=".audsmpl,.xlsx" className="hidden" onChange={importProject} />
+                  <input type="file" accept=".audsmpl" className="hidden" onChange={importProject} />
                 </label>
              </div>
 
