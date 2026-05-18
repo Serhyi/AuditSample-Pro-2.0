@@ -14,9 +14,7 @@ async function runExport() {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const initSqlJs = require('sql.js');
-    const SQL = await initSqlJs({
-      locateFile: (file: string) => require('path').join(__dirname, 'node_modules', 'sql.js', 'dist', file)
-    });
+    const SQL = await initSqlJs();
     const fb = fs.existsSync(dbPath) ? fs.readFileSync(dbPath) : null;
     if (!fb) throw new Error("Database file missing");
     const db = new SQL.Database(fb);

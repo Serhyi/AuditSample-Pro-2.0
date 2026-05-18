@@ -624,7 +624,7 @@ function createWindow() {
       } catch (e) {
         console.error("Failed to maximize or show window", e);
       }
-    }, 2500);
+    }, 50);
   });
 }
 import_electron2.app.whenReady().then(createWindow);

@@ -51,9 +51,7 @@ export class AppOrchestrator {
           // Verify it's an sqlite project file by reading audit_metadata
           const dbPath = filePath;
           const fb = fs.readFileSync(dbPath);
-          const SQL = await initSqlJs({
-            locateFile: (file: string) => require('path').join(__dirname, 'node_modules', 'sql.js', 'dist', file)
-          });
+          const SQL = await initSqlJs();
           const db = new SQL.Database(fb);
           
           const stateJson = await new Promise<any>((resolve, reject) => {
