@@ -39,18 +39,31 @@ var DatabaseService = class {
   dbPath = null;
   SQL = null;
   async initialize(projectId, directory) {
-    this.dbPath = `${directory}/${projectId}.sqlite`;
-    const initSqlJs2 = require("sql.js");
-    this.SQL = await initSqlJs2();
-    if (fs.existsSync(this.dbPath)) {
-      const fb = fs.readFileSync(this.dbPath);
-      this.db = new this.SQL.Database(fb);
-    } else {
-      this.db = new this.SQL.Database();
+    try {
+      this.dbPath = `${directory}/${projectId}.sqlite`;
+      console.log(`[DatabaseService] Initializing dbPath: ${this.dbPath}`);
+      const initSqlJs2 = require("sql.js");
+      console.log(`[DatabaseService] requiring sql.js ...`);
+      this.SQL = await initSqlJs2();
+      console.log(`[DatabaseService] initSqlJs() awaited successfully`);
+      if (fs.existsSync(this.dbPath)) {
+        console.log(`[DatabaseService] db file exists, loading from fs: ${this.dbPath}`);
+        const fb = fs.readFileSync(this.dbPath);
+        this.db = new this.SQL.Database(fb);
+      } else {
+        console.log(`[DatabaseService] db file does NOT exist, creating new db`);
+        this.db = new this.SQL.Database();
+      }
+      console.log(`[DatabaseService] initialized correctly. db object exists? ` + !!this.db);
+    } catch (err) {
+      console.error(`[DatabaseService] Error during initialization!`, err);
+      throw err;
     }
   }
   isInitialized() {
-    return this.db !== null && this.db !== void 0;
+    const isInit = this.db !== null && this.db !== void 0;
+    console.log(`[DatabaseService] isInitialized called -> ${isInit}`);
+    return isInit;
   }
   async query(sql, params = []) {
     if (!this.db) throw new Error("Database not initialized");

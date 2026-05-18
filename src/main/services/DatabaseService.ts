@@ -6,20 +6,33 @@ export class DatabaseService {
   private SQL: any = null;
 
   public async initialize(projectId: string, directory: string): Promise<void> {
-    this.dbPath = `${directory}/${projectId}.sqlite`;
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const initSqlJs = require('sql.js');
-    this.SQL = await initSqlJs();
-    if (fs.existsSync(this.dbPath)) {
-      const fb = fs.readFileSync(this.dbPath);
-      this.db = new this.SQL.Database(fb);
-    } else {
-      this.db = new this.SQL.Database();
+    try {
+      this.dbPath = `${directory}/${projectId}.sqlite`;
+      console.log(`[DatabaseService] Initializing dbPath: ${this.dbPath}`);
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const initSqlJs = require('sql.js');
+      console.log(`[DatabaseService] requiring sql.js ...`);
+      this.SQL = await initSqlJs();
+      console.log(`[DatabaseService] initSqlJs() awaited successfully`);
+      if (fs.existsSync(this.dbPath)) {
+        console.log(`[DatabaseService] db file exists, loading from fs: ${this.dbPath}`);
+        const fb = fs.readFileSync(this.dbPath);
+        this.db = new this.SQL.Database(fb);
+      } else {
+        console.log(`[DatabaseService] db file does NOT exist, creating new db`);
+        this.db = new this.SQL.Database();
+      }
+      console.log(`[DatabaseService] initialized correctly. db object exists? ` + !!this.db);
+    } catch (err: any) {
+      console.error(`[DatabaseService] Error during initialization!`, err);
+      throw err;
     }
   }
 
   public isInitialized(): boolean {
-    return this.db !== null && this.db !== undefined;
+    const isInit = this.db !== null && this.db !== undefined;
+    console.log(`[DatabaseService] isInitialized called -> ${isInit}`);
+    return isInit;
   }
 
   public async query<T>(sql: string, params: any[] = []): Promise<T[]> {

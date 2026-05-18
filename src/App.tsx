@@ -128,6 +128,7 @@ const App: React.FC = () => {
     if (file.name.endsWith('.audsmpl') && isElectron() && window.api) {
         try {
             const rawFilePath = (file as any).path;
+              
             const data = await window.api.import.project(rawFilePath);
             
             await refreshStats();

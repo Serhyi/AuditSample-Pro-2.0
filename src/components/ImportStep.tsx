@@ -195,9 +195,14 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
     setFileError(null);
     
     const isElectron = navigator.userAgent.toLowerCase().indexOf(' electron/') > -1;
-    if (isElectron && window.api && (file as any).path) {
+    let filePathStr = '';
+    if (isElectron && window.api) {
+        filePathStr = (file as any).path || '';
+    }
+
+    if (isElectron && window.api && filePathStr) {
         try {
-            const filePath = (file as any).path;
+            const filePath = filePathStr;
             setCurrentFile(filePath);
             const { data } = await window.api.import.preview(filePath);
             

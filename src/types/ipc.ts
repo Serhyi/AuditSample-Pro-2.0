@@ -25,6 +25,9 @@ export interface SamplingResultMeta {
 }
 
 export interface IpcApi {
+  utils: {
+    getPathForFile: (file: File) => string;
+  };
   import: {
     start: (filePath: string, config: any) => Promise<ImportMeta>;
     preview: (filePath: string) => Promise<{ headers: string[], data: any[][] }>;
