@@ -23,7 +23,7 @@ export class ExportService {
     // if we checkpoint or if the connection is idle.
     await this.db.execute(`CHECKPOINT`);
     
-    // Copy the .duckdb file to the projectPath
+    // Copy the .sqlite file to the projectPath
     fs.copyFileSync(this.db.dbPath, projectPath);
   }
 

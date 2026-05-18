@@ -16,8 +16,7 @@ export class WorkerPool {
       // Since it's esbuild bundled, we can't easily spawn another file unless we also bundle workers.
       // Wait, let's fix path for local development format
       
-      const workerPath = path.join(__dirname, workerFile); 
-      
+      const workerPath = path.join(__dirname, workerFile);
       const worker = new Worker(workerPath, { workerData: data });
 
       worker.on('message', (msg) => {

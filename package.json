@@ -12,8 +12,8 @@
     "dev": "vite",
     "start": "vite",
     "clean": "rimraf dist release coverage",
-    "build:worker": "esbuild src/main/workers/ImportWorker.ts --bundle --platform=node --external:duckdb --external:exceljs --outfile=ImportWorker.js",
-    "build:main": "esbuild src/main/index.ts --bundle --platform=node --external:electron --external:duckdb --outfile=main.cjs",
+    "build:worker": "esbuild src/main/workers/ImportWorker.ts src/main/workers/ExportWorker.ts --bundle --platform=node --external:sql.js --external:exceljs --outdir=.",
+    "build:main": "esbuild src/main/index.ts --bundle --platform=node --external:electron --external:sql.js --outfile=main.cjs",
     "build": "vite build && npm run build:main && npm run build:worker",
     "preview": "vite preview",
     "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
@@ -26,9 +26,8 @@
   },
   "dependencies": {
     "@types/papaparse": "^5.5.2",
+    "apache-arrow": "^21.1.0",
     "clsx": "^2.1.0",
-    "duckdb": "^1.4.4",
-    "duckdb-async": "^1.4.2",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "lucide-react": "^0.561.0",
@@ -36,8 +35,10 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "^2.12.2",
+    "sql.js": "^1.14.1",
     "tailgrids": "^2.1.0",
-    "tailwind-merge": "^2.2.1"
+    "tailwind-merge": "^2.2.1",
+    "web-worker": "^1.5.0"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.4.0",
@@ -74,6 +75,7 @@
     "appId": "com.auditpro.app",
     "productName": "AuditSample Pro",
     "copyright": "Copyright © 2025 Serhii Minin",
+    "asar": false,
     "directories": {
       "output": "release"
     },
@@ -81,7 +83,9 @@
       "dist/**/*",
       "main.cjs",
       "preload.cjs",
-      "splash.html"
+      "splash.html",
+      "ImportWorker.js",
+      "ExportWorker.js"
     ],
     "win": {
       "target": [

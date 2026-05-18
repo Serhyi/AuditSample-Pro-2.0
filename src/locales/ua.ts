@@ -13,6 +13,7 @@ export const ua = {
   dragDropSub: "Підтримуються .XLSX, .XLS та CSV (для великих файлів)",
   importFormatHint: "Таблиця повинна містити стовпці: Номер (1), Сума (2), Дата (3).",
   loadingFile: "Зчитування файлу...",
+  validatingFile: "Валідація даних...",
   validationSuccess: "Валідація успішна",
   popSize: "Обсяг ген. сукупності",
   totalValue: "Загальна сума",

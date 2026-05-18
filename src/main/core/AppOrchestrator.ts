@@ -1,4 +1,10 @@
 import { ipcMain, dialog } from 'electron';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const initSqlJs = require('sql.js');
+
 import { DatabaseService } from '../services/DatabaseService';
 import { ImportService } from '../services/ImportService';
 import { SamplingService } from '../services/SamplingService';
@@ -23,7 +29,15 @@ export class AppOrchestrator {
   public registerIpcHandlers() {
     ipcMain.handle('import:start', async (event, filePath, config) => {
       console.log('IPC import:start received', filePath, config);
-      return await this.importService.importFile(filePath, config);
+      const result = await this.importService.importFile(filePath, config);
+      
+      // Now initialize using the db path created by the worker
+      await this.dbService.close();
+      const directory = path.dirname(result.dbPath);
+      const id = path.basename(result.dbPath, '.sqlite');
+      await this.dbService.initialize(id, directory);
+      
+      return result;
     });
 
     ipcMain.handle('import:preview', async (event, filePath) => {
@@ -34,40 +48,42 @@ export class AppOrchestrator {
       console.log('IPC import:project received', filePath);
       
       try {
-          // Verify it's a duckdb project file by reading audit_metadata
+          // Verify it's an sqlite project file by reading audit_metadata
           const dbPath = filePath;
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const tempDb = require('duckdb');
-          const db = new tempDb.Database(dbPath);
-          const conn = db.connect();
+          const fb = fs.readFileSync(dbPath);
+          const SQL = await initSqlJs();
+          const db = new SQL.Database(fb);
           
           const stateJson = await new Promise<any>((resolve, reject) => {
-              conn.all('SELECT data FROM audit_metadata', (err: any, res: any) => {
-                  if (err) return reject(new Error('Invalid project file (no audit_metadata)'));
-                  if (res && res.length > 0) resolve(res[0].data);
-                  else reject(new Error('Empty audit_metadata'));
-              });
+              try {
+                  const stmt = db.prepare('SELECT data FROM audit_metadata');
+                  if (stmt.step()) {
+                      const row = stmt.getAsObject();
+                      resolve(row.data);
+                  } else {
+                      reject(new Error('Empty audit_metadata'));
+                  }
+                  stmt.free();
+              } catch {
+                  reject(new Error('Invalid project file (no audit_metadata)'));
+              }
           });
           
-          await new Promise<void>(res => db.close(() => res()));
+          db.close();
           
           // Replace current dbPath with imported file essentially by copying it over
           // Wait, the current dbPath is this.dbService.dbPath
           if (!this.dbService.dbPath) {
-              // eslint-disable-next-line @typescript-eslint/no-require-imports
-              await this.dbService.initialize('imported_project', require('os').tmpdir());
+              await this.dbService.initialize('imported_project', os.tmpdir());
           }
           
           // close current DB
           await this.dbService.close();
           // copy the new file over
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          require('fs').copyFileSync(filePath, this.dbService.dbPath!);
+          fs.copyFileSync(filePath, this.dbService.dbPath!);
           // Re-open DB
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const directory = require('path').dirname(this.dbService.dbPath!);
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const id = require('path').basename(this.dbService.dbPath!, '.duckdb');
+          const directory = path.dirname(this.dbService.dbPath!);
+          const id = path.basename(this.dbService.dbPath!, '.sqlite');
           await this.dbService.initialize(id, directory);
           
           const state = JSON.parse(stateJson);

@@ -13,6 +13,7 @@ export const en = {
   dragDropSub: "Supports .XLSX, .XLS and CSV (for large files)",
   importFormatHint: "Input table must strictly contain columns in order: Number (1), Amount (2), Date (3).",
   loadingFile: "Reading file...",
+  validatingFile: "Validating data...",
   validationSuccess: "Validation Successful",
   popSize: "Population Volume",
   totalValue: "Total Recorded Amount",

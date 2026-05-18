@@ -2,7 +2,7 @@ import ExcelJS from 'exceljs';
 import { Language, TransactionItem } from '../types';
 import { t } from '../utils/translations';
 import { formatMoney, methodsSupportingAnomalies, calculateExtrapolation } from '../utils/samplingEngine';
-import { METHOD_PREFIX_MAP, getStaticFormula, getCalculationDetails } from '../components/resultsUtils';
+import { METHOD_PREFIX_MAP, getStaticFormula, getCalculationDetails, getDynamicMethodName, getDynamicMethodDescription } from '../components/resultsUtils';
 
 export async function exportToExcel(
   fullState: any,
@@ -52,9 +52,9 @@ export async function exportToExcel(
     // Method
     addSectionHeader(isUa ? 'Метод відбору' : 'Sampling Method', colorDarkBlue);
     const mPrefix = METHOD_PREFIX_MAP[config.method] || config.method.toLowerCase();
-    addDetailRow(isUa ? 'Метод:' : 'Method:', t(mPrefix + 'Name', lang));
+    addDetailRow(isUa ? 'Метод:' : 'Method:', getDynamicMethodName(config, lang));
     addDetailRow(isUa ? 'Ціль застосування:' : 'Purpose:', t(mPrefix + 'PurposeText', lang));
-    addDetailRow(isUa ? 'Опис методу:' : 'Description:', t(mPrefix + 'EvaluationText', lang));
+    addDetailRow(isUa ? 'Опис методу:' : 'Description:', getDynamicMethodDescription(config, lang));
 
     sheet.addRow([]);
 

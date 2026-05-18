@@ -57,8 +57,7 @@ import { calculateExtrapolation, formatMoney, formatDate, smartFormat, methodsSu
 import { Upload, Download, CheckCircle2, AlertCircle, ShieldCheck, BookOpen, Sigma, PlayCircle, StopCircle, Calculator, Database, Info, Layers, Target } from 'lucide-react';
 import { t } from '../utils/translations';
 import { exportToExcel } from '../export/excel';
-import { exportToCSV } from '../export/csv';
-import { getCalculationDetails, getStaticFormula, METHOD_PREFIX_MAP } from './resultsUtils';
+import { getCalculationDetails, getStaticFormula, METHOD_PREFIX_MAP, getDynamicMethodName, getDynamicMethodDescription } from './resultsUtils';
 
 interface ResultsStepProps {
   results: SamplingResult;
@@ -374,7 +373,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
             </h3>
 
             <Section title={t('methodUsed', lang)}>
-                <div className="text-brand-900 font-bold text-[14px] mb-2">{t(mPrefix + 'Name', lang)}</div>
+                <div className="text-brand-900 font-bold text-[14px] mb-2">{getDynamicMethodName(config, lang)}</div>
                 <DistributionGraphic items={currentResults.samplingItems} keys={currentResults.keyItems} />
             </Section>
 
@@ -383,7 +382,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
             </Section>
 
             <Section title={t('mnDescription', lang)} icon={Info}>
-                {t(mPrefix + 'EvaluationText', lang)}
+                {getDynamicMethodDescription(config, lang)}
             </Section>
 
             <Section title={t('tabKey', lang)} icon={Layers}>
@@ -432,7 +431,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                     <div className="space-y-1">
                         <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('mnFormula', lang)}</div>
                         <div className="font-mono text-[11px] text-brand-700 bg-brand-50/50 p-3 rounded-xl border border-brand-100/50 text-center shadow-inner italic">
-                          {getStaticFormula(config.method)}
+                          {getStaticFormula(config.method, lang)}
                         </div>
                     </div>
                     <div className="space-y-1">

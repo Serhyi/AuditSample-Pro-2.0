@@ -100,6 +100,7 @@ const detectTableStructure = (rawData: any[][]): { startRow: number, indices: Co
 const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, lang, currency, setCurrency, settings }) => {
   const [dragActive, setDragActive] = useState(false);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
+  const [loadingStage, setLoadingStage] = useState<'reading' | 'validating'>('reading');
   const [fileError, setFileError] = useState<string | null>(null);
   
   const [rawData, setRawData] = useState<any[][]>([]);
@@ -159,6 +160,7 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
       if (rawData.length === 0 || !workerRef.current) return;
 
       setIsLoadingFile(true);
+      setLoadingStage('validating');
       setValidation(null);
 
       const timer = setTimeout(() => {
@@ -187,6 +189,7 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
 
   const handleFile = async (file: File) => {
     setIsLoadingFile(true);
+    setLoadingStage('reading');
     setValidation(null);
     setRawData([]);
     setFileError(null);
@@ -363,7 +366,7 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
             {isLoadingFile ? (
               <div className="flex flex-col items-center gap-4">
                 <Loader2 className="w-14 h-14 text-brand-600 animate-spin" />
-                <span className="text-[11px] font-black text-brand-600 uppercase tracking-widest">{t('loadingFile', lang)}</span>
+                <span className="text-[11px] font-black text-brand-600 uppercase tracking-widest">{loadingStage === 'reading' ? t('loadingFile', lang) : t('validatingFile', lang)}</span>
               </div>
             ) : (
               <>

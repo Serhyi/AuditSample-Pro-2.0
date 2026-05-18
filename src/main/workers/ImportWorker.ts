@@ -49,59 +49,74 @@ async function startTask() {
       parentPort?.postMessage({ type: 'progress', pct: 50, stage: 'Importing via DuckDB...' });
       
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const duckdb = require('duckdb');
-      const db = new duckdb.Database(dbPath);
-      const con = db.connect();
+      const initSqlJs = require('sql.js');
+      const SQL = await initSqlJs();
+      const fb = fs.existsSync(dbPath) ? fs.readFileSync(dbPath) : null;
+      const db = fb ? new SQL.Database(fb) : new SQL.Database();
       
-      // Load raw into temp, then insert into population mapped
-      con.exec(`
-        CREATE TEMPORARY TABLE temp_raw AS SELECT * FROM read_csv_auto('${filePath.replace(/\\/g, '/')}');
-      `, (err: any) => {
-         if (err) {
-            db.close();
-            parentPort?.postMessage({ type: 'error', error: err.message });
-            return;
-         }
-         parentPort?.postMessage({ type: 'progress', pct: 75, stage: 'Mapping columns...' });
-         
-         con.all(`PRAGMA table_info('temp_raw')`, (infoErr: any, columns: any[]) => {
-            if (infoErr) {
-               db.close();
-               parentPort?.postMessage({ type: 'error', error: infoErr.message });
-               return;
-            }
-            const keys = columns.map(c => c.name);
-            const idKey = keys[activeIndices.id] ? `"${keys[activeIndices.id]}"` : "NULL::VARCHAR";
-            const dateKey = keys[activeIndices.date] ? `"${keys[activeIndices.date]}"` : "NULL::VARCHAR";
-            const amtKey = keys[activeIndices.amount] ? `"${keys[activeIndices.amount]}"` : "0::DOUBLE";
-
-            const insertQuery = `
-              INSERT INTO population (id, date, amount, bookValue, difference)
-              SELECT 
-                CAST(${idKey} AS VARCHAR), 
-                CAST(${dateKey} AS VARCHAR), 
-                TRY_CAST(${amtKey} AS DOUBLE), 
-                TRY_CAST(${amtKey} AS DOUBLE), 
-                TRY_CAST(${amtKey} AS DOUBLE)
-              FROM temp_raw
-              OFFSET ${startRow - 1}
-            `;
-
-            con.exec(insertQuery, (insertErr: any) => {
-               if (insertErr) {
-                   db.close();
-                   parentPort?.postMessage({ type: 'error', error: insertErr.message });
-                   return;
-               }
-
-               con.all('SELECT COUNT(*) as cnt FROM population', (countErr: any, rows: any[]) => {
-                   db.close();
-                   parentPort?.postMessage({ type: 'progress', pct: 100, stage: 'Complete' });
-                   parentPort?.postMessage({ type: 'done', rowCount: rows[0].cnt, columns: keys });
-               });
-            });
-         });
+      parentPort?.postMessage({ type: 'progress', pct: 60, stage: 'Creating schema...' });
+      
+      try {
+        db.run(`
+          DROP TABLE IF EXISTS population;
+          CREATE TABLE population (
+            id VARCHAR,
+            date VARCHAR,
+            amount DOUBLE,
+            bookValue DOUBLE,
+            auditedValue DOUBLE,
+            difference DOUBLE
+          );
+        `);
+      } catch (createErr: any) {
+          parentPort?.postMessage({ type: 'error', error: createErr.message });
+          return;
+      }
+      
+      parentPort?.postMessage({ type: 'progress', pct: 75, stage: 'Loading JSON/CSV...' });
+      
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const Papa = require('papaparse');
+      const fileText = fs.readFileSync(filePath, 'utf-8');
+      
+      const parsed = Papa.parse(fileText, {
+          header: true,
+          skipEmptyLines: true
       });
+      
+      const rows = parsed.data;
+      const keys = parsed.meta.fields || [];
+      const idKey = keys[activeIndices.id] || null;
+      const dateKey = keys[activeIndices.date] || null;
+      const amtKey = keys[activeIndices.amount] || null;
+
+      const stmt = db.prepare('INSERT INTO population (id, date, amount, bookValue, difference) VALUES (?, ?, ?, ?, ?)');
+      
+      let inserted = 0;
+      for (let i = startRow - 1; i < rows.length; i++) {
+         const row = rows[i];
+         const idv = idKey ? row[idKey] : "";
+         const dtv = dateKey ? row[dateKey] : "";
+         const amtRaw = amtKey ? row[amtKey] : 0;
+         
+         const amountVal = parseFloat(amtRaw) || 0;
+         
+         stmt.run([idv, dtv, amountVal, amountVal, amountVal]);
+         inserted++;
+         
+         if (inserted % 10000 === 0) {
+             parentPort?.postMessage({ type: 'progress', pct: Math.min(90, 75 + (inserted / rows.length * 15)), stage: `Parsing ${inserted} rows...` });
+         }
+      }
+      
+      stmt.free();
+      
+      const data = db.export();
+      fs.writeFileSync(dbPath, Buffer.from(data));
+      db.close();
+
+      parentPort?.postMessage({ type: 'progress', pct: 100, stage: 'Complete' });
+      parentPort?.postMessage({ type: 'done', rowCount: inserted, columns: keys });
 
     } else if (filePath.endsWith('.xlsx')) {
        // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -112,11 +127,24 @@ async function startTask() {
        });
        
        // eslint-disable-next-line @typescript-eslint/no-require-imports
-       const duckdb = require('duckdb');
-       const db = new duckdb.Database(dbPath);
-       const con = db.connect();
+       const initSqlJs = require('sql.js');
+       const SQL = await initSqlJs();
+       const fb = fs.existsSync(dbPath) ? fs.readFileSync(dbPath) : null;
+       const db = fb ? new SQL.Database(fb) : new SQL.Database();
        
-       const stmt = con.prepare('INSERT INTO population (id, date, amount, bookValue, difference) VALUES (?, ?, ?, ?, ?)');
+       db.run(`
+         DROP TABLE IF EXISTS population;
+         CREATE TABLE population (
+           id VARCHAR,
+           date VARCHAR,
+           amount DOUBLE,
+           bookValue DOUBLE,
+           auditedValue DOUBLE,
+           difference DOUBLE
+         );
+       `);
+       
+       const stmt = db.prepare('INSERT INTO population (id, date, amount, bookValue, difference) VALUES (?, ?, ?, ?, ?)');
        
        let parseCount = 0;
        
@@ -136,7 +164,7 @@ async function startTask() {
                    const dateVal = String(typeof dt === 'object' && dt !== null && 'text' in dt ? dt.text : (dt || ''));
                    const amountVal = parseFloat(typeof amtRaw === 'object' && amtRaw !== null && 'text' in amtRaw ? amtRaw.text : amtRaw) || 0;
                    
-                   stmt.run(idVal, dateVal, amountVal, amountVal, amountVal);
+                   stmt.run([idVal, dateVal, amountVal, amountVal, amountVal]);
                }
                
                if (parseCount % 10000 === 0) {
@@ -145,7 +173,9 @@ async function startTask() {
            }
        }
        
-       stmt.finalize();
+       stmt.free();
+       const data = db.export();
+       fs.writeFileSync(dbPath, Buffer.from(data));
        db.close();
        
        parentPort?.postMessage({ type: 'progress', pct: 100, stage: 'Complete' });

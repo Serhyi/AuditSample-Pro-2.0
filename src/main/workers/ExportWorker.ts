@@ -1,6 +1,6 @@
 import { parentPort, workerData } from 'worker_threads';
 import * as ExcelJS from 'exceljs';
-import * as duckdb from 'duckdb';
+import * as fs from 'fs';
 
 async function runExport() {
   const { dbPath, excelPath, results } = workerData;
@@ -12,8 +12,12 @@ async function runExport() {
   });
 
   try {
-    const db = new duckdb.Database(dbPath);
-    const connection = db.connect();
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const initSqlJs = require('sql.js');
+    const SQL = await initSqlJs();
+    const fb = fs.existsSync(dbPath) ? fs.readFileSync(dbPath) : null;
+    if (!fb) throw new Error("Database file missing");
+    const db = new SQL.Database(fb);
 
     parentPort?.postMessage({ type: 'progress', pct: 10, stage: 'Writing sumary...' });
 
@@ -26,32 +30,30 @@ async function runExport() {
     summarySheet.commit();
 
     // Stream results or population from DB
-    // To do this, we stream records from duckdb
     parentPort?.postMessage({ type: 'progress', pct: 30, stage: 'Exporting records...' });
     
-    // (A real implementation would iterate using duckdb stream)
     const dataSheet = workbook.addWorksheet('Data');
     dataSheet.addRow(['ID', 'Date', 'Amount', 'Book Value', 'Audited Value', 'Difference']);
 
-    // Use connection.each for row-by-row streaming to bypass memory limits
     let count = 0;
     
-    connection.each("SELECT * FROM population", (err, row: any) => {
-        if (err) throw err;
+    const stmt = db.prepare('SELECT * FROM population');
+    while (stmt.step()) {
+        const row = stmt.getAsObject();
         dataSheet.addRow([row.id, row.date, row.amount, row.bookValue, row.auditedValue, row.difference]).commit();
         count++;
         if (count % 10000 === 0) {
             parentPort?.postMessage({ type: 'progress', pct: 30 + Math.min(60, Math.floor((count / 100000) * 60)), stage: `Exporting rows... ${count}` });
         }
-    }, (err) => {
-        if (err) throw err;
-        dataSheet.commit();
-        workbook.commit().then(() => {
-            parentPort?.postMessage({ type: 'progress', pct: 100, stage: 'Complete' });
-            parentPort?.postMessage({ type: 'done' });
-        });
-    });
+    }
+    stmt.free();
+    db.close();
 
+    dataSheet.commit();
+    await workbook.commit();
+    
+    parentPort?.postMessage({ type: 'progress', pct: 100, stage: 'Complete' });
+    parentPort?.postMessage({ type: 'done' });
   } catch (error) {
     if (error instanceof Error) {
         parentPort?.postMessage({ type: 'error', message: error.message });

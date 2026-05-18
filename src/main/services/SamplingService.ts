@@ -4,7 +4,10 @@ export class SamplingService {
   constructor(private db: DatabaseService) {}
 
   public async runSampling(config: any): Promise<any> {
-    console.log('SamplingService executing SQL-based sampling via DuckDB...', config.method);
+    if (!this.db || !this.db.isInitialized()) {
+      throw new Error('Database not initialized. Please import population data or load a project first.');
+    }
+    console.log('SamplingService executing SQL-based sampling via SQLite...', config.method);
 
     // 1. Get total population size and value
     const popAgg: any[] = await this.db.query(`SELECT COUNT(*) as cnt, SUM(ABS(amount)) as val FROM population`);
@@ -62,14 +65,14 @@ export class SamplingService {
         
         const riskQueryConds = [];
         if (includeWeekend) {
-            riskQueryConds.push(`DAYOFWEEK(CAST(date AS DATE)) IN (0, 6)`);
+            riskQueryConds.push(`CAST(strftime('%w', date) AS INTEGER) IN (0, 6)`);
         }
         if (includeHoliday) {
-            riskQueryConds.push(`strftime(CAST(date AS DATE), '%m-%d') IN ('01-01', '03-08', '05-01', '05-08', '05-09', '06-28', '08-24', '10-01', '12-25')`);
+            riskQueryConds.push(`strftime('%m-%d', date) IN ('01-01', '03-08', '05-01', '05-08', '05-09', '06-28', '08-24', '10-01', '12-25')`);
         }
         if (closingDays > 0) {
-            // DuckDB last_day works for end of month
-            riskQueryConds.push(`date_diff('day', CAST(date AS DATE), last_day(CAST(date AS DATE))) <= ${closingDays}`);
+            // SQLite last_day logic using start of next month - 1 day
+            riskQueryConds.push(`(julianday(date(date, 'start of month', '+1 month', '-1 day')) - julianday(date)) <= ${closingDays}`);
         }
         
         const riskWhereStr = riskQueryConds.length > 0 ? `(${riskQueryConds.join(' OR ')})` : 'FALSE';
@@ -116,6 +119,92 @@ export class SamplingService {
             });
         }
         
+    } else if (config.method === 'Pareto') {
+        const targetPercent = (config.paretoCoverage || 80) / 100;
+        const targetValue = remPopValue * targetPercent;
+        
+        const paretoItemsQuery = `
+          SELECT * FROM population 
+          WHERE ABS(amount) < ? AND ABS(amount) >= ?
+          ORDER BY ABS(amount) DESC
+        `;
+        const allItems: any[] = await this.db.query(paretoItemsQuery, [tm > 0 ? tm : 999999999999, ctt]);
+        
+        let currentSum = 0;
+        for (const item of allItems) {
+            if (currentSum >= targetValue) break;
+            currentSum += Math.abs(item.amount);
+            sampleItems.push({
+                ...item,
+                bookValue: item.amount,
+                auditedValue: '',
+                difference: item.amount,
+                tainting: 1,
+                isSampled: true,
+                selectionReason: 'Pareto (Top 80%)'
+            });
+            if (sampleItems.length >= 5000) break;
+        }
+
+    } else if (config.method === 'Percentile') {
+        const percent = config.percentileCount || 5;
+        const limitCount = Math.max(1, Math.ceil((popSize * percent) / 100)); // from each tail
+        
+        const topQuery = `SELECT * FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY amount DESC LIMIT ?`;
+        const bottomQuery = `SELECT * FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY amount ASC LIMIT ?`;
+        
+        const topItems: any[] = await this.db.query(topQuery, [tm > 0 ? tm : 999999999999, ctt, limitCount]);
+        const bottomItems: any[] = await this.db.query(bottomQuery, [tm > 0 ? tm : 999999999999, ctt, limitCount]);
+        
+        const combined = [...topItems, ...bottomItems];
+        // Deduplicate
+        const uniqueSet = new Set();
+        for (const item of combined) {
+            if (!uniqueSet.has(item.id)) {
+                uniqueSet.add(item.id);
+                sampleItems.push({
+                    ...item,
+                    bookValue: item.amount,
+                    auditedValue: '',
+                    difference: item.amount,
+                    tainting: 1,
+                    isSampled: true,
+                    selectionReason: 'Percentile Tail'
+                });
+            }
+        }
+        
+    } else if (config.method === 'Benford') {
+        const benfordCount = config.benfordSampleSize || 50;
+        const query = `
+          SELECT * FROM population 
+          WHERE ABS(amount) < ? AND ABS(amount) >= ?
+          ORDER BY random() 
+          LIMIT ?
+        `;
+        const items: any[] = await this.db.query(query, [tm > 0 ? tm : 999999999999, ctt, benfordCount]);
+        sampleItems = items.map(item => ({
+            ...item,
+            bookValue: item.amount,
+            auditedValue: '',
+            difference: item.amount,
+            tainting: 1,
+            isSampled: true,
+            selectionReason: 'Benford Review'
+        }));
+
+    } else if (config.method === 'Grubbs') {
+        const grubbsItems: any[] = await this.db.query(`SELECT * FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY ABS(amount) DESC LIMIT 15`, [tm > 0 ? tm : 999999999999, ctt]);
+        sampleItems = grubbsItems.map(item => ({
+            ...item,
+            bookValue: item.amount,
+            auditedValue: '',
+            difference: item.amount,
+            tainting: 1,
+            isSampled: true,
+            selectionReason: 'Grubbs Outlier'
+        }));
+
     } else {
         let sampleSize = 10;
         if (config.method === 'MUS') {

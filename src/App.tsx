@@ -5,7 +5,6 @@ import ImportStep from './components/ImportStep';
 import ConfigStep from './components/ConfigStep';
 import ResultsStep from './components/ResultsStep';
 import { TransactionItem, SamplingConfig, SamplingResult, Currency, ColumnIndices, GlobalSettings } from './types';
-import ExcelJS from 'exceljs';
 import { runSampling } from './utils/samplingEngine';
 import { t } from './utils/translations';
 import { useAppStorage } from './contexts/StorageContext';
@@ -68,11 +67,16 @@ const App: React.FC = () => {
   });
   const [results, setResults] = useState<SamplingResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [samplingError, setSamplingError] = useState<string | null>(null);
 
   const steps = [t('step1', lang), t('step2', lang), t('step3', lang)];
 
   const exportProject = async () => {
+    setIsSaving(true);
+    // Allow UI to render the spinner before blocking
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
     const projectData = {
       version: "2.0",
       timestamp: Date.now(),
@@ -93,6 +97,7 @@ const App: React.FC = () => {
             console.error(e);
             alert((lang === 'ua' ? 'Помилка збереження: ' : 'Export error: ') + e.message);
         }
+        setIsSaving(false);
         return;
     }
 
@@ -110,6 +115,8 @@ const App: React.FC = () => {
     } catch (e: any) {
         console.error(e);
         alert((lang === 'ua' ? 'Помилка збереження: ' : 'Export error: ') + e.message);
+    } finally {
+        setIsSaving(false);
     }
   };
 
@@ -117,7 +124,7 @@ const App: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // Electron optimized path for DuckDB .audsmpl
+    // Electron optimized path for SQLite .audsmpl
     if (file.name.endsWith('.audsmpl') && isElectron() && window.api) {
         try {
             const rawFilePath = (file as any).path;
@@ -155,8 +162,8 @@ const App: React.FC = () => {
                 if (data.settings) updateSettings(data.settings);
                 setCurrentStep(data.currentStep || 0);
                 alert(lang === 'ua' ? 'Проєкт успішно відкрито!' : 'Project opened successfully!');
-            } catch (err) {
-                alert(lang === 'ua' ? 'Помилка: файл .audsmpl є базою даних DuckDB, і його потрібно відкривати в десктопній версії програми.' : 'Error: .audsmpl file is a DuckDB database and must be opened in the desktop application.');
+            } catch {
+                alert(lang === 'ua' ? 'Помилка: файл .audsmpl є базою даних SQLite, і його потрібно відкривати в десктопній версії програми.' : 'Error: .audsmpl file is a SQLite database and must be opened in the desktop application.');
             }
             return;
         }
@@ -243,10 +250,13 @@ const App: React.FC = () => {
   const handleRunSampling = async () => {
     setIsProcessing(true);
     setSamplingError(null);
+    // Allow UI to render the spinner before blocking
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
     try {
         let res;
         if (isElectron() && window.api && isVirtual) {
-            console.log('Dispatching sampling to DuckDB engine via IPC');
+            console.log('Dispatching sampling to SQLite engine via IPC');
             res = await window.api.sampling.execute(config);
         } else {
             console.log('Running sampling in browser memory');
@@ -325,8 +335,8 @@ const App: React.FC = () => {
              </div>
              
              <div className="flex items-center gap-2 mr-2 border-r border-slate-200 pr-4">
-                <button onClick={exportProject} title={lang === 'ua' ? "Зберегти проєкт" : "Save Project"} className="p-2 text-slate-500 hover:text-brand-600 hover:bg-slate-50 rounded-full transition-all">
-                  <Save className="w-5 h-5" />
+                <button onClick={exportProject} disabled={isSaving} title={lang === 'ua' ? "Зберегти проєкт" : "Save Project"} className="p-2 text-slate-500 hover:text-brand-600 hover:bg-slate-50 rounded-full transition-all disabled:opacity-50">
+                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                 </button>
                 <label title={lang === 'ua' ? "Відкрити проєкт" : "Open Project"} className="p-2 text-slate-500 hover:text-brand-600 hover:bg-slate-50 rounded-full transition-all cursor-pointer">
                   <FolderOpen className="w-5 h-5" />
@@ -408,7 +418,9 @@ const App: React.FC = () => {
                 />
                 <div className="flex justify-between">
                      <button onClick={() => setCurrentStep(0)} className="text-brand-600 bg-white border border-brand-200 hover:bg-brand-50 px-10 py-3.5 rounded-xl text-sm font-bold transition-all shadow-sm">{t('back', lang)}</button>
-                    <button onClick={handleRunSampling} disabled={isProcessing} className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-12 py-3.5 rounded-xl text-sm font-bold transition-all shadow-[0_4px_12px_rgba(0,133,75,0.25)] disabled:opacity-70">{isProcessing ? t('processing', lang) : t('run', lang)}</button>
+                    <button onClick={handleRunSampling} disabled={isProcessing} className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-12 py-3.5 rounded-xl text-sm font-bold transition-all shadow-[0_4px_12px_rgba(0,133,75,0.25)] disabled:opacity-70">
+                      {isProcessing ? <><Loader2 className="w-5 h-5 animate-spin" /> {t('processing', lang)}</> : t('run', lang)}
+                    </button>
                 </div>
             </div>
           )}
