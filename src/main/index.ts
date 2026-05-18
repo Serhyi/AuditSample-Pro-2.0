@@ -51,9 +51,13 @@ function createWindow() {
         splash.close();
         splash = null;
       }
-      win.maximize(); // Optional: open in max mode
-      win.show();
-    }, 1500);
+      try {
+        win.maximize(); // Optional: open in max mode
+        win.show();
+      } catch (e) {
+        console.error('Failed to maximize or show window', e);
+      }
+    }, 50); // fast splash screen duration
   });
 }
 

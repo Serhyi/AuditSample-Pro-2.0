@@ -225,6 +225,7 @@ const App: React.FC = () => {
 
   const handleContinueFromImport = async () => {
       setIsProcessing(true);
+      setSamplingError(null);
       try {
           if (isElectron() && currentFilePath && window.api) {
               await window.api.import.start(currentFilePath, { 
@@ -234,8 +235,9 @@ const App: React.FC = () => {
               await refreshStats();
           }
           setCurrentStep(1);
-      } catch (e) {
+      } catch (e: any) {
           console.error(e);
+          setSamplingError('Import failed: ' + e.message);
       } finally {
           setIsProcessing(false);
       }

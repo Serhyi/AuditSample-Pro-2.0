@@ -9,7 +9,9 @@ export class DatabaseService {
     this.dbPath = `${directory}/${projectId}.sqlite`;
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const initSqlJs = require('sql.js');
-    this.SQL = await initSqlJs();
+    this.SQL = await initSqlJs({
+      locateFile: (file: string) => require('path').join(__dirname, 'node_modules', 'sql.js', 'dist', file)
+    });
     if (fs.existsSync(this.dbPath)) {
       const fb = fs.readFileSync(this.dbPath);
       this.db = new this.SQL.Database(fb);

@@ -24,68 +24,71 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 
 // src/main/index.ts
 var import_electron2 = require("electron");
-var path4 = __toESM(require("path"), 1);
+var path5 = __toESM(require("path"), 1);
 
 // src/main/core/AppOrchestrator.ts
 var import_electron = require("electron");
+var path4 = __toESM(require("path"), 1);
+var fs3 = __toESM(require("fs"), 1);
+var os2 = __toESM(require("os"), 1);
 
 // src/main/services/DatabaseService.ts
-var duckdb = __toESM(require("duckdb"), 1);
-var path = __toESM(require("path"), 1);
+var fs = __toESM(require("fs"), 1);
 var DatabaseService = class {
   db = null;
-  connection = null;
   dbPath = null;
+  SQL = null;
   async initialize(projectId, directory) {
-    this.dbPath = path.join(directory, `${projectId}.duckdb`);
-    return new Promise((resolve, reject) => {
-      this.db = new duckdb.Database(this.dbPath, (err) => {
-        if (err) return reject(err);
-        this.connection = this.db.connect();
-        this.execute("PRAGMA memory_limit='1GB'");
-        this.execute("PRAGMA threads=4");
-        resolve();
-      });
-    });
+    this.dbPath = `${directory}/${projectId}.sqlite`;
+    const initSqlJs2 = require("sql.js");
+    this.SQL = await initSqlJs2();
+    if (fs.existsSync(this.dbPath)) {
+      const fb = fs.readFileSync(this.dbPath);
+      this.db = new this.SQL.Database(fb);
+    } else {
+      this.db = new this.SQL.Database();
+    }
+  }
+  isInitialized() {
+    return this.db !== null && this.db !== void 0;
   }
   async query(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      if (!this.connection) return reject(new Error("Database not initialized"));
-      const stmt = this.connection.prepare(sql);
-      stmt.all(...params, (err, res) => {
-        if (err) reject(err);
-        else resolve(res);
-      });
-    });
+    if (!this.db) throw new Error("Database not initialized");
+    const stmt = this.db.prepare(sql);
+    stmt.bind(params);
+    const results = [];
+    while (stmt.step()) {
+      results.push(stmt.getAsObject());
+    }
+    stmt.free();
+    return results;
   }
   async execute(sql) {
-    return new Promise((resolve, reject) => {
-      if (!this.connection) return reject(new Error("Database not initialized"));
-      this.connection.exec(sql, (err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
+    if (!this.db) throw new Error("Database not initialized");
+    if (sql.trim().toUpperCase() === "CHECKPOINT") {
+      if (this.dbPath) {
+        const data = this.db.export();
+        fs.writeFileSync(this.dbPath, Buffer.from(data));
+      }
+      return;
+    }
+    this.db.run(sql);
   }
   async close() {
-    return new Promise((resolve, reject) => {
-      if (this.db) {
-        this.db.close((err) => {
-          if (err) reject(err);
-          else {
-            this.db = null;
-            this.connection = null;
-            resolve();
-          }
-        });
-      } else {
-        resolve();
+    if (this.db) {
+      if (this.dbPath) {
+        const data = this.db.export();
+        fs.writeFileSync(this.dbPath, Buffer.from(data));
       }
-    });
+      this.db.close();
+      this.db = null;
+    }
   }
 };
 
 // src/main/services/ImportService.ts
+var os = __toESM(require("os"), 1);
+var path = __toESM(require("path"), 1);
 var ImportService = class {
   constructor(db, workerPool) {
     this.db = db;
@@ -95,24 +98,14 @@ var ImportService = class {
   workerPool;
   async importFile(filePath, config) {
     console.log("ImportService starting worker for", filePath);
-    await this.db.execute(`DROP TABLE IF EXISTS population`);
-    await this.db.execute(`
-      CREATE TABLE population (
-        id VARCHAR,
-        date VARCHAR,
-        amount DOUBLE,
-        bookValue DOUBLE,
-        auditedValue DOUBLE,
-        difference DOUBLE
-      )
-    `);
+    const dbPath = path.join(os.tmpdir(), `project_${Date.now()}.sqlite`);
     const result = await this.workerPool.runTask("ImportWorker.js", {
       filePath,
       config,
-      dbPath: "temp_project.duckdb",
+      dbPath,
       mode: "import"
     });
-    return result;
+    return { ...result, dbPath };
   }
   async previewFile(filePath) {
     console.log("ImportService starting preview worker for", filePath);
@@ -130,7 +123,10 @@ var SamplingService = class {
   }
   db;
   async runSampling(config) {
-    console.log("SamplingService executing SQL-based sampling via DuckDB...", config.method);
+    if (!this.db || !this.db.isInitialized()) {
+      throw new Error("Database not initialized. Please import population data or load a project first.");
+    }
+    console.log("SamplingService executing SQL-based sampling via SQLite...", config.method);
     const popAgg = await this.db.query(`SELECT COUNT(*) as cnt, SUM(ABS(amount)) as val FROM population`);
     const popSize = popAgg[0]?.cnt || 0;
     const popValue = popAgg[0]?.val || 0;
@@ -175,13 +171,13 @@ var SamplingService = class {
       const includeHoliday = config.riskHoliday !== false;
       const riskQueryConds = [];
       if (includeWeekend) {
-        riskQueryConds.push(`DAYOFWEEK(CAST(date AS DATE)) IN (0, 6)`);
+        riskQueryConds.push(`CAST(strftime('%w', date) AS INTEGER) IN (0, 6)`);
       }
       if (includeHoliday) {
-        riskQueryConds.push(`strftime(CAST(date AS DATE), '%m-%d') IN ('01-01', '03-08', '05-01', '05-08', '05-09', '06-28', '08-24', '10-01', '12-25')`);
+        riskQueryConds.push(`strftime('%m-%d', date) IN ('01-01', '03-08', '05-01', '05-08', '05-09', '06-28', '08-24', '10-01', '12-25')`);
       }
       if (closingDays > 0) {
-        riskQueryConds.push(`date_diff('day', CAST(date AS DATE), last_day(CAST(date AS DATE))) <= ${closingDays}`);
+        riskQueryConds.push(`(julianday(date(date, 'start of month', '+1 month', '-1 day')) - julianday(date)) <= ${closingDays}`);
       }
       const riskWhereStr = riskQueryConds.length > 0 ? `(${riskQueryConds.join(" OR ")})` : "FALSE";
       const riskMatchedQuery = `
@@ -220,6 +216,82 @@ var SamplingService = class {
           selectionReason: "Random (Risk)"
         });
       }
+    } else if (config.method === "Pareto") {
+      const targetPercent = (config.paretoCoverage || 80) / 100;
+      const targetValue = remPopValue * targetPercent;
+      const paretoItemsQuery = `
+          SELECT * FROM population 
+          WHERE ABS(amount) < ? AND ABS(amount) >= ?
+          ORDER BY ABS(amount) DESC
+        `;
+      const allItems = await this.db.query(paretoItemsQuery, [tm > 0 ? tm : 999999999999, ctt]);
+      let currentSum = 0;
+      for (const item of allItems) {
+        if (currentSum >= targetValue) break;
+        currentSum += Math.abs(item.amount);
+        sampleItems.push({
+          ...item,
+          bookValue: item.amount,
+          auditedValue: "",
+          difference: item.amount,
+          tainting: 1,
+          isSampled: true,
+          selectionReason: "Pareto (Top 80%)"
+        });
+        if (sampleItems.length >= 5e3) break;
+      }
+    } else if (config.method === "Percentile") {
+      const percent = config.percentileCount || 5;
+      const limitCount = Math.max(1, Math.ceil(popSize * percent / 100));
+      const topQuery = `SELECT * FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY amount DESC LIMIT ?`;
+      const bottomQuery = `SELECT * FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY amount ASC LIMIT ?`;
+      const topItems = await this.db.query(topQuery, [tm > 0 ? tm : 999999999999, ctt, limitCount]);
+      const bottomItems = await this.db.query(bottomQuery, [tm > 0 ? tm : 999999999999, ctt, limitCount]);
+      const combined = [...topItems, ...bottomItems];
+      const uniqueSet = /* @__PURE__ */ new Set();
+      for (const item of combined) {
+        if (!uniqueSet.has(item.id)) {
+          uniqueSet.add(item.id);
+          sampleItems.push({
+            ...item,
+            bookValue: item.amount,
+            auditedValue: "",
+            difference: item.amount,
+            tainting: 1,
+            isSampled: true,
+            selectionReason: "Percentile Tail"
+          });
+        }
+      }
+    } else if (config.method === "Benford") {
+      const benfordCount = config.benfordSampleSize || 50;
+      const query = `
+          SELECT * FROM population 
+          WHERE ABS(amount) < ? AND ABS(amount) >= ?
+          ORDER BY random() 
+          LIMIT ?
+        `;
+      const items = await this.db.query(query, [tm > 0 ? tm : 999999999999, ctt, benfordCount]);
+      sampleItems = items.map((item) => ({
+        ...item,
+        bookValue: item.amount,
+        auditedValue: "",
+        difference: item.amount,
+        tainting: 1,
+        isSampled: true,
+        selectionReason: "Benford Review"
+      }));
+    } else if (config.method === "Grubbs") {
+      const grubbsItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY ABS(amount) DESC LIMIT 15`, [tm > 0 ? tm : 999999999999, ctt]);
+      sampleItems = grubbsItems.map((item) => ({
+        ...item,
+        bookValue: item.amount,
+        auditedValue: "",
+        difference: item.amount,
+        tainting: 1,
+        isSampled: true,
+        selectionReason: "Grubbs Outlier"
+      }));
     } else {
       let sampleSize = 10;
       if (config.method === "MUS") {
@@ -312,7 +384,7 @@ var SamplingService = class {
 
 // src/main/services/ExportService.ts
 var path2 = __toESM(require("path"), 1);
-var fs = __toESM(require("fs"), 1);
+var fs2 = __toESM(require("fs"), 1);
 var ExportService = class {
   constructor(db, workerPool) {
     this.db = db;
@@ -330,7 +402,7 @@ var ExportService = class {
     await this.db.execute(`CREATE TABLE audit_metadata (data VARCHAR)`);
     await this.db.execute(`INSERT INTO audit_metadata VALUES ('${stateJson}')`);
     await this.db.execute(`CHECKPOINT`);
-    fs.copyFileSync(this.db.dbPath, projectPath);
+    fs2.copyFileSync(this.db.dbPath, projectPath);
   }
   async exportExcel(excelPath, dbPath, results) {
     return new Promise((resolve, reject) => {
@@ -376,6 +448,7 @@ var WorkerPool = class {
 };
 
 // src/main/core/AppOrchestrator.ts
+var initSqlJs = require("sql.js");
 var AppOrchestrator = class {
   dbService;
   importService;
@@ -392,7 +465,12 @@ var AppOrchestrator = class {
   registerIpcHandlers() {
     import_electron.ipcMain.handle("import:start", async (event, filePath, config) => {
       console.log("IPC import:start received", filePath, config);
-      return await this.importService.importFile(filePath, config);
+      const result = await this.importService.importFile(filePath, config);
+      await this.dbService.close();
+      const directory = path4.dirname(result.dbPath);
+      const id = path4.basename(result.dbPath, ".sqlite");
+      await this.dbService.initialize(id, directory);
+      return result;
     });
     import_electron.ipcMain.handle("import:preview", async (event, filePath) => {
       return await this.importService.previewFile(filePath);
@@ -401,24 +479,31 @@ var AppOrchestrator = class {
       console.log("IPC import:project received", filePath);
       try {
         const dbPath = filePath;
-        const tempDb = require("duckdb");
-        const db = new tempDb.Database(dbPath);
-        const conn = db.connect();
+        const fb = fs3.readFileSync(dbPath);
+        const SQL = await initSqlJs();
+        const db = new SQL.Database(fb);
         const stateJson = await new Promise((resolve, reject) => {
-          conn.all("SELECT data FROM audit_metadata", (err, res) => {
-            if (err) return reject(new Error("Invalid project file (no audit_metadata)"));
-            if (res && res.length > 0) resolve(res[0].data);
-            else reject(new Error("Empty audit_metadata"));
-          });
+          try {
+            const stmt = db.prepare("SELECT data FROM audit_metadata");
+            if (stmt.step()) {
+              const row = stmt.getAsObject();
+              resolve(row.data);
+            } else {
+              reject(new Error("Empty audit_metadata"));
+            }
+            stmt.free();
+          } catch {
+            reject(new Error("Invalid project file (no audit_metadata)"));
+          }
         });
-        await new Promise((res) => db.close(() => res()));
+        db.close();
         if (!this.dbService.dbPath) {
-          await this.dbService.initialize("imported_project", require("os").tmpdir());
+          await this.dbService.initialize("imported_project", os2.tmpdir());
         }
         await this.dbService.close();
-        require("fs").copyFileSync(filePath, this.dbService.dbPath);
-        const directory = require("path").dirname(this.dbService.dbPath);
-        const id = require("path").basename(this.dbService.dbPath, ".duckdb");
+        fs3.copyFileSync(filePath, this.dbService.dbPath);
+        const directory = path4.dirname(this.dbService.dbPath);
+        const id = path4.basename(this.dbService.dbPath, ".sqlite");
         await this.dbService.initialize(id, directory);
         const state = JSON.parse(stateJson);
         return state;
@@ -505,14 +590,14 @@ function createWindow() {
       contextIsolation: true
     }
   });
-  splash.loadFile(path4.join(__dirname, "splash.html"));
+  splash.loadFile(path5.join(__dirname, "splash.html"));
   const win = new import_electron2.BrowserWindow({
     width: 1400,
     height: 900,
     show: false,
     // Don't show the main window immediately
     webPreferences: {
-      preload: path4.join(__dirname, "preload.cjs"),
+      preload: path5.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
@@ -525,15 +610,21 @@ function createWindow() {
   if (process.env.VITE_DEV_SERVER_URL) {
     win.loadURL(process.env.VITE_DEV_SERVER_URL);
   } else {
-    win.loadFile(path4.join(__dirname, "dist", "index.html"));
+    win.loadFile(path5.join(__dirname, "dist", "index.html"));
   }
   win.once("ready-to-show", () => {
-    if (splash) {
-      splash.close();
-      splash = null;
-    }
-    win.maximize();
-    win.show();
+    setTimeout(() => {
+      if (splash) {
+        splash.close();
+        splash = null;
+      }
+      try {
+        win.maximize();
+        win.show();
+      } catch (e) {
+        console.error("Failed to maximize or show window", e);
+      }
+    }, 2500);
   });
 }
 import_electron2.app.whenReady().then(createWindow);
