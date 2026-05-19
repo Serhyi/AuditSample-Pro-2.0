@@ -155,8 +155,9 @@ export async function exportToExcel(
         conclusionText = isUa ? `Верхня межа відхилення (${ubNum.toFixed(2)}%) ПЕРЕВИЩУЄ допустимий рівень відхилення (${config.tolerableMisstatement}%). Вибірка не підтверджує ефективність контролів.` : `Upper deviation bound (${ubNum.toFixed(2)}%) EXCEEDS tolerable deviation rate (${config.tolerableMisstatement}%). Sample does not confirm control effectiveness.`;
       }
     } else if (config.method === 'RiskAssessment') {
+        const keyItemsMisstatements = (results.keyItems || []).reduce((acc: any, i: any) => acc + (i.difference || 0), 0);
         conclusionPrefix = isUa ? "🟡 ОЦІНКА РИЗИКІВ" : "🟡 RISK ASSESSMENT";
-        conclusionText = isUa ? `Знайдено викривлень на суму ${formatMoney(extrapolation.key, settings)}.` : `Total misstatements found is ${formatMoney(extrapolation.key, settings)}.`;
+        conclusionText = isUa ? `Знайдено викривлень на суму ${formatMoney(keyItemsMisstatements, settings)}.` : `Total misstatements found is ${formatMoney(keyItemsMisstatements, settings)}.`;
     } else {
         if (ubNum <= config.tolerableMisstatement) {
             conclusionPrefix = isUa ? "🟢 НИЗЬКИЙ РИЗИК" : "🟢 LOW RISK";

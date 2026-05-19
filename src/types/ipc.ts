@@ -1,4 +1,4 @@
-import { SamplingConfig, TransactionItem } from './index';
+import { SamplingConfig, TransactionItem, SamplingResult } from './index';
 
 export interface ImportConfig {
   hasHeader: boolean;
@@ -31,6 +31,7 @@ export interface IpcApi {
   import: {
     start: (filePath: string, config: any) => Promise<ImportMeta>;
     preview: (filePath: string) => Promise<{ headers: string[], data: any[][] }>;
+    project: (filePath: string) => Promise<any>;
   };
   query: {
     getRows: (table: string, limit: number, offset: number, filters?: any[]) => Promise<TransactionItem[]>;
@@ -38,11 +39,11 @@ export interface IpcApi {
     insertRows: (table: string, rows: TransactionItem[]) => Promise<boolean>;
   };
   sampling: {
-    execute: (config: SamplingConfig) => Promise<SamplingResultMeta>;
+    execute: (config: SamplingConfig) => Promise<SamplingResult>;
   };
   export: {
-    project: (path: string) => Promise<void>;
-    excel: (path: string) => Promise<void>;
+    project: (state: any) => Promise<void>;
+    excel: (state: any) => Promise<void>;
   };
   on: (channel: string, callback: (...args: any[]) => void) => () => void;
 }

@@ -161,13 +161,18 @@ var SamplingService = class {
       const trivAgg = await this.db.query(`SELECT COUNT(*) as cnt, SUM(amount) as val FROM population WHERE ABS(amount) < ?`, [ctt]);
       trivialCount = trivAgg[0]?.cnt || 0;
       trivialValue = trivAgg[0]?.val || 0;
-      trivialItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) < ? LIMIT 10`, [ctt]);
+      const items = await this.db.query(`SELECT * FROM population WHERE ABS(amount) < ? LIMIT 10`, [ctt]);
+      trivialItems = items.map((i) => ({
+        ...i,
+        originalRow: typeof i.originalRow === "string" ? JSON.parse(i.originalRow) : i.originalRow || []
+      }));
     }
     let keyItems = [];
     if (tm > 0) {
       keyItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) >= ?`, [tm]);
       keyItems = keyItems.map((item) => ({
         ...item,
+        originalRow: item.originalRow ? JSON.parse(item.originalRow) : [],
         bookValue: item.amount,
         auditedValue: "",
         difference: item.amount,
@@ -345,6 +350,10 @@ var SamplingService = class {
         selectionReason: config.method === "StopOrGo" ? idx < (config.stopOrGoInitialSize || 25) ? "Stage 1" : "Stage 2" : "Sampled"
       }));
     }
+    sampleItems = sampleItems.map((item) => ({
+      ...item,
+      originalRow: typeof item.originalRow === "string" ? JSON.parse(item.originalRow) : item.originalRow || []
+    }));
     const interval = sampleItems.length > 0 ? remPopValue / sampleItems.length : 1;
     const preResult = {
       populationSize: popSize,

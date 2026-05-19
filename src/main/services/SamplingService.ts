@@ -29,7 +29,11 @@ export class SamplingService {
       const trivAgg: any[] = await this.db.query(`SELECT COUNT(*) as cnt, SUM(amount) as val FROM population WHERE ABS(amount) < ?`, [ctt]);
       trivialCount = trivAgg[0]?.cnt || 0;
       trivialValue = trivAgg[0]?.val || 0;
-      trivialItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) < ? LIMIT 10`, [ctt]);
+      const items = await this.db.query(`SELECT * FROM population WHERE ABS(amount) < ? LIMIT 10`, [ctt]);
+      trivialItems = items.map((i: any) => ({
+          ...i,
+          originalRow: typeof i.originalRow === 'string' ? JSON.parse(i.originalRow) : (i.originalRow || [])
+      }));
     }
 
     // 3. Key items
@@ -38,8 +42,9 @@ export class SamplingService {
       keyItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) >= ?`, [tm]);
       keyItems = keyItems.map(item => ({
         ...item,
+        originalRow: item.originalRow ? JSON.parse(item.originalRow) : [],
         bookValue: item.amount,
-        auditedValue: '',
+        auditedValue: '' as const,
         difference: item.amount,
         tainting: 1,
         isKeyItem: true
@@ -83,13 +88,13 @@ export class SamplingService {
           WHERE ABS(amount) < ? AND ABS(amount) >= ? AND ${riskWhereStr}
           LIMIT 5000
         `;
-        const riskMatched = await this.db.query(riskMatchedQuery, [tm > 0 ? tm : 999999999999, ctt]);
+        const riskMatched: any[] = await this.db.query(riskMatchedQuery, [tm > 0 ? tm : 999999999999, ctt]);
         
         for (const item of riskMatched) {
             sampleItems.push({
                 ...item,
                 bookValue: item.amount,
-                auditedValue: '',
+                auditedValue: '' as const,
                 difference: item.amount,
                 tainting: 1,
                 isSampled: true,
@@ -105,13 +110,13 @@ export class SamplingService {
           ORDER BY random() 
           LIMIT ?
         `;
-        const randomMatched = await this.db.query(riskUnmatchedQuery, [tm > 0 ? tm : 999999999999, ctt, randomCount]);
+        const randomMatched: any[] = await this.db.query(riskUnmatchedQuery, [tm > 0 ? tm : 999999999999, ctt, randomCount]);
         
         for (const item of randomMatched) {
             sampleItems.push({
                 ...item,
                 bookValue: item.amount,
-                auditedValue: '',
+                auditedValue: '' as const,
                 difference: item.amount,
                 tainting: 1,
                 isSampled: true,
@@ -137,7 +142,7 @@ export class SamplingService {
             sampleItems.push({
                 ...item,
                 bookValue: item.amount,
-                auditedValue: '',
+                auditedValue: '' as const,
                 difference: item.amount,
                 tainting: 1,
                 isSampled: true,
@@ -165,7 +170,7 @@ export class SamplingService {
                 sampleItems.push({
                     ...item,
                     bookValue: item.amount,
-                    auditedValue: '',
+                    auditedValue: '' as const,
                     difference: item.amount,
                     tainting: 1,
                     isSampled: true,
@@ -186,7 +191,7 @@ export class SamplingService {
         sampleItems = items.map(item => ({
             ...item,
             bookValue: item.amount,
-            auditedValue: '',
+            auditedValue: '' as const,
             difference: item.amount,
             tainting: 1,
             isSampled: true,
@@ -198,7 +203,7 @@ export class SamplingService {
         sampleItems = grubbsItems.map(item => ({
             ...item,
             bookValue: item.amount,
-            auditedValue: '',
+            auditedValue: '' as const,
             difference: item.amount,
             tainting: 1,
             isSampled: true,
@@ -237,13 +242,18 @@ export class SamplingService {
         sampleItems = rawSampleItems.map((item, idx) => ({
           ...item,
           bookValue: item.amount,
-          auditedValue: '',
+          auditedValue: '' as const,
           difference: item.amount,
           tainting: 1,
           isSampled: true,
           selectionReason: config.method === 'StopOrGo' ? (idx < (config.stopOrGoInitialSize || 25) ? 'Stage 1' : 'Stage 2') : 'Sampled'
         }));
     }
+
+    sampleItems = sampleItems.map(item => ({
+      ...item,
+      originalRow: typeof item.originalRow === 'string' ? JSON.parse(item.originalRow) : (item.originalRow || [])
+    }));
 
     const interval = sampleItems.length > 0 ? (remPopValue / sampleItems.length) : 1;
 

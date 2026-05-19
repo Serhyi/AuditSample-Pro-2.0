@@ -199,16 +199,16 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
   const limitValue = isAttribute ? (config.tolerableDeviationRate || 5) : (config.tolerableMisstatement || 0);
   const isExceeded = extrapolation.ub > (isAttribute ? limitValue : limitValue * 1.001);
   const coveragePercent = (currentResults.sampleValue / currentResults.populationValue) * 100;
-  const keyItemsValue = currentResults.keyItems.reduce((acc, i) => acc + Math.abs(i.bookValue), 0);
+  const keyItemsValue = (currentResults.keyItems || []).reduce((acc, i) => acc + Math.abs(i.bookValue), 0);
 
   // Stop-or-Go Calculations for Grid Display
-  const stage1Items = useMemo(() => currentResults.samplingItems.filter(i => i.selectionReason?.includes('Stage 1')), [currentResults.samplingItems]);
+  const stage1Items = useMemo(() => (currentResults.samplingItems || []).filter(i => i.selectionReason?.includes('Stage 1')), [currentResults.samplingItems]);
   const stage1Audited = useMemo(() => stage1Items.filter(i => i.auditedValue !== ''), [stage1Items]);
   const stage1Errors = useMemo(() => stage1Audited.filter(i => Math.abs(i.difference) > 0.001).length, [stage1Audited]);
   const isStage1Complete = stage1Items.length > 0 && stage1Audited.length === stage1Items.length;
   const isStage1Clean = isStage1Complete && stage1Errors === 0;
 
-  const stage2Items = useMemo(() => currentResults.samplingItems.filter(i => i.selectionReason?.includes('Stage 2')), [currentResults.samplingItems]);
+  const stage2Items = useMemo(() => (currentResults.samplingItems || []).filter(i => i.selectionReason?.includes('Stage 2')), [currentResults.samplingItems]);
   const stage2Audited = useMemo(() => stage2Items.filter(i => i.auditedValue !== ''), [stage2Items]);
   const stage2Errors = useMemo(() => stage2Audited.filter(i => Math.abs(i.difference) > 0.001).length, [stage2Audited]);
 
@@ -222,7 +222,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
     const parsedVal = parseFloat(clean);
     const finalVal: number | '' = isNaN(parsedVal) ? '' : parsedVal;
     
-    const list = [...currentResults[listKey]];
+    const list = [...(currentResults[listKey] || [])];
     const index = list.findIndex(i => String(i.id) === String(id));
     if (index === -1) return;
     
@@ -237,7 +237,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
 
   const fillAllVisible = (isKey: boolean) => {
     const listKey = isKey ? 'keyItems' : 'samplingItems';
-    const newList = [...currentResults[listKey]];
+    const newList = [...(currentResults[listKey] || [])];
     let changed = false;
     
     newList.forEach((it, index) => {
@@ -374,7 +374,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
 
             <Section title={t('methodUsed', lang)}>
                 <div className="text-brand-900 font-bold text-[14px] mb-2">{getDynamicMethodName(config, lang)}</div>
-                <DistributionGraphic items={currentResults.samplingItems} keys={currentResults.keyItems} />
+                <DistributionGraphic items={currentResults.samplingItems || []} keys={currentResults.keyItems || []} />
             </Section>
 
             <Section title={t('mnPurpose', lang)} icon={Target}>
@@ -398,7 +398,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                         <div className="text-[11px] text-slate-600 leading-snug">{anomalyDesc}</div>
                         <div className="flex justify-between items-center pt-1">
                             <span className="text-[10px] text-slate-400 font-bold uppercase">{t('keyItemsCount', lang)}</span>
-                            <span className="text-brand-600 font-mono font-bold">{currentResults.keyItems.length} {t('items', lang)}</span>
+                            <span className="text-brand-600 font-mono font-bold">{(currentResults.keyItems || []).length} {t('items', lang)}</span>
                         </div>
                     </div>
                 </div>
@@ -481,7 +481,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
       });
     }, 50);
     return () => clearTimeout(timer);
-  }, [currentResults.samplingItems.length, currentResults.keyItems.length, activeTab]);
+  }, [(currentResults.samplingItems || []).length, (currentResults.keyItems || []).length, activeTab]);
 
   const renderTable = (items: SampledItem[], title?: string, isKey: boolean = false) => (
     <div className="mb-10">
@@ -645,8 +645,8 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         <div className="lg:col-span-3 bg-white rounded-[2rem] shadow-sm border border-slate-200 flex flex-col h-[1050px] overflow-hidden transition-all hover:shadow-md">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
             <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
-              <button onClick={() => setActiveTab('sample')} className={`px-6 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'sample' ? 'bg-white text-brand-600 shadow-md shadow-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>{t('tabSample', lang)} ({currentResults.samplingItems.length})</button>
-              <button onClick={() => setActiveTab('key')} className={`px-6 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'key' ? 'bg-white text-brand-600 shadow-md shadow-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>{t('tabKey', lang)} ({currentResults.keyItems.length})</button>
+              <button onClick={() => setActiveTab('sample')} className={`px-6 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'sample' ? 'bg-white text-brand-600 shadow-md shadow-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>{t('tabSample', lang)} {(currentResults.samplingItems || []).length}</button>
+              <button onClick={() => setActiveTab('key')} className={`px-6 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'key' ? 'bg-white text-brand-600 shadow-md shadow-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>{t('tabKey', lang)} {(currentResults.keyItems || []).length}</button>
             </div>
             <div className="flex gap-2">
                 <label className="flex items-center gap-3 text-[11px] text-brand-700 font-black uppercase tracking-widest bg-brand-100 border border-brand-300 hover:bg-brand-200 px-7 py-3 rounded-xl transition-all active:scale-95 cursor-pointer">
@@ -660,8 +660,8 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
           </div>
           <div className="flex-1 overflow-auto custom-scrollbar">
             {activeTab === 'key' ? 
-                <TablePagination items={currentResults.keyItems} title={t('tabKey', lang)} isKey={true} renderTable={renderTable} /> : 
-                (config.method === 'StopOrGo' ? <StopOrGoView currentResults={currentResults} lang={lang} renderTable={renderTable} /> : <TablePagination items={currentResults.samplingItems} renderTable={renderTable} />)
+                <TablePagination items={currentResults.keyItems || []} title={t('tabKey', lang)} isKey={true} renderTable={renderTable} /> : 
+                (config.method === 'StopOrGo' ? <StopOrGoView currentResults={currentResults} lang={lang} renderTable={renderTable} /> : <TablePagination items={currentResults.samplingItems || []} renderTable={renderTable} />)
             }
           </div>
         </div>
@@ -688,14 +688,14 @@ const StatCard = ({ label, value, subValue, icon, currency }: { label: string, v
 );
 
 const StopOrGoView = ({ currentResults, lang, renderTable }: { currentResults: SamplingResult, lang: Language, renderTable: any }) => {
-    let stage1Items = currentResults.samplingItems.filter(i => i.selectionReason?.includes('Stage 1'));
-    let stage2Items = currentResults.samplingItems.filter(i => i.selectionReason?.includes('Stage 2'));
+    let stage1Items = (currentResults.samplingItems || []).filter(i => i.selectionReason?.includes('Stage 1'));
+    let stage2Items = (currentResults.samplingItems || []).filter(i => i.selectionReason?.includes('Stage 2'));
 
     // Backward compatibility if selectionReason is empty
-    if (stage1Items.length === 0 && stage2Items.length === 0 && currentResults.samplingItems.length > 0) {
-        const half = Math.ceil(currentResults.samplingItems.length / 2);
-        stage1Items = currentResults.samplingItems.slice(0, half);
-        stage2Items = currentResults.samplingItems.slice(half);
+    if (stage1Items.length === 0 && stage2Items.length === 0 && (currentResults.samplingItems || []).length > 0) {
+        const half = Math.ceil((currentResults.samplingItems || []).length / 2);
+        stage1Items = (currentResults.samplingItems || []).slice(0, half);
+        stage2Items = (currentResults.samplingItems || []).slice(half);
     }
     
     const stage1Audited = stage1Items.filter(i => i.auditedValue !== '');

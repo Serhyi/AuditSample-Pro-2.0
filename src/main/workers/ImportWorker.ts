@@ -65,7 +65,8 @@ async function startTask() {
             amount DOUBLE,
             bookValue DOUBLE,
             auditedValue DOUBLE,
-            difference DOUBLE
+            difference DOUBLE,
+            originalRow TEXT
           );
         `);
       } catch (createErr: any) {
@@ -90,7 +91,7 @@ async function startTask() {
       const dateKey = keys[activeIndices.date] || null;
       const amtKey = keys[activeIndices.amount] || null;
 
-      const stmt = db.prepare('INSERT INTO population (id, date, amount, bookValue, difference) VALUES (?, ?, ?, ?, ?)');
+      const stmt = db.prepare('INSERT INTO population (id, date, amount, bookValue, difference, originalRow) VALUES (?, ?, ?, ?, ?, ?)');
       
       let inserted = 0;
       for (let i = startRow - 1; i < rows.length; i++) {
@@ -100,8 +101,9 @@ async function startTask() {
          const amtRaw = amtKey ? row[amtKey] : 0;
          
          const amountVal = parseFloat(amtRaw) || 0;
+         const rowArray = keys.map((k: string) => row[k]);
          
-         stmt.run([idv, dtv, amountVal, amountVal, amountVal]);
+         stmt.run([idv, dtv, amountVal, amountVal, amountVal, JSON.stringify(rowArray)]);
          inserted++;
          
          if (inserted % 10000 === 0) {
@@ -140,11 +142,12 @@ async function startTask() {
            amount DOUBLE,
            bookValue DOUBLE,
            auditedValue DOUBLE,
-           difference DOUBLE
+           difference DOUBLE,
+           originalRow TEXT
          );
        `);
        
-       const stmt = db.prepare('INSERT INTO population (id, date, amount, bookValue, difference) VALUES (?, ?, ?, ?, ?)');
+       const stmt = db.prepare('INSERT INTO population (id, date, amount, bookValue, difference, originalRow) VALUES (?, ?, ?, ?, ?, ?)');
        
        let parseCount = 0;
        
@@ -164,7 +167,9 @@ async function startTask() {
                    const dateVal = String(typeof dt === 'object' && dt !== null && 'text' in dt ? dt.text : (dt || ''));
                    const amountVal = parseFloat(typeof amtRaw === 'object' && amtRaw !== null && 'text' in amtRaw ? amtRaw.text : amtRaw) || 0;
                    
-                   stmt.run([idVal, dateVal, amountVal, amountVal, amountVal]);
+                   const cleanRowArray = r.map(v => typeof v === 'object' && v !== null && 'text' in v ? v.text : v);
+                   
+                   stmt.run([idVal, dateVal, amountVal, amountVal, amountVal, JSON.stringify(cleanRowArray)]);
                }
                
                if (parseCount % 10000 === 0) {

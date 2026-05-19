@@ -1,4 +1,4 @@
-import { SamplingConfig, SamplingResult, GlobalSettings } from '../types';
+import { SamplingConfig, SamplingResult, GlobalSettings, Language } from '../types';
 import { t } from '../utils/translations';
 
 export const METHOD_PREFIX_MAP: Record<string, string> = {
@@ -16,7 +16,7 @@ export const METHOD_PREFIX_MAP: Record<string, string> = {
   Grubbs: 'grubbs'
 };
 
-export function getDynamicMethodName(config: SamplingConfig, lang: string): string {
+export function getDynamicMethodName(config: SamplingConfig, lang: Language): string {
     const mPrefix = METHOD_PREFIX_MAP[config.method] || config.method.toLowerCase();
     let name = t(mPrefix + 'Name', lang);
     if (config.method === 'Pareto') {
@@ -26,7 +26,7 @@ export function getDynamicMethodName(config: SamplingConfig, lang: string): stri
     return name;
 }
 
-export function getDynamicMethodDescription(config: SamplingConfig, lang: string): string {
+export function getDynamicMethodDescription(config: SamplingConfig, lang: Language): string {
     const mPrefix = METHOD_PREFIX_MAP[config.method] || config.method.toLowerCase();
     let desc = t(mPrefix + 'EvaluationText', lang);
     if (config.method === 'Pareto') {

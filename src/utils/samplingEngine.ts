@@ -25,10 +25,16 @@ export function formatDate(val: string, settings?: GlobalSettings): string {
     return val;
 }
 
-export function smartFormat(val: any): string {
+export function smartFormat(val: any, settings?: GlobalSettings): string {
     if (val === null || val === undefined) return '';
     if (typeof val === 'number') {
         if (Number.isInteger(val)) return val.toString();
+        if (settings) {
+            return new Intl.NumberFormat(settings.region === 'us' ? 'en-US' : 'uk-UA', { 
+                minimumFractionDigits: 2, 
+                maximumFractionDigits: 2 
+            }).format(val);
+        }
         return val.toFixed(2);
     }
     return String(val);
@@ -214,27 +220,27 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
         const riskSampled = riskMatched.slice(0, 5000).map(item => ({
             ...item,
             bookValue: item.amount,
-            auditedValue: '',
+            auditedValue: '' as const,
             difference: item.amount,
             tainting: 1,
             isSampled: true,
             selectionReason: 'Risk Criteria'
         }));
         
-        sampleItems = sampleItems.concat(riskSampled);
+        sampleItems = sampleItems.concat(riskSampled as any);
         
         const randomCount = config.riskRandomCount ?? 5;
         const randomSampled = getRandomSamples(riskUnmatched, randomCount).map(item => ({
             ...item,
             bookValue: item.amount,
-            auditedValue: '',
+            auditedValue: '' as const,
             difference: item.amount,
             tainting: 1,
             isSampled: true,
             selectionReason: 'Random (Risk)'
         }));
         
-        sampleItems = sampleItems.concat(randomSampled);
+        sampleItems = sampleItems.concat(randomSampled as any);
     } else {
         if (config.method === 'MUS') {
             const pm = config.tolerableMisstatement || 1;
