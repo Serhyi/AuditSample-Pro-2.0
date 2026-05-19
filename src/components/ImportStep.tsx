@@ -197,7 +197,9 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
     const isElectron = navigator.userAgent.toLowerCase().indexOf(' electron/') > -1;
     let filePathStr = '';
     if (isElectron && window.api) {
-        filePathStr = (file as any).path || '';
+        filePathStr = window.api.utils && window.api.utils.getPathForFile 
+            ? window.api.utils.getPathForFile(file as any) 
+            : (file as any).path || '';
     }
 
     if (isElectron && window.api && filePathStr) {

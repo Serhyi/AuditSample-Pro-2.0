@@ -127,7 +127,9 @@ const App: React.FC = () => {
     // Electron optimized path for SQLite .audsmpl
     if (file.name.endsWith('.audsmpl') && isElectron() && window.api) {
         try {
-            const rawFilePath = (file as any).path;
+            const rawFilePath = window.api.utils && window.api.utils.getPathForFile 
+              ? window.api.utils.getPathForFile(file as any) 
+              : (file as any).path || '';
               
             const data = await window.api.import.project(rawFilePath);
             

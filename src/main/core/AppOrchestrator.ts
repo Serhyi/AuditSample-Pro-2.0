@@ -99,8 +99,8 @@ export class AppOrchestrator {
     });
 
     ipcMain.handle('query:insertRows', async (event, table, rows) => {
-      await this.dbService.query(`DROP TABLE IF EXISTS ${table}`);
-      await this.dbService.query(`
+      await this.dbService.execute(`DROP TABLE IF EXISTS ${table}`);
+      await this.dbService.execute(`
         CREATE TABLE ${table} (
           id VARCHAR,
           date VARCHAR,
@@ -113,7 +113,7 @@ export class AppOrchestrator {
       // very naive batch insert for restored projects
       const values = rows.map((r: any) => `('${r.id}', '${r.date}', ${r.amount}, ${r.bookValue || r.amount}, ${r.auditedValue !== undefined ? r.auditedValue : 'NULL'}, ${r.difference || 0})`).join(',');
       if (values.length > 0) {
-        await this.dbService.query(`INSERT INTO ${table} (id, date, amount, bookValue, auditedValue, difference) VALUES ${values}`);
+        await this.dbService.execute(`INSERT INTO ${table} (id, date, amount, bookValue, auditedValue, difference) VALUES ${values}`);
       }
       return true;
     });

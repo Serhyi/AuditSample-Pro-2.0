@@ -67,6 +67,12 @@ var DatabaseService = class {
   }
   async query(sql, params = []) {
     if (!this.db) throw new Error("Database not initialized");
+    const normalized = sql.trim().toUpperCase();
+    if (normalized.startsWith("INSERT") || normalized.startsWith("UPDATE") || normalized.startsWith("DELETE") || normalized.startsWith("CREATE") || normalized.startsWith("DROP") || normalized.startsWith("ALTER")) {
+      throw new Error(
+        "query() cannot execute write operations. Use execute() instead."
+      );
+    }
     const stmt = this.db.prepare(sql);
     stmt.bind(params);
     const results = [];
@@ -529,8 +535,8 @@ var AppOrchestrator = class {
       return await this.dbService.query(`SELECT * FROM ${table} LIMIT ? OFFSET ?`, [limit, offset]);
     });
     import_electron.ipcMain.handle("query:insertRows", async (event, table, rows) => {
-      await this.dbService.query(`DROP TABLE IF EXISTS ${table}`);
-      await this.dbService.query(`
+      await this.dbService.execute(`DROP TABLE IF EXISTS ${table}`);
+      await this.dbService.execute(`
         CREATE TABLE ${table} (
           id VARCHAR,
           date VARCHAR,
@@ -542,7 +548,7 @@ var AppOrchestrator = class {
       `);
       const values = rows.map((r) => `('${r.id}', '${r.date}', ${r.amount}, ${r.bookValue || r.amount}, ${r.auditedValue !== void 0 ? r.auditedValue : "NULL"}, ${r.difference || 0})`).join(",");
       if (values.length > 0) {
-        await this.dbService.query(`INSERT INTO ${table} (id, date, amount, bookValue, auditedValue, difference) VALUES ${values}`);
+        await this.dbService.execute(`INSERT INTO ${table} (id, date, amount, bookValue, auditedValue, difference) VALUES ${values}`);
       }
       return true;
     });

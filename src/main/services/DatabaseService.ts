@@ -37,6 +37,21 @@ export class DatabaseService {
 
   public async query<T>(sql: string, params: any[] = []): Promise<T[]> {
     if (!this.db) throw new Error('Database not initialized');
+    
+    const normalized = sql.trim().toUpperCase();
+    if (
+      normalized.startsWith('INSERT') ||
+      normalized.startsWith('UPDATE') ||
+      normalized.startsWith('DELETE') ||
+      normalized.startsWith('CREATE') ||
+      normalized.startsWith('DROP') ||
+      normalized.startsWith('ALTER')
+    ) {
+      throw new Error(
+        'query() cannot execute write operations. Use execute() instead.'
+      );
+    }
+
     // sql.js executes single queries. For prepared statements we use prepare
     const stmt = this.db.prepare(sql);
     stmt.bind(params);
