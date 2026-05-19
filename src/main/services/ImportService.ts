@@ -12,7 +12,7 @@ export class ImportService {
     // Provide a unique db path for this import session
     const dbPath = path.join(os.tmpdir(), `project_${Date.now()}.sqlite`);
 
-    const result = await this.workerPool.runTask('ImportWorker.cjs', { 
+    const result = await this.workerPool.runTask(path.join('dist', 'workers', 'ImportWorker.cjs'), { 
       filePath, 
       config, 
       dbPath: dbPath, 
@@ -24,7 +24,7 @@ export class ImportService {
 
   public async previewFile(filePath: string): Promise<{ headers: string[], data: any[][] }> {
     console.log('ImportService starting preview worker for', filePath);
-    return await this.workerPool.runTask('ImportWorker.cjs', { 
+    return await this.workerPool.runTask(path.join('dist', 'workers', 'ImportWorker.cjs'), { 
       filePath, 
       mode: 'preview'
     });

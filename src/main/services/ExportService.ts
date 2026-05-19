@@ -1,5 +1,6 @@
 import { DatabaseService } from './DatabaseService';
 import { WorkerPool } from '../core/WorkerPool';
+import * as path from 'path';
 import * as fs from 'fs';
 
 export class ExportService {
@@ -28,7 +29,7 @@ export class ExportService {
 
   public async exportExcel(excelPath: string, dbPath: string, results: any): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.workerPool.runTask('ExportWorker.cjs', {
+      this.workerPool.runTask(path.join('dist', 'workers', 'ExportWorker.cjs'), {
         excelPath,
         dbPath,
         results

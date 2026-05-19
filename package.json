@@ -12,7 +12,9 @@
     "dev": "vite",
     "start": "vite",
     "clean": "rimraf dist release coverage",
-    "build:worker": "esbuild src/main/workers/ImportWorker.ts src/main/workers/ExportWorker.ts --bundle --platform=node --external:sql.js --external:exceljs --outdir=. --out-extension:.js=.cjs",
+    "build:worker:import": "esbuild src/main/workers/ImportWorker.ts --bundle --platform=node --external:sql.js --external:exceljs --outfile=dist/workers/ImportWorker.cjs",
+    "build:worker:export": "esbuild src/main/workers/ExportWorker.ts --bundle --platform=node --external:sql.js --external:exceljs --outfile=dist/workers/ExportWorker.cjs",
+    "build:worker": "npm run build:worker:import && npm run build:worker:export",
     "build:main": "esbuild src/main/index.ts --bundle --platform=node --external:electron --external:sql.js --outfile=main.cjs",
     "build": "vite build && npm run build:main && npm run build:worker",
     "preview": "vite preview",
@@ -21,7 +23,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "coverage": "vitest run --coverage",
-    "electron:dev": "npm run build:main && concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron:dev": "npm run build:main && npm run build:worker && concurrently \"npm run dev\" \"wait-on http://localhost:3000 && electron .\"",
     "dist": "npm run build && electron-builder"
   },
   "dependencies": {
@@ -84,15 +86,13 @@
       "main.cjs",
       "preload.cjs",
       "splash.html",
-      "ImportWorker.cjs",
-      "ExportWorker.cjs"
+      "node_modules/**/*"
     ],
     "win": {
       "target": [
         "portable",
         "nsis"
-      ],
-      "icon": "/icon.ico"
+      ]
     },
     "nsis": {
       "oneClick": false,

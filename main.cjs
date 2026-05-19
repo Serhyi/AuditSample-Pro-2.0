@@ -24,11 +24,11 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 
 // src/main/index.ts
 var import_electron2 = require("electron");
-var path4 = __toESM(require("path"), 1);
+var path5 = __toESM(require("path"), 1);
 
 // src/main/core/AppOrchestrator.ts
 var import_electron = require("electron");
-var path3 = __toESM(require("path"), 1);
+var path4 = __toESM(require("path"), 1);
 var fs3 = __toESM(require("fs"), 1);
 var os2 = __toESM(require("os"), 1);
 
@@ -118,7 +118,7 @@ var ImportService = class {
   async importFile(filePath, config) {
     console.log("ImportService starting worker for", filePath);
     const dbPath = path.join(os.tmpdir(), `project_${Date.now()}.sqlite`);
-    const result = await this.workerPool.runTask("ImportWorker.cjs", {
+    const result = await this.workerPool.runTask(path.join("dist", "workers", "ImportWorker.cjs"), {
       filePath,
       config,
       dbPath,
@@ -128,7 +128,7 @@ var ImportService = class {
   }
   async previewFile(filePath) {
     console.log("ImportService starting preview worker for", filePath);
-    return await this.workerPool.runTask("ImportWorker.cjs", {
+    return await this.workerPool.runTask(path.join("dist", "workers", "ImportWorker.cjs"), {
       filePath,
       mode: "preview"
     });
@@ -402,6 +402,7 @@ var SamplingService = class {
 };
 
 // src/main/services/ExportService.ts
+var path2 = __toESM(require("path"), 1);
 var fs2 = __toESM(require("fs"), 1);
 var ExportService = class {
   constructor(db, workerPool) {
@@ -424,7 +425,7 @@ var ExportService = class {
   }
   async exportExcel(excelPath, dbPath, results) {
     return new Promise((resolve, reject) => {
-      this.workerPool.runTask("ExportWorker.cjs", {
+      this.workerPool.runTask(path2.join("dist", "workers", "ExportWorker.cjs"), {
         excelPath,
         dbPath,
         results
@@ -435,7 +436,7 @@ var ExportService = class {
 
 // src/main/core/WorkerPool.ts
 var import_worker_threads = require("worker_threads");
-var path2 = __toESM(require("path"), 1);
+var path3 = __toESM(require("path"), 1);
 var WorkerPool = class {
   // Simple task queue for demonstration
   constructor(poolSize = 4) {
@@ -446,7 +447,7 @@ var WorkerPool = class {
   taskQueue = [];
   async runTask(workerFile, data) {
     return new Promise((resolve, reject) => {
-      const workerPath = path2.join(__dirname, workerFile);
+      const workerPath = path3.join(__dirname, workerFile);
       const worker = new import_worker_threads.Worker(workerPath, { workerData: data });
       worker.on("message", (msg) => {
         if (msg.type === "done") resolve(msg);
@@ -485,8 +486,8 @@ var AppOrchestrator = class {
       console.log("IPC import:start received", filePath, config);
       const result = await this.importService.importFile(filePath, config);
       await this.dbService.close();
-      const directory = path3.dirname(result.dbPath);
-      const id = path3.basename(result.dbPath, ".sqlite");
+      const directory = path4.dirname(result.dbPath);
+      const id = path4.basename(result.dbPath, ".sqlite");
       await this.dbService.initialize(id, directory);
       return result;
     });
@@ -520,8 +521,8 @@ var AppOrchestrator = class {
         }
         await this.dbService.close();
         fs3.copyFileSync(filePath, this.dbService.dbPath);
-        const directory = path3.dirname(this.dbService.dbPath);
-        const id = path3.basename(this.dbService.dbPath, ".sqlite");
+        const directory = path4.dirname(this.dbService.dbPath);
+        const id = path4.basename(this.dbService.dbPath, ".sqlite");
         await this.dbService.initialize(id, directory);
         const state = JSON.parse(stateJson);
         return state;
@@ -608,14 +609,14 @@ function createWindow() {
       contextIsolation: true
     }
   });
-  splash.loadFile(path4.join(__dirname, "splash.html"));
+  splash.loadFile(path5.join(__dirname, "splash.html"));
   const win = new import_electron2.BrowserWindow({
     width: 1400,
     height: 900,
     show: false,
     // Don't show the main window immediately
     webPreferences: {
-      preload: path4.join(__dirname, "preload.cjs"),
+      preload: path5.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
@@ -628,7 +629,7 @@ function createWindow() {
   if (process.env.VITE_DEV_SERVER_URL) {
     win.loadURL(process.env.VITE_DEV_SERVER_URL);
   } else {
-    win.loadFile(path4.join(__dirname, "dist", "index.html"));
+    win.loadFile(path5.join(__dirname, "dist", "index.html"));
   }
   win.once("ready-to-show", () => {
     setTimeout(() => {
