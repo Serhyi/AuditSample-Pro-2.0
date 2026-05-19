@@ -84,8 +84,8 @@
       "main.cjs",
       "preload.cjs",
       "splash.html",
-      "ImportWorker.js",
-      "ExportWorker.js"
+      "ImportWorker.cjs",
+      "ExportWorker.cjs"
     ],
     "win": {
       "target": [
