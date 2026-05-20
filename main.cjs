@@ -82,8 +82,51 @@ var DatabaseService = class {
     stmt.free();
     return results;
   }
+  get MUS_and_Pareto_Helpers() {
+    return {
+      getMUSPickedRows: (sql, params, interval, sampleSize) => {
+        if (!this.db) throw new Error("Database not initialized");
+        const stmt = this.db.prepare(sql);
+        stmt.bind(params);
+        let runningTotal = 0;
+        let nextHit = Math.random() * interval;
+        const pickedRowIds = [];
+        while (stmt.step()) {
+          const row = stmt.get();
+          const rowid = row[0];
+          const absAmt = row[1];
+          runningTotal += absAmt;
+          while (runningTotal >= nextHit) {
+            pickedRowIds.push(rowid);
+            nextHit += interval;
+            if (pickedRowIds.length >= sampleSize || pickedRowIds.length >= 5e3) break;
+          }
+          if (pickedRowIds.length >= sampleSize || pickedRowIds.length >= 5e3) break;
+        }
+        stmt.free();
+        return pickedRowIds;
+      },
+      getParetoPickedRows: (sql, params, targetValue) => {
+        if (!this.db) throw new Error("Database not initialized");
+        const stmt = this.db.prepare(sql);
+        stmt.bind(params);
+        let currentSum = 0;
+        const pickedRowIds = [];
+        while (stmt.step()) {
+          const row = stmt.get();
+          const rowid = row[0];
+          const absAmt = row[1];
+          if (currentSum >= targetValue) break;
+          currentSum += absAmt;
+          pickedRowIds.push(rowid);
+          if (pickedRowIds.length >= 5e3) break;
+        }
+        stmt.free();
+        return pickedRowIds;
+      }
+    };
+  }
   async execute(sql) {
-    if (!this.db) throw new Error("Database not initialized");
     if (sql.trim().toUpperCase() === "CHECKPOINT") {
       if (this.dbPath) {
         const data = this.db.export();
@@ -242,17 +285,17 @@ var SamplingService = class {
     } else if (config.method === "Pareto") {
       const targetPercent = (config.paretoCoverage || 80) / 100;
       const targetValue = remPopValue * targetPercent;
-      const paretoItemsQuery = `
-          SELECT * FROM population 
-          WHERE ABS(amount) < ? AND ABS(amount) >= ?
-          ORDER BY ABS(amount) DESC
-        `;
-      const allItems = await this.db.query(paretoItemsQuery, [tm > 0 ? tm : 999999999999, ctt]);
-      let currentSum = 0;
-      for (const item of allItems) {
-        if (currentSum >= targetValue) break;
-        currentSum += Math.abs(item.amount);
-        sampleItems.push({
+      const paretoItemsQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY ABS(amount) DESC`;
+      const pickedRowIds = this.db.MUS_and_Pareto_Helpers.getParetoPickedRows(paretoItemsQuery, [tm > 0 ? tm : 999999999999, ctt], targetValue);
+      if (pickedRowIds.length > 0) {
+        const results = [];
+        const chunkSize = 500;
+        for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
+          const chunk = pickedRowIds.slice(i, i + chunkSize);
+          const chunkResults = await this.db.query(`SELECT * FROM population WHERE rowid IN (${chunk.join(",")})`);
+          results.push(...chunkResults);
+        }
+        sampleItems = results.map((item) => ({
           ...item,
           bookValue: item.amount,
           auditedValue: "",
@@ -260,8 +303,7 @@ var SamplingService = class {
           tainting: 1,
           isSampled: true,
           selectionReason: "Pareto (Top 80%)"
-        });
-        if (sampleItems.length >= 5e3) break;
+        }));
       }
     } else if (config.method === "Percentile") {
       const percent = config.percentileCount || 5;
@@ -332,19 +374,8 @@ var SamplingService = class {
       if (isMUS) {
         const pm = config.tolerableMisstatement || 1;
         const interval2 = Math.max(pm / rf, 1);
-        const rawData = await this.db.query(`SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`, [tm > 0 ? tm : 999999999999, ctt]);
-        let runningTotal = 0;
-        let nextHit = Math.random() * interval2;
-        const pickedRowIds = [];
-        for (const item of rawData) {
-          runningTotal += item.absAmt;
-          if (runningTotal >= nextHit) {
-            pickedRowIds.push(item.rowid);
-            nextHit += interval2;
-            if (pickedRowIds.length >= sampleSize) break;
-            if (pickedRowIds.length >= 5e3) break;
-          }
-        }
+        const musQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`;
+        const pickedRowIds = this.db.MUS_and_Pareto_Helpers.getMUSPickedRows(musQuery, [tm > 0 ? tm : 999999999999, ctt], interval2, sampleSize);
         if (pickedRowIds.length > 0) {
           const results = [];
           const chunkSize = 500;

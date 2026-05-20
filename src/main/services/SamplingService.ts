@@ -128,18 +128,18 @@ export class SamplingService {
         const targetPercent = (config.paretoCoverage || 80) / 100;
         const targetValue = remPopValue * targetPercent;
         
-        const paretoItemsQuery = `
-          SELECT * FROM population 
-          WHERE ABS(amount) < ? AND ABS(amount) >= ?
-          ORDER BY ABS(amount) DESC
-        `;
-        const allItems: any[] = await this.db.query(paretoItemsQuery, [tm > 0 ? tm : 999999999999, ctt]);
+        const paretoItemsQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY ABS(amount) DESC`;
+        const pickedRowIds = this.db.MUS_and_Pareto_Helpers.getParetoPickedRows(paretoItemsQuery, [tm > 0 ? tm : 999999999999, ctt], targetValue);
         
-        let currentSum = 0;
-        for (const item of allItems) {
-            if (currentSum >= targetValue) break;
-            currentSum += Math.abs(item.amount);
-            sampleItems.push({
+        if (pickedRowIds.length > 0) {
+            const results: any[] = [];
+            const chunkSize = 500;
+            for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
+                const chunk = pickedRowIds.slice(i, i + chunkSize);
+                const chunkResults = await this.db.query(`SELECT * FROM population WHERE rowid IN (${chunk.join(',')})`);
+                results.push(...chunkResults);
+            }
+            sampleItems = results.map(item => ({
                 ...item,
                 bookValue: item.amount,
                 auditedValue: '' as const,
@@ -147,8 +147,7 @@ export class SamplingService {
                 tainting: 1,
                 isSampled: true,
                 selectionReason: 'Pareto (Top 80%)'
-            });
-            if (sampleItems.length >= 5000) break;
+            }));
         }
 
     } else if (config.method === 'Percentile') {
@@ -231,22 +230,8 @@ export class SamplingService {
             const pm = config.tolerableMisstatement || 1;
             const interval = Math.max(pm / rf, 1);
             
-            // We use JS filtering but ONLY load rowid and amount for memory efficiency
-            const rawData = await this.db.query<{rowid: number, absAmt: number}>(`SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`, [tm > 0 ? tm : 999999999999, ctt]);
-            
-            let runningTotal = 0;
-            let nextHit = (Math.random() * interval);
-            const pickedRowIds: number[] = [];
-            
-            for (const item of rawData) {
-                runningTotal += item.absAmt;
-                if (runningTotal >= nextHit) {
-                    pickedRowIds.push(item.rowid);
-                    nextHit += interval;
-                    if (pickedRowIds.length >= sampleSize) break;
-                    if (pickedRowIds.length >= 5000) break;
-                }
-            }
+            const musQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`;
+            const pickedRowIds = this.db.MUS_and_Pareto_Helpers.getMUSPickedRows(musQuery, [tm > 0 ? tm : 999999999999, ctt], interval, sampleSize);
 
             if (pickedRowIds.length > 0) {
                 const results: any[] = [];

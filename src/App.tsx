@@ -421,7 +421,13 @@ const App: React.FC = () => {
                         {isProcessing ? (
                             <>
                                 <Loader2 className="w-5 h-5 animate-spin" />
-                                {importProgress ? `${importProgress.stage} (${importProgress.pct}%)` : t('continue', lang)}
+                                {importProgress ? `${(lang === 'ua' ? importProgress.stage
+                                    .replace('Opening file...', 'Відкриття файлу...')
+                                    .replace('Importing via DuckDB...', 'Імпорт...')
+                                    .replace('Creating schema...', 'Створення структури...')
+                                    .replace('Loading JSON/CSV...', 'Завантаження...')
+                                    .replace(/Parsing (\d+) rows\.\.\./, 'Обробка $1 рядків...')
+                                    .replace('Complete', 'Готово') : importProgress.stage)} (${importProgress.pct}%)` : t('continue', lang)}
                             </>
                         ) : (
                             <>{t('continue', lang)} <ChevronRight className="w-4 h-4" /></>

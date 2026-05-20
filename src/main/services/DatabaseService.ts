@@ -63,8 +63,54 @@ export class DatabaseService {
     return results as T[];
   }
 
+  public get MUS_and_Pareto_Helpers() {
+    return {
+      getMUSPickedRows: (sql: string, params: any[], interval: number, sampleSize: number): number[] => {
+        if (!this.db) throw new Error('Database not initialized');
+        const stmt = this.db.prepare(sql);
+        stmt.bind(params);
+        let runningTotal = 0;
+        let nextHit = Math.random() * interval;
+        const pickedRowIds: number[] = [];
+        while (stmt.step()) {
+           const row = stmt.get(); // [rowid, absAmt]
+           const rowid = row[0] as number;
+           const absAmt = row[1] as number;
+           runningTotal += absAmt;
+           while (runningTotal >= nextHit) { // while instead of if, in case interval is very small
+               pickedRowIds.push(rowid);
+               nextHit += interval;
+               if (pickedRowIds.length >= sampleSize || pickedRowIds.length >= 5000) break;
+           }
+           if (pickedRowIds.length >= sampleSize || pickedRowIds.length >= 5000) break;
+        }
+        stmt.free();
+        return pickedRowIds;
+      },
+      getParetoPickedRows: (sql: string, params: any[], targetValue: number): number[] => {
+        if (!this.db) throw new Error('Database not initialized');
+        const stmt = this.db.prepare(sql);
+        stmt.bind(params);
+        let currentSum = 0;
+        const pickedRowIds: number[] = [];
+        while (stmt.step()) {
+           const row = stmt.get(); // [rowid, absAmt]
+           const rowid = row[0] as number;
+           const absAmt = row[1] as number;
+           
+           if (currentSum >= targetValue) break;
+           currentSum += absAmt;
+           pickedRowIds.push(rowid);
+           
+           if (pickedRowIds.length >= 5000) break;
+        }
+        stmt.free();
+        return pickedRowIds;
+      }
+    };
+  }
+
   public async execute(sql: string): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
     if (sql.trim().toUpperCase() === 'CHECKPOINT') {
       if (this.dbPath) {
         const data = this.db.export();
