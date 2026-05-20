@@ -9,7 +9,7 @@ export class WorkerPool {
     // Basic pool init
   }
 
-  public async runTask(workerFile: string, data: any): Promise<any> {
+  public async runTask(workerFile: string, data: any, onProgress?: (pct: number, stage: string) => void): Promise<any> {
     return new Promise((resolve, reject) => {
       // Assuming compiled worker lives in dist/workers or just next to main
       // However currently we run from main.cjs which has bundled everything?
@@ -23,8 +23,8 @@ export class WorkerPool {
         if (msg.type === 'done') resolve(msg);
         else if (msg.type === 'error') reject(new Error(msg.error));
         else if (msg.type === 'progress') {
-           // Can pipe to IPC later
            console.log(`Worker Progress: ${msg.pct}% - ${msg.stage}`);
+           if (onProgress) onProgress(msg.pct, msg.stage);
         }
       });
       worker.on('error', reject);

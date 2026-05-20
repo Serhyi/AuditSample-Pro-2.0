@@ -29,7 +29,9 @@ export class AppOrchestrator {
   public registerIpcHandlers() {
     ipcMain.handle('import:start', async (event, filePath, config) => {
       console.log('IPC import:start received', filePath, config);
-      const result = await this.importService.importFile(filePath, config);
+      const result = await this.importService.importFile(filePath, config, (pct, stage) => {
+          event.sender.send('import:progress', pct, stage);
+      });
       
       // Now initialize using the db path created by the worker
       await this.dbService.close();

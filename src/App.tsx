@@ -67,6 +67,7 @@ const App: React.FC = () => {
   });
   const [results, setResults] = useState<SamplingResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [importProgress, setImportProgress] = useState<{pct: number, stage: string} | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [samplingError, setSamplingError] = useState<string | null>(null);
 
@@ -229,6 +230,15 @@ const App: React.FC = () => {
   const handleContinueFromImport = async () => {
       setIsProcessing(true);
       setSamplingError(null);
+      setImportProgress(null);
+      
+      let unsubscribe: (() => void) | undefined;
+      if (isElectron() && window.api && window.api.on) {
+          unsubscribe = window.api.on('import:progress', (pct: number, stage: string) => {
+              setImportProgress({ pct: Math.round(pct), stage });
+          });
+      }
+      
       try {
           if (isElectron() && currentFilePath && window.api) {
               await window.api.import.start(currentFilePath, { 
@@ -243,6 +253,8 @@ const App: React.FC = () => {
           setSamplingError('Import failed: ' + e.message);
       } finally {
           setIsProcessing(false);
+          setImportProgress(null);
+          if (unsubscribe) unsubscribe();
       }
   };
 
@@ -406,7 +418,14 @@ const App: React.FC = () => {
                         onClick={handleContinueFromImport}
                         className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:bg-slate-200 disabled:text-slate-400 text-white px-10 py-3.5 rounded-xl text-sm font-bold transition-all shadow-[0_4px_12px_rgba(0,133,75,0.25)] active:scale-95"
                     >
-                        {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <>{t('continue', lang)} <ChevronRight className="w-4 h-4" /></>}
+                        {isProcessing ? (
+                            <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                {importProgress ? `${importProgress.stage} (${importProgress.pct}%)` : t('continue', lang)}
+                            </>
+                        ) : (
+                            <>{t('continue', lang)} <ChevronRight className="w-4 h-4" /></>
+                        )}
                     </button>
                 </div>
             </div>

@@ -6,7 +6,7 @@ import * as path from 'path';
 export class ImportService {
   constructor(private db: DatabaseService, private workerPool: WorkerPool) {}
 
-  public async importFile(filePath: string, config: any): Promise<any> {
+  public async importFile(filePath: string, config: any, onProgress?: (pct: number, stage: string) => void): Promise<any> {
     console.log('ImportService starting worker for', filePath);
     
     // Provide a unique db path for this import session
@@ -17,7 +17,7 @@ export class ImportService {
       config, 
       dbPath: dbPath, 
       mode: 'import'
-    });
+    }, onProgress);
     
     return { ...result, dbPath };
   }

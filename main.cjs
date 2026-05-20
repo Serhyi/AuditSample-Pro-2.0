@@ -115,7 +115,7 @@ var ImportService = class {
   }
   db;
   workerPool;
-  async importFile(filePath, config) {
+  async importFile(filePath, config, onProgress) {
     console.log("ImportService starting worker for", filePath);
     const dbPath = path.join(os.tmpdir(), `project_${Date.now()}.sqlite`);
     const result = await this.workerPool.runTask(path.join("dist", "workers", "ImportWorker.cjs"), {
@@ -123,7 +123,7 @@ var ImportService = class {
       config,
       dbPath,
       mode: "import"
-    });
+    }, onProgress);
     return { ...result, dbPath };
   }
   async previewFile(filePath) {
@@ -142,23 +142,8 @@ var SamplingService = class {
   }
   db;
   async getRandomSample(whereClause, params, limitCount) {
-    const rowIds = await this.db.query(`SELECT rowid FROM population WHERE ${whereClause}`, params);
-    for (let i = rowIds.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      const temp = rowIds[i];
-      rowIds[i] = rowIds[j];
-      rowIds[j] = temp;
-    }
-    const picked = rowIds.slice(0, limitCount).map((r) => r.rowid);
-    if (picked.length === 0) return [];
-    const results = [];
-    const chunkSize = 500;
-    for (let i = 0; i < picked.length; i += chunkSize) {
-      const chunk = picked.slice(i, i + chunkSize);
-      const chunkResults = await this.db.query(`SELECT * FROM population WHERE rowid IN (${chunk.join(",")})`);
-      results.push(...chunkResults);
-    }
-    return results;
+    const query = `SELECT * FROM population WHERE ${whereClause} ORDER BY random() LIMIT ?`;
+    return this.db.query(query, [...params, limitCount]);
   }
   async runSampling(config) {
     if (!this.db || !this.db.isInitialized()) {
@@ -327,7 +312,9 @@ var SamplingService = class {
       }));
     } else {
       let sampleSize = 10;
+      let isMUS = false;
       if (config.method === "MUS") {
+        isMUS = true;
         const pm = config.tolerableMisstatement || 1;
         sampleSize = Math.ceil(remPopValue * rf / Math.max(pm, 0.01));
       } else if (config.method === "FixedRandom") {
@@ -342,17 +329,53 @@ var SamplingService = class {
       const remPopSize = popSize - keyItems.length - trivialCount;
       if (sampleSize > remPopSize) sampleSize = remPopSize;
       if (sampleSize > 5e3) sampleSize = 5e3;
-      const whereStr = `ABS(amount) < ? AND ABS(amount) >= ?`;
-      const rawSampleItems = await this.getRandomSample(whereStr, [tm > 0 ? tm : 999999999999, ctt], sampleSize);
-      sampleItems = rawSampleItems.map((item, idx) => ({
-        ...item,
-        bookValue: item.amount,
-        auditedValue: "",
-        difference: item.amount,
-        tainting: 1,
-        isSampled: true,
-        selectionReason: config.method === "StopOrGo" ? idx < (config.stopOrGoInitialSize || 25) ? "Stage 1" : "Stage 2" : "Sampled"
-      }));
+      if (isMUS) {
+        const pm = config.tolerableMisstatement || 1;
+        const interval2 = Math.max(pm / rf, 1);
+        const rawData = await this.db.query(`SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`, [tm > 0 ? tm : 999999999999, ctt]);
+        let runningTotal = 0;
+        let nextHit = Math.random() * interval2;
+        const pickedRowIds = [];
+        for (const item of rawData) {
+          runningTotal += item.absAmt;
+          if (runningTotal >= nextHit) {
+            pickedRowIds.push(item.rowid);
+            nextHit += interval2;
+            if (pickedRowIds.length >= sampleSize) break;
+            if (pickedRowIds.length >= 5e3) break;
+          }
+        }
+        if (pickedRowIds.length > 0) {
+          const results = [];
+          const chunkSize = 500;
+          for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
+            const chunk = pickedRowIds.slice(i, i + chunkSize);
+            const chunkResults = await this.db.query(`SELECT * FROM population WHERE rowid IN (${chunk.join(",")})`);
+            results.push(...chunkResults);
+          }
+          sampleItems = results.map((item, idx) => ({
+            ...item,
+            bookValue: item.amount,
+            auditedValue: "",
+            difference: item.amount,
+            tainting: 1,
+            isSampled: true,
+            selectionReason: "MUS Hit"
+          }));
+        }
+      } else {
+        const whereStr = `ABS(amount) < ? AND ABS(amount) >= ?`;
+        const rawSampleItems = await this.getRandomSample(whereStr, [tm > 0 ? tm : 999999999999, ctt], sampleSize);
+        sampleItems = rawSampleItems.map((item, idx) => ({
+          ...item,
+          bookValue: item.amount,
+          auditedValue: "",
+          difference: item.amount,
+          tainting: 1,
+          isSampled: true,
+          selectionReason: config.method === "StopOrGo" ? idx < (config.stopOrGoInitialSize || 25) ? "Stage 1" : "Stage 2" : "Sampled"
+        }));
+      }
     }
     sampleItems = sampleItems.map((item) => ({
       ...item,
@@ -458,7 +481,7 @@ var WorkerPool = class {
   poolSize;
   workers = [];
   taskQueue = [];
-  async runTask(workerFile, data) {
+  async runTask(workerFile, data, onProgress) {
     return new Promise((resolve, reject) => {
       const workerPath = path3.join(__dirname, workerFile);
       const worker = new import_worker_threads.Worker(workerPath, { workerData: data });
@@ -467,6 +490,7 @@ var WorkerPool = class {
         else if (msg.type === "error") reject(new Error(msg.error));
         else if (msg.type === "progress") {
           console.log(`Worker Progress: ${msg.pct}% - ${msg.stage}`);
+          if (onProgress) onProgress(msg.pct, msg.stage);
         }
       });
       worker.on("error", reject);
@@ -497,7 +521,9 @@ var AppOrchestrator = class {
   registerIpcHandlers() {
     import_electron.ipcMain.handle("import:start", async (event, filePath, config) => {
       console.log("IPC import:start received", filePath, config);
-      const result = await this.importService.importFile(filePath, config);
+      const result = await this.importService.importFile(filePath, config, (pct, stage) => {
+        event.sender.send("import:progress", pct, stage);
+      });
       await this.dbService.close();
       const directory = path4.dirname(result.dbPath);
       const id = path4.basename(result.dbPath, ".sqlite");

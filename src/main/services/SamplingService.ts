@@ -4,24 +4,8 @@ export class SamplingService {
   constructor(private db: DatabaseService) {}
 
     private async getRandomSample(whereClause: string, params: any[], limitCount: number): Promise<any[]> {
-        const rowIds: any[] = await this.db.query(`SELECT rowid FROM population WHERE ${whereClause}`, params);
-        for(let i = rowIds.length - 1; i > 0; i--){
-            const j = Math.floor(Math.random() * (i + 1));
-            const temp = rowIds[i];
-            rowIds[i] = rowIds[j];
-            rowIds[j] = temp;
-        }
-        const picked = rowIds.slice(0, limitCount).map(r => r.rowid);
-        if (picked.length === 0) return [];
-        
-        const results: any[] = [];
-        const chunkSize = 500;
-        for (let i = 0; i < picked.length; i += chunkSize) {
-            const chunk = picked.slice(i, i + chunkSize);
-            const chunkResults = await this.db.query(`SELECT * FROM population WHERE rowid IN (${chunk.join(',')})`);
-            results.push(...chunkResults);
-        }
-        return results;
+        const query = `SELECT * FROM population WHERE ${whereClause} ORDER BY random() LIMIT ?`;
+        return this.db.query(query, [...params, limitCount]);
     }
 
   public async runSampling(config: any): Promise<any> {
@@ -223,7 +207,10 @@ export class SamplingService {
 
     } else {
         let sampleSize = 10;
+        let isMUS = false;
+        
         if (config.method === 'MUS') {
+          isMUS = true;
           const pm = config.tolerableMisstatement || 1;
           sampleSize = Math.ceil((remPopValue * rf) / Math.max(pm, 0.01));
         } else if (config.method === 'FixedRandom') {
@@ -236,24 +223,63 @@ export class SamplingService {
           sampleSize = config.fixedSampleSize || 25;
         }
 
-        // Adjust sample size against remaining population size limit
         const remPopSize = popSize - keyItems.length - trivialCount;
         if (sampleSize > remPopSize) sampleSize = remPopSize;
         if (sampleSize > 5000) sampleSize = 5000;
 
-        // 4. Regular items sampled using JS Random filtering
-        const whereStr = `ABS(amount) < ? AND ABS(amount) >= ?`;
-        const rawSampleItems: any[] = await this.getRandomSample(whereStr, [tm > 0 ? tm : 999999999999, ctt], sampleSize);
+        if (isMUS) {
+            const pm = config.tolerableMisstatement || 1;
+            const interval = Math.max(pm / rf, 1);
+            
+            // We use JS filtering but ONLY load rowid and amount for memory efficiency
+            const rawData = await this.db.query<{rowid: number, absAmt: number}>(`SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`, [tm > 0 ? tm : 999999999999, ctt]);
+            
+            let runningTotal = 0;
+            let nextHit = (Math.random() * interval);
+            const pickedRowIds: number[] = [];
+            
+            for (const item of rawData) {
+                runningTotal += item.absAmt;
+                if (runningTotal >= nextHit) {
+                    pickedRowIds.push(item.rowid);
+                    nextHit += interval;
+                    if (pickedRowIds.length >= sampleSize) break;
+                    if (pickedRowIds.length >= 5000) break;
+                }
+            }
 
-        sampleItems = rawSampleItems.map((item, idx) => ({
-          ...item,
-          bookValue: item.amount,
-          auditedValue: '' as const,
-          difference: item.amount,
-          tainting: 1,
-          isSampled: true,
-          selectionReason: config.method === 'StopOrGo' ? (idx < (config.stopOrGoInitialSize || 25) ? 'Stage 1' : 'Stage 2') : 'Sampled'
-        }));
+            if (pickedRowIds.length > 0) {
+                const results: any[] = [];
+                const chunkSize = 500;
+                for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
+                    const chunk = pickedRowIds.slice(i, i + chunkSize);
+                    const chunkResults = await this.db.query(`SELECT * FROM population WHERE rowid IN (${chunk.join(',')})`);
+                    results.push(...chunkResults);
+                }
+                sampleItems = results.map((item, idx) => ({
+                    ...item,
+                    bookValue: item.amount,
+                    auditedValue: '' as const,
+                    difference: item.amount,
+                    tainting: 1,
+                    isSampled: true,
+                    selectionReason: 'MUS Hit'
+                }));
+            }
+        } else {
+            const whereStr = `ABS(amount) < ? AND ABS(amount) >= ?`;
+            const rawSampleItems: any[] = await this.getRandomSample(whereStr, [tm > 0 ? tm : 999999999999, ctt], sampleSize);
+    
+            sampleItems = rawSampleItems.map((item, idx) => ({
+              ...item,
+              bookValue: item.amount,
+              auditedValue: '' as const,
+              difference: item.amount,
+              tainting: 1,
+              isSampled: true,
+              selectionReason: config.method === 'StopOrGo' ? (idx < (config.stopOrGoInitialSize || 25) ? 'Stage 1' : 'Stage 2') : 'Sampled'
+            }));
+        }
     }
 
     sampleItems = sampleItems.map(item => ({
