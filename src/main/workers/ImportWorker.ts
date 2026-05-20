@@ -6,13 +6,66 @@ async function startTask() {
 
   if (mode === 'preview') {
       try {
-          if (filePath.endsWith('.csv')) {
-              const text = fs.readFileSync(filePath, { encoding: 'utf-8', flag: 'r' });
-              const lines = text.split('\n').filter(l => l.trim().length > 0).slice(0, 50);
-              const data = lines.map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g, '')));
-              const headers = data.length > 0 ? data[0] : [];
-              parentPort?.postMessage({ type: 'done', headers, data });
-          } else if (filePath.endsWith('.xlsx')) {
+        if (filePath.endsWith('.csv')) {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const Papa = require('papaparse');
+            
+            const fd = fs.openSync(filePath, 'r');
+            const buf = Buffer.alloc(4096);
+            const bytesRead = fs.readSync(fd, buf, 0, 4096, 0);
+            fs.closeSync(fd);
+            
+            let isUtf8 = true;
+            try {
+                new TextDecoder('utf-8', { fatal: true }).decode(buf.subarray(0, bytesRead));
+            } catch {
+                isUtf8 = false;
+            }
+
+            const sampleText = isUtf8 
+                ? buf.toString('utf8', 0, bytesRead)
+                : new TextDecoder('windows-1251').decode(buf.subarray(0, bytesRead));
+            
+            let detectedDelimiter = "";
+            const lines = sampleText.split('\n');
+            const firstLine = lines[0] || "";
+            
+            const headerSemi = (firstLine.match(/;/g) || []).length;
+            const headerComma = (firstLine.match(/,/g) || []).length;
+            const headerTab = (firstLine.match(/\t/g) || []).length;
+            
+            if (headerSemi > headerComma && headerSemi > headerTab) detectedDelimiter = ';';
+            else if (headerTab > headerComma && headerTab > headerSemi) detectedDelimiter = '\t';
+            else if (headerComma > headerSemi && headerComma > headerTab) detectedDelimiter = ',';
+            else {
+                const firstLines = lines.slice(0, 5).join('\n');
+                const semiCount = (firstLines.match(/;/g) || []).length;
+                const commaCount = (firstLines.match(/,/g) || []).length;
+                const tabCount = (firstLines.match(/\t/g) || []).length;
+                if (semiCount > commaCount && semiCount > tabCount) detectedDelimiter = ';';
+                else if (tabCount > commaCount && tabCount > semiCount) detectedDelimiter = '\t';
+                else if (commaCount > semiCount && commaCount > tabCount) detectedDelimiter = ',';
+            }
+
+            const results = Papa.parse(sampleText, {
+                skipEmptyLines: true,
+                ...(detectedDelimiter ? { delimiter: detectedDelimiter } : {})
+            });
+
+            const rawData = results.data;
+            const data: any[][] = [];
+            for (let i = 0; i < rawData.length; i++) {
+                if (i > 50) break;
+                const row = rawData[i] as any[];
+                while (row.length > 0 && (row[row.length - 1] === null || row[row.length - 1] === undefined || String(row[row.length - 1]).trim() === '')) {
+                    row.pop();
+                }
+                data.push(row);
+            }
+
+            const headers = data.length > 0 ? data[0] : [];
+            parentPort?.postMessage({ type: 'done', headers, data });
+        } else if (filePath.endsWith('.xlsx')) {
               // eslint-disable-next-line @typescript-eslint/no-require-imports
               const ExcelJS = require('exceljs');
               const workbook = new ExcelJS.Workbook();
@@ -79,33 +132,51 @@ async function startTask() {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const Papa = require('papaparse');
       
-      const fd = fs.openSync(filePath, 'r');
-      const buf = Buffer.alloc(4096);
-      const bytesRead = fs.readSync(fd, buf, 0, 4096, 0);
-      fs.closeSync(fd);
-      const sampleText = buf.toString('utf8', 0, bytesRead);
-                let detectedDelimiter = "";
-                const lines = sampleText.split('\n');
-                const firstLine = lines[0] || "";
-                
-                const headerSemi = (firstLine.match(/;/g) || []).length;
-                const headerComma = (firstLine.match(/,/g) || []).length;
-                const headerTab = (firstLine.match(/\t/g) || []).length;
-                
-                if (headerSemi > headerComma && headerSemi > headerTab) detectedDelimiter = ';';
-                else if (headerTab > headerComma && headerTab > headerSemi) detectedDelimiter = '\t';
-                else if (headerComma > headerSemi && headerComma > headerTab) detectedDelimiter = ',';
-                else {
-                    const firstLines = lines.slice(0, 5).join('\n');
-                    const semiCount = (firstLines.match(/;/g) || []).length;
-                    const commaCount = (firstLines.match(/,/g) || []).length;
-                    const tabCount = (firstLines.match(/\t/g) || []).length;
-                    if (semiCount > commaCount && semiCount > tabCount) detectedDelimiter = ';';
-                    else if (tabCount > commaCount && tabCount > semiCount) detectedDelimiter = '\t';
-                    else if (commaCount > semiCount && commaCount > tabCount) detectedDelimiter = ',';
-                }
+        const fd = fs.openSync(filePath, 'r');
+        const buf = Buffer.alloc(4096);
+        const bytesRead = fs.readSync(fd, buf, 0, 4096, 0);
+        fs.closeSync(fd);
 
-      const fileStream = fs.createReadStream(filePath, 'utf-8');
+        let isUtf8 = true;
+        try {
+            new TextDecoder('utf-8', { fatal: true }).decode(buf.subarray(0, bytesRead));
+        } catch {
+            isUtf8 = false;
+        }
+
+        const sampleText = isUtf8 
+            ? buf.toString('utf8', 0, bytesRead)
+            : new TextDecoder('windows-1251').decode(buf.subarray(0, bytesRead));
+              
+        let detectedDelimiter = "";
+        const lines = sampleText.split('\n');
+        const firstLine = lines[0] || "";
+        
+        const headerSemi = (firstLine.match(/;/g) || []).length;
+        const headerComma = (firstLine.match(/,/g) || []).length;
+        const headerTab = (firstLine.match(/\t/g) || []).length;
+        
+        if (headerSemi > headerComma && headerSemi > headerTab) detectedDelimiter = ';';
+        else if (headerTab > headerComma && headerTab > headerSemi) detectedDelimiter = '\t';
+        else if (headerComma > headerSemi && headerComma > headerTab) detectedDelimiter = ',';
+        else {
+            const firstLines = lines.slice(0, 5).join('\n');
+            const semiCount = (firstLines.match(/;/g) || []).length;
+            const commaCount = (firstLines.match(/,/g) || []).length;
+            const tabCount = (firstLines.match(/\t/g) || []).length;
+            if (semiCount > commaCount && semiCount > tabCount) detectedDelimiter = ';';
+            else if (tabCount > commaCount && tabCount > semiCount) detectedDelimiter = '\t';
+            else if (commaCount > semiCount && commaCount > tabCount) detectedDelimiter = ',';
+        }
+
+        let fileStream;
+        if (!isUtf8) {
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            const iconv = require('iconv-lite');
+            fileStream = fs.createReadStream(filePath).pipe(iconv.decodeStream('win1251'));
+        } else {
+            fileStream = fs.createReadStream(filePath, 'utf-8');
+        }
       
       const stmt = db.prepare('INSERT INTO population (id, date, amount, bookValue, difference, originalRow) VALUES (?, ?, ?, ?, ?, ?)');
       db.run('BEGIN TRANSACTION;');
