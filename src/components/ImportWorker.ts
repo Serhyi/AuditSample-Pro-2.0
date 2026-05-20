@@ -140,7 +140,31 @@ self.onmessage = async (e) => {
                     ? new TextDecoder('utf-8').decode(uint8)
                     : new TextDecoder('windows-1251').decode(uint8);
 
-                const results = Papa.parse(text, { skipEmptyLines: true });
+                let detectedDelimiter = "";
+                const lines = text.split('\n');
+                const firstLine = lines[0] || "";
+                
+                const headerSemi = (firstLine.match(/;/g) || []).length;
+                const headerComma = (firstLine.match(/,/g) || []).length;
+                const headerTab = (firstLine.match(/\t/g) || []).length;
+                
+                if (headerSemi > headerComma && headerSemi > headerTab) detectedDelimiter = ';';
+                else if (headerTab > headerComma && headerTab > headerSemi) detectedDelimiter = '\t';
+                else if (headerComma > headerSemi && headerComma > headerTab) detectedDelimiter = ',';
+                else {
+                    const firstLines = lines.slice(0, 5).join('\n');
+                    const semiCount = (firstLines.match(/;/g) || []).length;
+                    const commaCount = (firstLines.match(/,/g) || []).length;
+                    const tabCount = (firstLines.match(/\t/g) || []).length;
+                    if (semiCount > commaCount && semiCount > tabCount) detectedDelimiter = ';';
+                    else if (tabCount > commaCount && tabCount > semiCount) detectedDelimiter = '\t';
+                    else if (commaCount > semiCount && commaCount > tabCount) detectedDelimiter = ',';
+                }
+
+                const results = Papa.parse(text, { 
+                    skipEmptyLines: true, 
+                    ...(detectedDelimiter ? { delimiter: detectedDelimiter } : {}) 
+                });
                 const rawResultsData = results.data as any[][];
                 if (!rawResultsData || rawResultsData.length === 0) throw new Error('errFileEmpty');
                 

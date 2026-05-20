@@ -78,6 +78,33 @@ async function startTask() {
       
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const Papa = require('papaparse');
+      
+      const fd = fs.openSync(filePath, 'r');
+      const buf = Buffer.alloc(4096);
+      const bytesRead = fs.readSync(fd, buf, 0, 4096, 0);
+      fs.closeSync(fd);
+      const sampleText = buf.toString('utf8', 0, bytesRead);
+                let detectedDelimiter = "";
+                const lines = sampleText.split('\n');
+                const firstLine = lines[0] || "";
+                
+                const headerSemi = (firstLine.match(/;/g) || []).length;
+                const headerComma = (firstLine.match(/,/g) || []).length;
+                const headerTab = (firstLine.match(/\t/g) || []).length;
+                
+                if (headerSemi > headerComma && headerSemi > headerTab) detectedDelimiter = ';';
+                else if (headerTab > headerComma && headerTab > headerSemi) detectedDelimiter = '\t';
+                else if (headerComma > headerSemi && headerComma > headerTab) detectedDelimiter = ',';
+                else {
+                    const firstLines = lines.slice(0, 5).join('\n');
+                    const semiCount = (firstLines.match(/;/g) || []).length;
+                    const commaCount = (firstLines.match(/,/g) || []).length;
+                    const tabCount = (firstLines.match(/\t/g) || []).length;
+                    if (semiCount > commaCount && semiCount > tabCount) detectedDelimiter = ';';
+                    else if (tabCount > commaCount && tabCount > semiCount) detectedDelimiter = '\t';
+                    else if (commaCount > semiCount && commaCount > tabCount) detectedDelimiter = ',';
+                }
+
       const fileStream = fs.createReadStream(filePath, 'utf-8');
       
       const stmt = db.prepare('INSERT INTO population (id, date, amount, bookValue, difference, originalRow) VALUES (?, ?, ?, ?, ?, ?)');
@@ -94,6 +121,7 @@ async function startTask() {
           Papa.parse(fileStream, {
               header: false, // We need to use false so headers don't offset startRow
               skipEmptyLines: true,
+              ...(detectedDelimiter ? { delimiter: detectedDelimiter } : {}),
               step: function(results: any) {
                   rowCount++;
                   if (rowCount === Math.max(1, startRow - 1)) {
@@ -166,68 +194,37 @@ async function startTask() {
        
        const stmt = db.prepare('INSERT INTO population (id, date, amount, bookValue, difference, originalRow) VALUES (?, ?, ?, ?, ?, ?)');
        
-       const shouldUseStream = fs.statSync(filePath).size > 50 * 1024 * 1024; // 50MB
-       
        db.run('BEGIN TRANSACTION;');
        let parseCount = 0;
        
-       if (shouldUseStream) {
-           const workbook = new ExcelJS.stream.xlsx.WorkbookReader(filePath, {
-              worksheets: "emit",
-              styles: "drop",
-           });
-           for await (const worksheet of workbook) {
-               for await (const row of worksheet) {
-                   parseCount++;
-                   if (parseCount >= startRow) {
-                       const rValues = row.values as any[];
-                       const r = rValues.slice(1);
-                       
-                       const idv = r[activeIndices.id];
-                       const dt = r[activeIndices.date];
-                       const amtRaw = r[activeIndices.amount];
-                       
-                       const idVal = String(typeof idv === 'object' && idv !== null && 'text' in idv ? idv.text : (idv || ''));
-                       const dateVal = String(typeof dt === 'object' && dt !== null && 'text' in dt ? dt.text : (dt || ''));
-                       const amountVal = parseFloat(typeof amtRaw === 'object' && amtRaw !== null && 'text' in amtRaw ? amtRaw.text : amtRaw) || 0;
-                       
-                       const cleanRowArray = r.map(v => typeof v === 'object' && v !== null && 'text' in v ? v.text : v);
-                       
-                       stmt.run([idVal, dateVal, amountVal, amountVal, amountVal, JSON.stringify(cleanRowArray)]);
-                   }
-                   if (parseCount % 50000 === 0) db.run('COMMIT; BEGIN TRANSACTION;');
-                   if (parseCount % 10000 === 0) parentPort?.postMessage({ type: 'progress', pct: Math.min(90, 10 + (parseCount / 10000)), stage: `Parsing ${parseCount} rows...` });
+       const workbook = new ExcelJS.stream.xlsx.WorkbookReader(filePath, {
+          worksheets: "emit",
+          styles: "drop",
+       });
+
+       for await (const worksheet of workbook) {
+           for await (const row of worksheet) {
+               parseCount++;
+               if (parseCount >= startRow) {
+                   const rValues = row.values as any[];
+                   const r = rValues.slice(1);
+                   
+                   const idv = r[activeIndices.id];
+                   const dt = r[activeIndices.date];
+                   const amtRaw = r[activeIndices.amount];
+                   
+                   const idVal = String(typeof idv === 'object' && idv !== null && 'text' in idv ? idv.text : (idv || ''));
+                   const dateVal = String(typeof dt === 'object' && dt !== null && 'text' in dt ? dt.text : (dt || ''));
+                   const amountVal = parseFloat(typeof amtRaw === 'object' && amtRaw !== null && 'text' in amtRaw ? amtRaw.text : (typeof amtRaw === 'object' && amtRaw !== null && 'result' in amtRaw ? amtRaw.result : amtRaw)) || 0;
+                   
+                   const cleanRowArray = r.map((v: any) => typeof v === 'object' && v !== null && 'result' in v ? v.result : (typeof v === 'object' && v !== null && 'text' in v ? v.text : v));
+                   
+                   stmt.run([idVal, dateVal, amountVal, amountVal, amountVal, JSON.stringify(cleanRowArray)]);
                }
-               break; // only first worksheet
+               if (parseCount % 50000 === 0) db.run('COMMIT; BEGIN TRANSACTION;');
+               if (parseCount % 10000 === 0) parentPort?.postMessage({ type: 'progress', pct: Math.min(90, 10 + (parseCount / 10000)), stage: `Parsing ${parseCount} rows...` });
            }
-       } else {
-           const workbook = new ExcelJS.Workbook();
-           await workbook.xlsx.readFile(filePath);
-           const sheet = workbook.worksheets[0];
-           
-           if (sheet) {
-               sheet.eachRow((row: any) => {
-                   parseCount++;
-                   if (parseCount >= startRow) {
-                       const rValues = row.values as any[];
-                       const r = rValues.slice(1);
-                       
-                       const idv = r[activeIndices.id];
-                       const dt = r[activeIndices.date];
-                       const amtRaw = r[activeIndices.amount];
-                       
-                       const idVal = String(typeof idv === 'object' && idv !== null && 'text' in idv ? idv.text : (idv || ''));
-                       const dateVal = String(typeof dt === 'object' && dt !== null && 'text' in dt ? dt.text : (dt || ''));
-                       const amountVal = parseFloat(typeof amtRaw === 'object' && amtRaw !== null && 'result' in amtRaw ? amtRaw.result : (amtRaw !== null && 'text' in amtRaw ? amtRaw.text : amtRaw)) || 0;
-                       
-                       const cleanRowArray = r.map((v: any) => typeof v === 'object' && v !== null && 'result' in v ? v.result : (typeof v === 'object' && v !== null && 'text' in v ? v.text : v));
-                       
-                       stmt.run([idVal, dateVal, amountVal, amountVal, amountVal, JSON.stringify(cleanRowArray)]);
-                   }
-                   if (parseCount % 50000 === 0) db.run('COMMIT; BEGIN TRANSACTION;');
-                   if (parseCount % 10000 === 0) parentPort?.postMessage({ type: 'progress', pct: Math.min(90, 10 + (parseCount / 10000)), stage: `Parsing ${parseCount} rows...` });
-               });
-           }
+           break; // only first worksheet
        }
        
        db.run('COMMIT;');
