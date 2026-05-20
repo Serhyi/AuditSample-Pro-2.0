@@ -141,6 +141,25 @@ var SamplingService = class {
     this.db = db;
   }
   db;
+  async getRandomSample(whereClause, params, limitCount) {
+    const rowIds = await this.db.query(`SELECT rowid FROM population WHERE ${whereClause}`, params);
+    for (let i = rowIds.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const temp = rowIds[i];
+      rowIds[i] = rowIds[j];
+      rowIds[j] = temp;
+    }
+    const picked = rowIds.slice(0, limitCount).map((r) => r.rowid);
+    if (picked.length === 0) return [];
+    const results = [];
+    const chunkSize = 500;
+    for (let i = 0; i < picked.length; i += chunkSize) {
+      const chunk = picked.slice(i, i + chunkSize);
+      const chunkResults = await this.db.query(`SELECT * FROM population WHERE rowid IN (${chunk.join(",")})`);
+      results.push(...chunkResults);
+    }
+    return results;
+  }
   async runSampling(config) {
     if (!this.db || !this.db.isInitialized()) {
       throw new Error("Database not initialized. Please import population data or load a project first.");
@@ -222,13 +241,8 @@ var SamplingService = class {
         });
       }
       const randomCount = config.riskRandomCount ?? 5;
-      const riskUnmatchedQuery = `
-          SELECT * FROM population 
-          WHERE ABS(amount) < ? AND ABS(amount) >= ? AND NOT ${riskWhereStr}
-          ORDER BY random() 
-          LIMIT ?
-        `;
-      const randomMatched = await this.db.query(riskUnmatchedQuery, [tm > 0 ? tm : 999999999999, ctt, randomCount]);
+      const riskUnmatchedWhere = `ABS(amount) < ? AND ABS(amount) >= ? AND NOT ${riskWhereStr}`;
+      const randomMatched = await this.getRandomSample(riskUnmatchedWhere, [tm > 0 ? tm : 999999999999, ctt], randomCount);
       for (const item of randomMatched) {
         sampleItems.push({
           ...item,
@@ -289,13 +303,8 @@ var SamplingService = class {
       }
     } else if (config.method === "Benford") {
       const benfordCount = config.benfordSampleSize || 50;
-      const query = `
-          SELECT * FROM population 
-          WHERE ABS(amount) < ? AND ABS(amount) >= ?
-          ORDER BY random() 
-          LIMIT ?
-        `;
-      const items = await this.db.query(query, [tm > 0 ? tm : 999999999999, ctt, benfordCount]);
+      const whereCond = `ABS(amount) < ? AND ABS(amount) >= ?`;
+      const items = await this.getRandomSample(whereCond, [tm > 0 ? tm : 999999999999, ctt], benfordCount);
       sampleItems = items.map((item) => ({
         ...item,
         bookValue: item.amount,
@@ -333,13 +342,8 @@ var SamplingService = class {
       const remPopSize = popSize - keyItems.length - trivialCount;
       if (sampleSize > remPopSize) sampleSize = remPopSize;
       if (sampleSize > 5e3) sampleSize = 5e3;
-      const sampleItemsQuery = `
-          SELECT * FROM population 
-          WHERE ABS(amount) < ? AND ABS(amount) >= ?
-          ORDER BY random() 
-          LIMIT ?
-        `;
-      const rawSampleItems = await this.db.query(sampleItemsQuery, [tm > 0 ? tm : 999999999999, ctt, sampleSize]);
+      const whereStr = `ABS(amount) < ? AND ABS(amount) >= ?`;
+      const rawSampleItems = await this.getRandomSample(whereStr, [tm > 0 ? tm : 999999999999, ctt], sampleSize);
       sampleItems = rawSampleItems.map((item, idx) => ({
         ...item,
         bookValue: item.amount,

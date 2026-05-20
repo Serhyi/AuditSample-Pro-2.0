@@ -204,34 +204,35 @@ async function startTask() {
       await new Promise<void>((resolve, reject) => {
           let rowCount = 0;
           Papa.parse(fileStream, {
-              header: false, // We need to use false so headers don't offset startRow
+              header: false,
               skipEmptyLines: true,
               ...(detectedDelimiter ? { delimiter: detectedDelimiter } : {}),
-              step: function(results: any) {
-                  rowCount++;
-                  if (rowCount === Math.max(1, startRow - 1)) {
-                      keys = results.data.map(String);
-                  }
-
-                  if (rowCount >= startRow) {
-                      const row = results.data;
-                      const idv = row[activeIndices.id] !== undefined ? row[activeIndices.id] : "";
-                      const dtv = row[activeIndices.date] !== undefined ? row[activeIndices.date] : "";
-                      const amtRaw = row[activeIndices.amount] !== undefined ? row[activeIndices.amount] : 0;
-                      
-                      const amountVal = parseAmount(amtRaw);
-                      // rowArray is the entire row
-                      const rowArray = Array.isArray(row) ? row.map(String) : [];
-                      
-                      stmt.run([String(idv), String(dtv), amountVal, amountVal, amountVal, JSON.stringify(rowArray)]);
-                      inserted++;
-                      
-                      if (inserted % 50000 === 0) {
-                          db.run('COMMIT; BEGIN TRANSACTION;');
+              chunk: function(results: any) {
+                  for (let i = 0; i < results.data.length; i++) {
+                      rowCount++;
+                      if (rowCount === Math.max(1, startRow - 1)) {
+                          keys = results.data[i].map(String);
                       }
-                      
-                      if (inserted % 10000 === 0) {
-                          parentPort?.postMessage({ type: 'progress', pct: Math.min(90, 75 + (inserted / 1000000 * 15)), stage: `Parsing ${inserted} rows...` });
+
+                      if (rowCount >= startRow) {
+                          const row = results.data[i];
+                          const idv = row[activeIndices.id] !== undefined ? row[activeIndices.id] : "";
+                          const dtv = row[activeIndices.date] !== undefined ? row[activeIndices.date] : "";
+                          const amtRaw = row[activeIndices.amount] !== undefined ? row[activeIndices.amount] : 0;
+                          
+                          const amountVal = parseAmount(amtRaw);
+                          const rowArray = Array.isArray(row) ? row.map(String) : [];
+                          
+                          stmt.run([String(idv), String(dtv), amountVal, amountVal, amountVal, JSON.stringify(rowArray)]);
+                          inserted++;
+                          
+                          if (inserted % 50000 === 0) {
+                              db.run('COMMIT; BEGIN TRANSACTION;');
+                          }
+                          
+                          if (inserted % 10000 === 0) {
+                              parentPort?.postMessage({ type: 'progress', pct: Math.min(90, 75 + (inserted / 1000000 * 15)), stage: `Parsing ${inserted} rows...` });
+                          }
                       }
                   }
               },
