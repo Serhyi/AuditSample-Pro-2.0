@@ -78,39 +78,62 @@ async function startTask() {
       
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const Papa = require('papaparse');
-      const fileText = fs.readFileSync(filePath, 'utf-8');
+      const fileStream = fs.createReadStream(filePath, 'utf-8');
       
-      const parsed = Papa.parse(fileText, {
-          header: true,
-          skipEmptyLines: true
-      });
-      
-      const rows = parsed.data;
-      const keys = parsed.meta.fields || [];
-      const idKey = keys[activeIndices.id] || null;
-      const dateKey = keys[activeIndices.date] || null;
-      const amtKey = keys[activeIndices.amount] || null;
-
       const stmt = db.prepare('INSERT INTO population (id, date, amount, bookValue, difference, originalRow) VALUES (?, ?, ?, ?, ?, ?)');
+      db.run('BEGIN TRANSACTION;');
       
       let inserted = 0;
-      for (let i = startRow - 1; i < rows.length; i++) {
-         const row = rows[i];
-         const idv = idKey ? row[idKey] : "";
-         const dtv = dateKey ? row[dateKey] : "";
-         const amtRaw = amtKey ? row[amtKey] : 0;
-         
-         const amountVal = parseFloat(amtRaw) || 0;
-         const rowArray = keys.map((k: string) => row[k]);
-         
-         stmt.run([idv, dtv, amountVal, amountVal, amountVal, JSON.stringify(rowArray)]);
-         inserted++;
-         
-         if (inserted % 10000 === 0) {
-             parentPort?.postMessage({ type: 'progress', pct: Math.min(90, 75 + (inserted / rows.length * 15)), stage: `Parsing ${inserted} rows...` });
-         }
-      }
+      let keys: string[] = [];
+      let idKey: string | null = null;
+      let dateKey: string | null = null;
+      let amtKey: string | null = null;
+
+      await new Promise<void>((resolve, reject) => {
+          let rowCount = 0;
+          Papa.parse(fileStream, {
+              header: true,
+              skipEmptyLines: true,
+              step: function(results: any) {
+                  rowCount++;
+                  if (rowCount === 1) {
+                      keys = results.meta.fields || [];
+                      idKey = keys[activeIndices.id] || null;
+                      dateKey = keys[activeIndices.date] || null;
+                      amtKey = keys[activeIndices.amount] || null;
+                  }
+
+                  if (rowCount >= startRow) {
+                      const row = results.data;
+                      const idv = idKey ? row[idKey] : "";
+                      const dtv = dateKey ? row[dateKey] : "";
+                      const amtRaw = amtKey ? row[amtKey] : 0;
+                      
+                      const amountVal = parseFloat(amtRaw) || 0;
+                      const rowArray = keys.map((k: string) => row[k]);
+                      
+                      stmt.run([idv, dtv, amountVal, amountVal, amountVal, JSON.stringify(rowArray)]);
+                      inserted++;
+                      
+                      if (inserted % 50000 === 0) {
+                          db.run('COMMIT; BEGIN TRANSACTION;');
+                      }
+                      
+                      if (inserted % 10000 === 0) {
+                          parentPort?.postMessage({ type: 'progress', pct: Math.min(90, 75 + (inserted / 1000000 * 15)), stage: `Parsing ${inserted} rows...` });
+                      }
+                  }
+              },
+              complete: function() {
+                  resolve();
+              },
+              error: function(err: any) {
+                  reject(err);
+              }
+          });
+      });
       
+      db.run('COMMIT;');
       stmt.free();
       
       const data = db.export();
@@ -149,6 +172,7 @@ async function startTask() {
        
        const stmt = db.prepare('INSERT INTO population (id, date, amount, bookValue, difference, originalRow) VALUES (?, ?, ?, ?, ?, ?)');
        
+       db.run('BEGIN TRANSACTION;');
        let parseCount = 0;
        
        for await (const worksheet of workbook) {
@@ -172,12 +196,17 @@ async function startTask() {
                    stmt.run([idVal, dateVal, amountVal, amountVal, amountVal, JSON.stringify(cleanRowArray)]);
                }
                
+               if (parseCount % 50000 === 0) {
+                   db.run('COMMIT; BEGIN TRANSACTION;');
+               }
+               
                if (parseCount % 10000 === 0) {
                    parentPort?.postMessage({ type: 'progress', pct: Math.min(90, 10 + (parseCount / 10000)), stage: `Parsing ${parseCount} rows...` });
                }
            }
        }
        
+       db.run('COMMIT;');
        stmt.free();
        const data = db.export();
        fs.writeFileSync(dbPath, Buffer.from(data));
