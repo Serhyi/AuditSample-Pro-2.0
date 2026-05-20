@@ -18,8 +18,8 @@ export class SamplingService {
       throw new Error('Population cannot be empty');
     }
 
-    const tm = config.tolerableMisstatement || 0;
-    const ctt = config.clearlyTrivialThreshold || 0;
+    const tm = Number(config.tolerableMisstatement) || 0;
+    const ctt = Number(config.clearlyTrivialThreshold) || 0;
 
     // 2. Trivial items
     let trivialCount = 0;

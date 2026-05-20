@@ -152,8 +152,8 @@ var SamplingService = class {
     if (popSize === 0) {
       throw new Error("Population cannot be empty");
     }
-    const tm = config.tolerableMisstatement || 0;
-    const ctt = config.clearlyTrivialThreshold || 0;
+    const tm = Number(config.tolerableMisstatement) || 0;
+    const ctt = Number(config.clearlyTrivialThreshold) || 0;
     let trivialCount = 0;
     let trivialValue = 0;
     let trivialItems = [];

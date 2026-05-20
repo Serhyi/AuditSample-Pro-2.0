@@ -1,6 +1,20 @@
 import { parentPort, workerData } from 'worker_threads';
 import * as fs from 'fs';
 
+function parseAmount(val: any): number {
+    if (typeof val === 'number') return val;
+    const cleanStr = String(val).replace(/\s/g, '').replace(/[\u00A0\u202F]/g, '').trim();
+    if (!cleanStr) return 0;
+    if (cleanStr.includes(',') && !cleanStr.includes('.')) return parseFloat(cleanStr.replace(',', '.')) || 0;
+    if (cleanStr.includes(',') && cleanStr.includes('.')) {
+        const lastComma = cleanStr.lastIndexOf(',');
+        const lastDot = cleanStr.lastIndexOf('.');
+        if (lastComma > lastDot) return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.')) || 0;
+        else return parseFloat(cleanStr.replace(/,/g, '')) || 0;
+    }
+    return parseFloat(cleanStr) || 0;
+}
+
 async function startTask() {
   const { filePath, config, dbPath, mode } = workerData;
 
@@ -205,7 +219,7 @@ async function startTask() {
                       const dtv = row[activeIndices.date] !== undefined ? row[activeIndices.date] : "";
                       const amtRaw = row[activeIndices.amount] !== undefined ? row[activeIndices.amount] : 0;
                       
-                      const amountVal = parseFloat(amtRaw) || 0;
+                      const amountVal = parseAmount(amtRaw);
                       // rowArray is the entire row
                       const rowArray = Array.isArray(row) ? row.map(String) : [];
                       
@@ -286,7 +300,7 @@ async function startTask() {
                    
                    const idVal = String(typeof idv === 'object' && idv !== null && 'text' in idv ? idv.text : (idv || ''));
                    const dateVal = String(typeof dt === 'object' && dt !== null && 'text' in dt ? dt.text : (dt || ''));
-                   const amountVal = parseFloat(typeof amtRaw === 'object' && amtRaw !== null && 'text' in amtRaw ? amtRaw.text : (typeof amtRaw === 'object' && amtRaw !== null && 'result' in amtRaw ? amtRaw.result : amtRaw)) || 0;
+                   const amountVal = parseAmount(typeof amtRaw === 'object' && amtRaw !== null && 'text' in amtRaw ? amtRaw.text : (typeof amtRaw === 'object' && amtRaw !== null && 'result' in amtRaw ? amtRaw.result : amtRaw));
                    
                    const cleanRowArray = r.map((v: any) => typeof v === 'object' && v !== null && 'result' in v ? v.result : (typeof v === 'object' && v !== null && 'text' in v ? v.text : v));
                    
