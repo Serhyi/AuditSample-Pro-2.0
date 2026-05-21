@@ -23,16 +23,6 @@ export class DatabaseService {
         this.db = new this.SQL.Database();
       }
       console.log(`[DatabaseService] initialized correctly. db object exists? ` + !!this.db);
-      
-      // Ensure indices are present, especially if loading old project that lacked them
-      if (this.db) {
-        try {
-          this.db.run('CREATE INDEX IF NOT EXISTS idx_abs_amount ON population(ABS(amount));');
-          this.db.run('CREATE INDEX IF NOT EXISTS idx_amount ON population(amount);');
-        } catch (e) {
-          console.error(`[DatabaseService] Could not create indices (might not be population table yet)`, e);
-        }
-      }
     } catch (err: any) {
       console.error(`[DatabaseService] Error during initialization!`, err);
       throw err;

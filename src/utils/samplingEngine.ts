@@ -2,12 +2,12 @@ import { TransactionItem, SamplingConfig, SamplingResult, SampledItem, GlobalSet
 
 export const methodsSupportingAnomalies = ['MUS', 'CVS', 'Random', 'FixedRandom'];
 
-export function formatMoney(val: number, settings: GlobalSettings): string {
-    return new Intl.NumberFormat(settings.region === 'us' ? 'en-US' : 'uk-UA', { 
+export function formatMoney(val: number, settings?: GlobalSettings): string {
+    return new Intl.NumberFormat('en-US', { 
         style: 'decimal', 
         minimumFractionDigits: 2, 
         maximumFractionDigits: 2 
-    }).format(val);
+    }).format(val).replace(/,/g, ' ');
 }
 
 export function formatDate(val: string, settings?: GlobalSettings): string {
@@ -30,10 +30,10 @@ export function smartFormat(val: any, settings?: GlobalSettings): string {
     if (typeof val === 'number') {
         if (Number.isInteger(val)) return val.toString();
         if (settings) {
-            return new Intl.NumberFormat(settings.region === 'us' ? 'en-US' : 'uk-UA', { 
+            return new Intl.NumberFormat('en-US', { 
                 minimumFractionDigits: 2, 
                 maximumFractionDigits: 2 
-            }).format(val);
+            }).format(val).replace(/,/g, ' ');
         }
         return val.toFixed(2);
     }
@@ -117,7 +117,7 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
             if (trivialItems.length < 10) trivialItems.push(item);
             trivialCount++;
             trivialValue += item.amount;
-        } else if (config.tolerableMisstatement && Math.abs(item.amount) >= config.tolerableMisstatement) {
+        } else if (!['StopOrGo', 'Attribute'].includes(config.method) && config.tolerableMisstatement && Math.abs(item.amount) >= config.tolerableMisstatement) {
             keyItems.push({
                 ...item,
                 bookValue: item.amount,

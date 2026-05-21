@@ -43,14 +43,42 @@ const parseAmount = (rawAmt: any): number => {
     let str = String(rawAmt).trim();
     if (str === '') return NaN;
     if (str.startsWith('(') && str.endsWith(')')) str = '-' + str.slice(1, -1);
+    
     const cleanStr = str.replace(/[\s\u00A0\u200B\u202F$€£₴]/g, ''); 
-    if (cleanStr.includes(',') && !cleanStr.includes('.')) return parseFloat(cleanStr.replace(',', '.'));
+    
+    // Check if it has both comma and dot
     if (cleanStr.includes(',') && cleanStr.includes('.')) {
         const lastDot = cleanStr.lastIndexOf('.');
         const lastComma = cleanStr.lastIndexOf(',');
-        if (lastComma > lastDot) return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.'));
-        else return parseFloat(cleanStr.replace(/,/g, ''));
+        if (lastComma > lastDot) {
+            // European format: 1.234,56
+            return parseFloat(cleanStr.replace(/\./g, '').replace(/,/g, '.'));
+        } else {
+            // International/US format: 1,234.56
+            return parseFloat(cleanStr.replace(/,/g, ''));
+        }
     }
+    
+    // Only comma
+    if (cleanStr.includes(',')) {
+        const commaParts = cleanStr.split(',');
+        // If there are multiple commas (e.g. 1,234,567), they are thousands separators
+        if (commaParts.length > 2) {
+            return parseFloat(cleanStr.replace(/,/g, ''));
+        }
+        
+        // Single comma: Could be decimal (e.g. 965,00) or thousands (e.g. 25,000)
+        const afterComma = commaParts[commaParts.length - 1];
+        if (afterComma.length === 3) {
+            // Probably thousands separator (e.g. 25,000 = 25000)
+            return parseFloat(cleanStr.replace(/,/g, ''));
+        } else {
+            // Probably decimal (e.g. 965,00 = 965.0)
+            return parseFloat(cleanStr.replace(/,/g, '.'));
+        }
+    }
+    
+    // Only dot or neither
     return parseFloat(cleanStr);
 };
 
