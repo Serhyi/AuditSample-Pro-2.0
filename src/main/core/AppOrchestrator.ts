@@ -142,8 +142,13 @@ export class AppOrchestrator {
 
     ipcMain.handle('export:project', async (event, state) => {
       console.log('IPC export:project received');
+      const methodName = state?.config?.method || 'Sample';
+      const dateStr = new Date().toLocaleDateString('uk-UA').replace(/\./g, '_');
+      const defaultName = `Вибірка_${methodName}_${dateStr}.audsmpl`;
+      
       const { canceled, filePath: projectPath } = await dialog.showSaveDialog({
-         title: 'Save Project',
+         title: 'Зберегти проєкт',
+         defaultPath: defaultName,
          filters: [{ name: 'Audit Sample Project', extensions: ['audsmpl'] }]
       });
       if (!canceled && projectPath) {
@@ -153,8 +158,13 @@ export class AppOrchestrator {
 
     ipcMain.handle('export:excel', async (event, state) => {
       console.log('IPC export:excel received');
+      const methodName = state?.config?.method || 'Sample';
+      const dateStr = new Date().toLocaleDateString('uk-UA').replace(/\./g, '_');
+      const defaultName = `Вибірка_${methodName}_${dateStr}.xlsx`;
+      
       const { canceled, filePath: excelPath } = await dialog.showSaveDialog({
-         title: 'Export to Excel',
+         title: 'Експорт в Excel',
+         defaultPath: defaultName,
          filters: [{ name: 'Excel Workbook', extensions: ['xlsx'] }]
       });
       if (!canceled && excelPath) {

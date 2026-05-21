@@ -109,7 +109,8 @@ const App: React.FC = () => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Audit_Sample_${config.method}_${new Date().toISOString().slice(0,10)}.audsmpl`;
+        const dateStr = new Date().toLocaleDateString('uk-UA').replace(/\./g, '_');
+        a.download = `Вибірка_${config.method}_${dateStr}.audsmpl`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

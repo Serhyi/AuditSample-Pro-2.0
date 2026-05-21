@@ -56,8 +56,13 @@ export class DatabaseService {
     const stmt = this.db.prepare(sql);
     stmt.bind(params);
     const results: any[] = [];
+    let count = 0;
     while (stmt.step()) {
       results.push(stmt.getAsObject());
+      count++;
+      if (count % 5000 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
     }
     stmt.free();
     return results as T[];
@@ -65,13 +70,14 @@ export class DatabaseService {
 
   public get MUS_and_Pareto_Helpers() {
     return {
-      getMUSPickedRows: (sql: string, params: any[], interval: number, sampleSize: number): number[] => {
+      getMUSPickedRows: async (sql: string, params: any[], interval: number, sampleSize: number): Promise<number[]> => {
         if (!this.db) throw new Error('Database not initialized');
         const stmt = this.db.prepare(sql);
         stmt.bind(params);
         let runningTotal = 0;
         let nextHit = Math.random() * interval;
         const pickedRowIds: number[] = [];
+        let count = 0;
         while (stmt.step()) {
            const row = stmt.get(); // [rowid, absAmt]
            const rowid = row[0] as number;
@@ -82,17 +88,20 @@ export class DatabaseService {
                nextHit += interval;
                if (pickedRowIds.length >= sampleSize || pickedRowIds.length >= 5000) break;
            }
+           count++;
+           if (count % 5000 === 0) await new Promise(resolve => setTimeout(resolve, 0));
            if (pickedRowIds.length >= sampleSize || pickedRowIds.length >= 5000) break;
         }
         stmt.free();
         return pickedRowIds;
       },
-      getParetoPickedRows: (sql: string, params: any[], targetValue: number): number[] => {
+      getParetoPickedRows: async (sql: string, params: any[], targetValue: number): Promise<number[]> => {
         if (!this.db) throw new Error('Database not initialized');
         const stmt = this.db.prepare(sql);
         stmt.bind(params);
         let currentSum = 0;
         const pickedRowIds: number[] = [];
+        let count = 0;
         while (stmt.step()) {
            const row = stmt.get(); // [rowid, absAmt]
            const rowid = row[0] as number;
@@ -102,18 +111,24 @@ export class DatabaseService {
            currentSum += absAmt;
            pickedRowIds.push(rowid);
            
+           count++;
+           if (count % 5000 === 0) await new Promise(resolve => setTimeout(resolve, 0));
+           
            if (pickedRowIds.length >= 5000) break;
         }
         stmt.free();
         return pickedRowIds;
       },
-      getRandomPickedRows: (sql: string, params: any[], sampleSize: number): number[] => {
+      getRandomPickedRows: async (sql: string, params: any[], sampleSize: number): Promise<number[]> => {
         if (!this.db) throw new Error('Database not initialized');
         const stmt = this.db.prepare(sql);
         stmt.bind(params);
         const allRowIds: number[] = [];
+        let count = 0;
         while(stmt.step()){
            allRowIds.push(stmt.get()[0] as number);
+           count++;
+           if (count % 5000 === 0) await new Promise(resolve => setTimeout(resolve, 0));
         }
         stmt.free();
         if(allRowIds.length === 0) return [];
@@ -122,6 +137,7 @@ export class DatabaseService {
             const temp = allRowIds[i];
             allRowIds[i] = allRowIds[j];
             allRowIds[j] = temp;
+            if (i % 50000 === 0) await new Promise(resolve => setTimeout(resolve, 0));
         }
         return allRowIds.slice(0, sampleSize);
       }

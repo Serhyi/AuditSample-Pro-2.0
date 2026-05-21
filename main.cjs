@@ -76,21 +76,27 @@ var DatabaseService = class {
     const stmt = this.db.prepare(sql);
     stmt.bind(params);
     const results = [];
+    let count = 0;
     while (stmt.step()) {
       results.push(stmt.getAsObject());
+      count++;
+      if (count % 5e3 === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
     }
     stmt.free();
     return results;
   }
   get MUS_and_Pareto_Helpers() {
     return {
-      getMUSPickedRows: (sql, params, interval, sampleSize) => {
+      getMUSPickedRows: async (sql, params, interval, sampleSize) => {
         if (!this.db) throw new Error("Database not initialized");
         const stmt = this.db.prepare(sql);
         stmt.bind(params);
         let runningTotal = 0;
         let nextHit = Math.random() * interval;
         const pickedRowIds = [];
+        let count = 0;
         while (stmt.step()) {
           const row = stmt.get();
           const rowid = row[0];
@@ -101,17 +107,20 @@ var DatabaseService = class {
             nextHit += interval;
             if (pickedRowIds.length >= sampleSize || pickedRowIds.length >= 5e3) break;
           }
+          count++;
+          if (count % 5e3 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
           if (pickedRowIds.length >= sampleSize || pickedRowIds.length >= 5e3) break;
         }
         stmt.free();
         return pickedRowIds;
       },
-      getParetoPickedRows: (sql, params, targetValue) => {
+      getParetoPickedRows: async (sql, params, targetValue) => {
         if (!this.db) throw new Error("Database not initialized");
         const stmt = this.db.prepare(sql);
         stmt.bind(params);
         let currentSum = 0;
         const pickedRowIds = [];
+        let count = 0;
         while (stmt.step()) {
           const row = stmt.get();
           const rowid = row[0];
@@ -119,18 +128,23 @@ var DatabaseService = class {
           if (currentSum >= targetValue) break;
           currentSum += absAmt;
           pickedRowIds.push(rowid);
+          count++;
+          if (count % 5e3 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
           if (pickedRowIds.length >= 5e3) break;
         }
         stmt.free();
         return pickedRowIds;
       },
-      getRandomPickedRows: (sql, params, sampleSize) => {
+      getRandomPickedRows: async (sql, params, sampleSize) => {
         if (!this.db) throw new Error("Database not initialized");
         const stmt = this.db.prepare(sql);
         stmt.bind(params);
         const allRowIds = [];
+        let count = 0;
         while (stmt.step()) {
           allRowIds.push(stmt.get()[0]);
+          count++;
+          if (count % 5e3 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
         }
         stmt.free();
         if (allRowIds.length === 0) return [];
@@ -139,6 +153,7 @@ var DatabaseService = class {
           const temp = allRowIds[i];
           allRowIds[i] = allRowIds[j];
           allRowIds[j] = temp;
+          if (i % 5e4 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
         }
         return allRowIds.slice(0, sampleSize);
       }
@@ -204,7 +219,7 @@ var SamplingService = class {
   db;
   async getRandomSample(whereClause, params, limitCount) {
     const query = `SELECT rowid FROM population WHERE ${whereClause}`;
-    const pickedRowIds = this.db.MUS_and_Pareto_Helpers.getRandomPickedRows(query, params, limitCount);
+    const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getRandomPickedRows(query, params, limitCount);
     if (pickedRowIds.length === 0) return [];
     const results = [];
     const chunkSize = 500;
@@ -318,7 +333,7 @@ var SamplingService = class {
       const targetPercent = (config.paretoCoverage || 80) / 100;
       const targetValue = remPopValue * targetPercent;
       const paretoItemsQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY ABS(amount) DESC`;
-      const pickedRowIds = this.db.MUS_and_Pareto_Helpers.getParetoPickedRows(paretoItemsQuery, [tm > 0 ? tm : 999999999999, ctt], targetValue);
+      const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getParetoPickedRows(paretoItemsQuery, [tm > 0 ? tm : 999999999999, ctt], targetValue);
       if (pickedRowIds.length > 0) {
         const results = [];
         const chunkSize = 500;
@@ -407,7 +422,7 @@ var SamplingService = class {
         const pm = config.tolerableMisstatement || 1;
         const interval2 = Math.max(pm / rf, 1);
         const musQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`;
-        const pickedRowIds = this.db.MUS_and_Pareto_Helpers.getMUSPickedRows(musQuery, [tm > 0 ? tm : 999999999999, ctt], interval2, sampleSize);
+        const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getMUSPickedRows(musQuery, [tm > 0 ? tm : 999999999999, ctt], interval2, sampleSize);
         if (pickedRowIds.length > 0) {
           const results = [];
           const chunkSize = 500;
@@ -674,8 +689,12 @@ var AppOrchestrator = class {
     });
     import_electron.ipcMain.handle("export:project", async (event, state) => {
       console.log("IPC export:project received");
+      const methodName = state?.config?.method || "Sample";
+      const dateStr = (/* @__PURE__ */ new Date()).toLocaleDateString("uk-UA").replace(/\./g, "_");
+      const defaultName = `\u0412\u0438\u0431\u0456\u0440\u043A\u0430_${methodName}_${dateStr}.audsmpl`;
       const { canceled, filePath: projectPath } = await import_electron.dialog.showSaveDialog({
-        title: "Save Project",
+        title: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043F\u0440\u043E\u0454\u043A\u0442",
+        defaultPath: defaultName,
         filters: [{ name: "Audit Sample Project", extensions: ["audsmpl"] }]
       });
       if (!canceled && projectPath) {
@@ -684,8 +703,12 @@ var AppOrchestrator = class {
     });
     import_electron.ipcMain.handle("export:excel", async (event, state) => {
       console.log("IPC export:excel received");
+      const methodName = state?.config?.method || "Sample";
+      const dateStr = (/* @__PURE__ */ new Date()).toLocaleDateString("uk-UA").replace(/\./g, "_");
+      const defaultName = `\u0412\u0438\u0431\u0456\u0440\u043A\u0430_${methodName}_${dateStr}.xlsx`;
       const { canceled, filePath: excelPath } = await import_electron.dialog.showSaveDialog({
-        title: "Export to Excel",
+        title: "\u0415\u043A\u0441\u043F\u043E\u0440\u0442 \u0432 Excel",
+        defaultPath: defaultName,
         filters: [{ name: "Excel Workbook", extensions: ["xlsx"] }]
       });
       if (!canceled && excelPath) {

@@ -5,7 +5,7 @@ export class SamplingService {
 
     private async getRandomSample(whereClause: string, params: any[], limitCount: number): Promise<any[]> {
         const query = `SELECT rowid FROM population WHERE ${whereClause}`;
-        const pickedRowIds = this.db.MUS_and_Pareto_Helpers.getRandomPickedRows(query, params, limitCount);
+        const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getRandomPickedRows(query, params, limitCount);
         if (pickedRowIds.length === 0) return [];
         
         const results: any[] = [];
@@ -144,7 +144,7 @@ export class SamplingService {
         const targetValue = remPopValue * targetPercent;
         
         const paretoItemsQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY ABS(amount) DESC`;
-        const pickedRowIds = this.db.MUS_and_Pareto_Helpers.getParetoPickedRows(paretoItemsQuery, [tm > 0 ? tm : 999999999999, ctt], targetValue);
+        const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getParetoPickedRows(paretoItemsQuery, [tm > 0 ? tm : 999999999999, ctt], targetValue);
         
         if (pickedRowIds.length > 0) {
             const results: any[] = [];
@@ -246,7 +246,7 @@ export class SamplingService {
             const interval = Math.max(pm / rf, 1);
             
             const musQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`;
-            const pickedRowIds = this.db.MUS_and_Pareto_Helpers.getMUSPickedRows(musQuery, [tm > 0 ? tm : 999999999999, ctt], interval, sampleSize);
+            const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getMUSPickedRows(musQuery, [tm > 0 ? tm : 999999999999, ctt], interval, sampleSize);
 
             if (pickedRowIds.length > 0) {
                 const results: any[] = [];

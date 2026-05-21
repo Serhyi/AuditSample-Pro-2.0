@@ -291,8 +291,8 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         return;
     }
 
-    const dateStr = new Date().toISOString().slice(0,10);
-    exportToExcel(fullState, `Audit_Sample_${config.method}_Full_${dateStr}.xlsx`, false, lang);
+    const dateStr = new Date().toLocaleDateString('uk-UA').replace(/\./g, '_');
+    exportToExcel(fullState, `Вибірка_${config.method}_Робоча_${dateStr}.xlsx`, false, lang);
   };
 
   const handleExportClient = async () => {
@@ -316,8 +316,8 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         return;
     }
 
-    const dateStr = new Date().toISOString().slice(0,10);
-    exportToExcel(clientState, `Audit_Sample_${config.method}_Client_${dateStr}.xlsx`, true, lang);
+    const dateStr = new Date().toLocaleDateString('uk-UA').replace(/\./g, '_');
+    exportToExcel(clientState, `Вибірка_${config.method}_Клієнту_${dateStr}.xlsx`, true, lang);
   };
 
   const handleImportClient = async (e: React.ChangeEvent<HTMLInputElement>) => {
