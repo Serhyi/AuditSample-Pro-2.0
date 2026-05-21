@@ -440,7 +440,8 @@ const App: React.FC = () => {
                                     .replace('Creating schema...', 'Створення структури...')
                                     .replace('Loading JSON/CSV...', 'Завантаження...')
                                     .replace(/Parsing (\d+) rows\.\.\./, 'Обробка $1 рядків...')
-                                    .replace('Complete', 'Готово') : importProgress.stage)} (${importProgress.pct}%)` : t('continue', lang)}
+                                    .replace(/Creating indices \((.*?)\)\.\.\./, 'Створення індексів ($1)...')
+                                    .replace('Complete', 'Готово') : importProgress.stage)} (${Math.round(importProgress.pct)}%)` : t('continue', lang)}
                             </>
                         ) : (
                             <>{t('continue', lang)} <ChevronRight className="w-4 h-4" /></>

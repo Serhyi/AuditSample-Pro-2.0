@@ -248,6 +248,11 @@ async function startTask() {
       db.run('COMMIT;');
       stmt.free();
       
+      parentPort?.postMessage({ type: 'progress', pct: 95, stage: 'Creating indices (1/2)...' });
+      db.run('CREATE INDEX IF NOT EXISTS idx_abs_amount ON population(ABS(amount));');
+      parentPort?.postMessage({ type: 'progress', pct: 98, stage: 'Creating indices (2/2)...' });
+      db.run('CREATE INDEX IF NOT EXISTS idx_amount ON population(amount);');
+      
       const data = db.export();
       fs.writeFileSync(dbPath, Buffer.from(data));
       db.close();
@@ -315,6 +320,12 @@ async function startTask() {
        
        db.run('COMMIT;');
        stmt.free();
+       
+       parentPort?.postMessage({ type: 'progress', pct: 95, stage: 'Creating indices (1/2)...' });
+       db.run('CREATE INDEX IF NOT EXISTS idx_abs_amount ON population(ABS(amount));');
+       parentPort?.postMessage({ type: 'progress', pct: 98, stage: 'Creating indices (2/2)...' });
+       db.run('CREATE INDEX IF NOT EXISTS idx_amount ON population(amount);');
+       
        const data = db.export();
        fs.writeFileSync(dbPath, Buffer.from(data));
        db.close();
