@@ -231,12 +231,18 @@ var SamplingService = class {
     return results;
   }
   async runSampling(config, onProgress) {
+    const updateProgress = async (stage) => {
+      if (onProgress) {
+        onProgress(stage);
+        await new Promise((resolve) => setTimeout(resolve, 30));
+      }
+    };
     if (!this.db || !this.db.isInitialized()) {
       throw new Error("Database not initialized. Please import population data or load a project first.");
     }
     console.log("SamplingService executing SQL-based sampling via SQLite...", config.method);
-    if (onProgress) onProgress("\u041F\u0456\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u0431\u0430\u0437\u0438 \u0434\u0430\u043D\u0438\u0445...");
-    if (onProgress) onProgress("\u041E\u0431\u0447\u0438\u0441\u043B\u0435\u043D\u043D\u044F \u0433\u0435\u043D\u0435\u0440\u0430\u043B\u044C\u043D\u043E\u0457 \u0441\u0443\u043A\u0443\u043F\u043D\u043E\u0441\u0442\u0456...");
+    await updateProgress("\u041F\u0456\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u0431\u0430\u0437\u0438 \u0434\u0430\u043D\u0438\u0445...");
+    await updateProgress("\u041E\u0431\u0447\u0438\u0441\u043B\u0435\u043D\u043D\u044F \u0433\u0435\u043D\u0435\u0440\u0430\u043B\u044C\u043D\u043E\u0457 \u0441\u0443\u043A\u0443\u043F\u043D\u043E\u0441\u0442\u0456...");
     const popAgg = await this.db.query(`SELECT COUNT(*) as cnt, SUM(ABS(amount)) as val FROM population`);
     const popSize = popAgg[0]?.cnt || 0;
     const popValue = popAgg[0]?.val || 0;
@@ -249,7 +255,7 @@ var SamplingService = class {
     let trivialValue = 0;
     let trivialItems = [];
     if (ctt > 0) {
-      if (onProgress) onProgress("\u0412\u0456\u0434\u0431\u0456\u0440 \u0442\u0440\u0438\u0432\u0456\u0430\u043B\u044C\u043D\u0438\u0445 \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432...");
+      await updateProgress("\u0412\u0456\u0434\u0431\u0456\u0440 \u0442\u0440\u0438\u0432\u0456\u0430\u043B\u044C\u043D\u0438\u0445 \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432...");
       const trivAgg = await this.db.query(`SELECT COUNT(*) as cnt, SUM(amount) as val FROM population WHERE ABS(amount) < ?`, [ctt]);
       trivialCount = trivAgg[0]?.cnt || 0;
       trivialValue = trivAgg[0]?.val || 0;
@@ -261,7 +267,7 @@ var SamplingService = class {
     }
     let keyItems = [];
     if (tm > 0) {
-      if (onProgress) onProgress("\u0412\u0456\u0434\u0431\u0456\u0440 \u043A\u043B\u044E\u0447\u043E\u0432\u0438\u0445 \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432...");
+      await updateProgress("\u0412\u0456\u0434\u0431\u0456\u0440 \u043A\u043B\u044E\u0447\u043E\u0432\u0438\u0445 \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432...");
       keyItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) >= ?`, [tm]);
       keyItems = keyItems.map((item) => ({
         ...item,
@@ -282,7 +288,7 @@ var SamplingService = class {
     else if (config.confidenceLevel === 95) rf = 3;
     else if (config.confidenceLevel === 99) rf = 4.61;
     let sampleItems = [];
-    if (onProgress) onProgress("\u0417\u0430\u0441\u0442\u043E\u0441\u0443\u0432\u0430\u043D\u043D\u044F \u043C\u0435\u0442\u043E\u0434\u0443 \u0432\u0456\u0434\u0431\u043E\u0440\u0443...");
+    await updateProgress("\u0417\u0430\u0441\u0442\u043E\u0441\u0443\u0432\u0430\u043D\u043D\u044F \u043C\u0435\u0442\u043E\u0434\u0443 \u0432\u0456\u0434\u0431\u043E\u0440\u0443...");
     if (config.method === "RiskAssessment") {
       const closingDays = config.riskClosingDays ?? 5;
       const includeWeekend = config.riskWeekend !== false;
@@ -455,6 +461,7 @@ var SamplingService = class {
         }));
       }
     }
+    await updateProgress("\u0424\u043E\u0440\u043C\u0443\u0432\u0430\u043D\u043D\u044F \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0456\u0432...");
     sampleItems = sampleItems.map((item) => ({
       ...item,
       originalRow: typeof item.originalRow === "string" ? JSON.parse(item.originalRow) : item.originalRow || []

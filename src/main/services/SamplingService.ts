@@ -19,14 +19,22 @@ export class SamplingService {
     }
 
   public async runSampling(config: any, onProgress?: (stage: string) => void): Promise<any> {
+    const updateProgress = async (stage: string) => {
+      if (onProgress) {
+          onProgress(stage);
+          // Yield to let the main thread flush IPC before blocking on synchronous steps
+          await new Promise(resolve => setTimeout(resolve, 30));
+      }
+    };
+
     if (!this.db || !this.db.isInitialized()) {
       throw new Error('Database not initialized. Please import population data or load a project first.');
     }
     console.log('SamplingService executing SQL-based sampling via SQLite...', config.method);
-    if (onProgress) onProgress('Підготовка бази даних...');
+    await updateProgress('Підготовка бази даних...');
 
     // 1. Get total population size and value
-    if (onProgress) onProgress('Обчислення генеральної сукупності...');
+    await updateProgress('Обчислення генеральної сукупності...');
     const popAgg: any[] = await this.db.query(`SELECT COUNT(*) as cnt, SUM(ABS(amount)) as val FROM population`);
     const popSize = popAgg[0]?.cnt || 0;
     const popValue = popAgg[0]?.val || 0;
@@ -43,7 +51,7 @@ export class SamplingService {
     let trivialValue = 0;
     let trivialItems: any[] = [];
     if (ctt > 0) {
-      if (onProgress) onProgress('Відбір тривіальних елементів...');
+      await updateProgress('Відбір тривіальних елементів...');
       const trivAgg: any[] = await this.db.query(`SELECT COUNT(*) as cnt, SUM(amount) as val FROM population WHERE ABS(amount) < ?`, [ctt]);
       trivialCount = trivAgg[0]?.cnt || 0;
       trivialValue = trivAgg[0]?.val || 0;
@@ -57,7 +65,7 @@ export class SamplingService {
     // 3. Key items
     let keyItems: any[] = [];
     if (tm > 0) {
-      if (onProgress) onProgress('Відбір ключових елементів...');
+      await updateProgress('Відбір ключових елементів...');
       keyItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) >= ?`, [tm]);
       keyItems = keyItems.map(item => ({
         ...item,
@@ -82,7 +90,7 @@ export class SamplingService {
 
     let sampleItems: any[] = [];
     
-    if (onProgress) onProgress('Застосування методу відбору...');
+    await updateProgress('Застосування методу відбору...');
     if (config.method === 'RiskAssessment') {
         const closingDays = config.riskClosingDays ?? 5;
         const includeWeekend = config.riskWeekend !== false;
@@ -281,6 +289,8 @@ export class SamplingService {
             }));
         }
     }
+
+    await updateProgress('Формування результатів...');
 
     sampleItems = sampleItems.map(item => ({
       ...item,
