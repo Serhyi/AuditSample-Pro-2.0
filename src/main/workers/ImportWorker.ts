@@ -197,9 +197,6 @@ async function startTask() {
       
       let inserted = 0;
       let keys: string[] = [];
-      let idKey: string | null = null;
-      let dateKey: string | null = null;
-      let amtKey: string | null = null;
 
       await new Promise<void>((resolve, reject) => {
           let rowCount = 0;

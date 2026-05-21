@@ -55,6 +55,14 @@ var DatabaseService = class {
         this.db = new this.SQL.Database();
       }
       console.log(`[DatabaseService] initialized correctly. db object exists? ` + !!this.db);
+      if (this.db) {
+        try {
+          this.db.run("CREATE INDEX IF NOT EXISTS idx_abs_amount ON population(ABS(amount));");
+          this.db.run("CREATE INDEX IF NOT EXISTS idx_amount ON population(amount);");
+        } catch (e) {
+          console.error(`[DatabaseService] Could not create indices (might not be population table yet)`, e);
+        }
+      }
     } catch (err) {
       console.error(`[DatabaseService] Error during initialization!`, err);
       throw err;
@@ -134,28 +142,6 @@ var DatabaseService = class {
         }
         stmt.free();
         return pickedRowIds;
-      },
-      getRandomPickedRows: async (sql, params, sampleSize) => {
-        if (!this.db) throw new Error("Database not initialized");
-        const stmt = this.db.prepare(sql);
-        stmt.bind(params);
-        const allRowIds = [];
-        let count = 0;
-        while (stmt.step()) {
-          allRowIds.push(stmt.get()[0]);
-          count++;
-          if (count % 5e3 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
-        }
-        stmt.free();
-        if (allRowIds.length === 0) return [];
-        for (let i = allRowIds.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          const temp = allRowIds[i];
-          allRowIds[i] = allRowIds[j];
-          allRowIds[j] = temp;
-          if (i % 5e4 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
-        }
-        return allRowIds.slice(0, sampleSize);
       }
     };
   }
@@ -218,17 +204,8 @@ var SamplingService = class {
   }
   db;
   async getRandomSample(whereClause, params, limitCount) {
-    const query = `SELECT rowid FROM population WHERE ${whereClause}`;
-    const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getRandomPickedRows(query, params, limitCount);
-    if (pickedRowIds.length === 0) return [];
-    const results = [];
-    const chunkSize = 500;
-    for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
-      const chunk = pickedRowIds.slice(i, i + chunkSize);
-      const chunkResults = await this.db.query(`SELECT * FROM population WHERE rowid IN (${chunk.join(",")})`);
-      results.push(...chunkResults);
-    }
-    return results;
+    const query = `SELECT * FROM population WHERE ${whereClause} ORDER BY RANDOM() LIMIT ${limitCount}`;
+    return await this.db.query(query, params);
   }
   async runSampling(config, onProgress) {
     const updateProgress = async (stage) => {
@@ -336,11 +313,14 @@ var SamplingService = class {
         });
       }
     } else if (config.method === "Pareto") {
+      await updateProgress("\u0410\u043D\u0430\u043B\u0456\u0437 \u0440\u043E\u0437\u043F\u043E\u0434\u0456\u043B\u0443 \u041F\u0430\u0440\u0435\u0442\u043E (\u0432\u0438\u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F 80% \u0432\u0430\u0440\u0442\u043E\u0441\u0442\u0456)...");
       const targetPercent = (config.paretoCoverage || 80) / 100;
       const targetValue = remPopValue * targetPercent;
+      await updateProgress("\u0412\u0438\u0431\u0456\u0440 \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0438\u0445 \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432 \u0442\u0430\u0431\u043B\u0438\u0446\u0456...");
       const paretoItemsQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY ABS(amount) DESC`;
       const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getParetoPickedRows(paretoItemsQuery, [tm > 0 ? tm : 999999999999, ctt], targetValue);
       if (pickedRowIds.length > 0) {
+        await updateProgress(`\u041E\u0442\u0440\u0438\u043C\u0430\u043D\u043D\u044F \u0434\u0430\u043D\u0438\u0445 \u0432\u0438\u0431\u0440\u0430\u043D\u0438\u0445 \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432 (${pickedRowIds.length})...`);
         const results = [];
         const chunkSize = 500;
         for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
@@ -425,11 +405,14 @@ var SamplingService = class {
       if (sampleSize > remPopSize) sampleSize = remPopSize;
       if (sampleSize > 5e3) sampleSize = 5e3;
       if (isMUS) {
+        await updateProgress("\u0420\u043E\u0437\u0440\u0430\u0445\u0443\u043D\u043E\u043A \u0456\u043D\u0442\u0435\u0440\u0432\u0430\u043B\u0443 \u0434\u043B\u044F \u041C\u043E\u043D\u0435\u0442\u0430\u0440\u043D\u043E\u0457 \u0432\u0438\u0431\u0456\u0440\u043A\u0438...");
         const pm = config.tolerableMisstatement || 1;
         const interval2 = Math.max(pm / rf, 1);
+        await updateProgress(`\u0417\u0430\u0441\u0442\u043E\u0441\u0443\u0432\u0430\u043D\u043D\u044F \u0456\u043D\u0442\u0435\u0440\u0432\u0430\u043B\u0443 (${interval2.toFixed(2)})...`);
         const musQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`;
         const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getMUSPickedRows(musQuery, [tm > 0 ? tm : 999999999999, ctt], interval2, sampleSize);
         if (pickedRowIds.length > 0) {
+          await updateProgress(`\u041E\u0442\u0440\u0438\u043C\u0430\u043D\u043D\u044F \u0434\u0430\u043D\u0438\u0445 \u0432\u0438\u0431\u0440\u0430\u043D\u0438\u0445 \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432 (${pickedRowIds.length})...`);
           const results = [];
           const chunkSize = 500;
           for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
@@ -437,7 +420,7 @@ var SamplingService = class {
             const chunkResults = await this.db.query(`SELECT * FROM population WHERE rowid IN (${chunk.join(",")})`);
             results.push(...chunkResults);
           }
-          sampleItems = results.map((item, idx) => ({
+          sampleItems = results.map((item) => ({
             ...item,
             bookValue: item.amount,
             auditedValue: "",
@@ -448,6 +431,7 @@ var SamplingService = class {
           }));
         }
       } else {
+        await updateProgress(`\u0412\u0438\u043A\u043E\u043D\u0430\u043D\u043D\u044F \u0432\u0438\u043F\u0430\u0434\u043A\u043E\u0432\u043E\u0433\u043E \u0432\u0438\u0431\u043E\u0440\u0443 (${sampleSize} \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432)...`);
         const whereStr = `ABS(amount) < ? AND ABS(amount) >= ?`;
         const rawSampleItems = await this.getRandomSample(whereStr, [tm > 0 ? tm : 999999999999, ctt], sampleSize);
         sampleItems = rawSampleItems.map((item, idx) => ({

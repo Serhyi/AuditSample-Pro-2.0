@@ -4,18 +4,8 @@ export class SamplingService {
   constructor(private db: DatabaseService) {}
 
     private async getRandomSample(whereClause: string, params: any[], limitCount: number): Promise<any[]> {
-        const query = `SELECT rowid FROM population WHERE ${whereClause}`;
-        const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getRandomPickedRows(query, params, limitCount);
-        if (pickedRowIds.length === 0) return [];
-        
-        const results: any[] = [];
-        const chunkSize = 500;
-        for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
-            const chunk = pickedRowIds.slice(i, i + chunkSize);
-            const chunkResults = await this.db.query(`SELECT * FROM population WHERE rowid IN (${chunk.join(',')})`);
-            results.push(...chunkResults);
-        }
-        return results;
+        const query = `SELECT * FROM population WHERE ${whereClause} ORDER BY RANDOM() LIMIT ${limitCount}`;
+        return await this.db.query(query, params);
     }
 
   public async runSampling(config: any, onProgress?: (stage: string) => void): Promise<any> {
@@ -148,13 +138,16 @@ export class SamplingService {
         }
         
     } else if (config.method === 'Pareto') {
+        await updateProgress('Аналіз розподілу Парето (визначення 80% вартості)...');
         const targetPercent = (config.paretoCoverage || 80) / 100;
         const targetValue = remPopValue * targetPercent;
         
+        await updateProgress('Вибір найбільших елементів таблиці...');
         const paretoItemsQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY ABS(amount) DESC`;
         const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getParetoPickedRows(paretoItemsQuery, [tm > 0 ? tm : 999999999999, ctt], targetValue);
         
         if (pickedRowIds.length > 0) {
+            await updateProgress(`Отримання даних вибраних елементів (${pickedRowIds.length})...`);
             const results: any[] = [];
             const chunkSize = 500;
             for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
@@ -250,13 +243,16 @@ export class SamplingService {
         if (sampleSize > 5000) sampleSize = 5000;
 
         if (isMUS) {
+            await updateProgress('Розрахунок інтервалу для Монетарної вибірки...');
             const pm = config.tolerableMisstatement || 1;
             const interval = Math.max(pm / rf, 1);
             
+            await updateProgress(`Застосування інтервалу (${interval.toFixed(2)})...`);
             const musQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`;
             const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getMUSPickedRows(musQuery, [tm > 0 ? tm : 999999999999, ctt], interval, sampleSize);
 
             if (pickedRowIds.length > 0) {
+                await updateProgress(`Отримання даних вибраних елементів (${pickedRowIds.length})...`);
                 const results: any[] = [];
                 const chunkSize = 500;
                 for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
@@ -264,7 +260,7 @@ export class SamplingService {
                     const chunkResults = await this.db.query(`SELECT * FROM population WHERE rowid IN (${chunk.join(',')})`);
                     results.push(...chunkResults);
                 }
-                sampleItems = results.map((item, idx) => ({
+                sampleItems = results.map(item => ({
                     ...item,
                     bookValue: item.amount,
                     auditedValue: '' as const,
@@ -275,6 +271,7 @@ export class SamplingService {
                 }));
             }
         } else {
+            await updateProgress(`Виконання випадкового вибору (${sampleSize} елементів)...`);
             const whereStr = `ABS(amount) < ? AND ABS(amount) >= ?`;
             const rawSampleItems: any[] = await this.getRandomSample(whereStr, [tm > 0 ? tm : 999999999999, ctt], sampleSize);
     

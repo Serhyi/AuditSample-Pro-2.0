@@ -23,6 +23,16 @@ export class DatabaseService {
         this.db = new this.SQL.Database();
       }
       console.log(`[DatabaseService] initialized correctly. db object exists? ` + !!this.db);
+      
+      // Ensure indices are present, especially if loading old project that lacked them
+      if (this.db) {
+        try {
+          this.db.run('CREATE INDEX IF NOT EXISTS idx_abs_amount ON population(ABS(amount));');
+          this.db.run('CREATE INDEX IF NOT EXISTS idx_amount ON population(amount);');
+        } catch (e) {
+          console.error(`[DatabaseService] Could not create indices (might not be population table yet)`, e);
+        }
+      }
     } catch (err: any) {
       console.error(`[DatabaseService] Error during initialization!`, err);
       throw err;
@@ -118,28 +128,6 @@ export class DatabaseService {
         }
         stmt.free();
         return pickedRowIds;
-      },
-      getRandomPickedRows: async (sql: string, params: any[], sampleSize: number): Promise<number[]> => {
-        if (!this.db) throw new Error('Database not initialized');
-        const stmt = this.db.prepare(sql);
-        stmt.bind(params);
-        const allRowIds: number[] = [];
-        let count = 0;
-        while(stmt.step()){
-           allRowIds.push(stmt.get()[0] as number);
-           count++;
-           if (count % 5000 === 0) await new Promise(resolve => setTimeout(resolve, 0));
-        }
-        stmt.free();
-        if(allRowIds.length === 0) return [];
-        for(let i = allRowIds.length - 1; i > 0; i--){
-            const j = Math.floor(Math.random() * (i + 1));
-            const temp = allRowIds[i];
-            allRowIds[i] = allRowIds[j];
-            allRowIds[j] = temp;
-            if (i % 50000 === 0) await new Promise(resolve => setTimeout(resolve, 0));
-        }
-        return allRowIds.slice(0, sampleSize);
       }
     };
   }
