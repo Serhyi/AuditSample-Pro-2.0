@@ -4,17 +4,29 @@ export class SamplingService {
   constructor(private db: DatabaseService) {}
 
     private async getRandomSample(whereClause: string, params: any[], limitCount: number): Promise<any[]> {
-        const query = `SELECT * FROM population WHERE ${whereClause} ORDER BY random() LIMIT ?`;
-        return this.db.query(query, [...params, limitCount]);
+        const query = `SELECT rowid FROM population WHERE ${whereClause}`;
+        const pickedRowIds = this.db.MUS_and_Pareto_Helpers.getRandomPickedRows(query, params, limitCount);
+        if (pickedRowIds.length === 0) return [];
+        
+        const results: any[] = [];
+        const chunkSize = 500;
+        for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
+            const chunk = pickedRowIds.slice(i, i + chunkSize);
+            const chunkResults = await this.db.query(`SELECT * FROM population WHERE rowid IN (${chunk.join(',')})`);
+            results.push(...chunkResults);
+        }
+        return results;
     }
 
-  public async runSampling(config: any): Promise<any> {
+  public async runSampling(config: any, onProgress?: (stage: string) => void): Promise<any> {
     if (!this.db || !this.db.isInitialized()) {
       throw new Error('Database not initialized. Please import population data or load a project first.');
     }
     console.log('SamplingService executing SQL-based sampling via SQLite...', config.method);
+    if (onProgress) onProgress('Підготовка бази даних...');
 
     // 1. Get total population size and value
+    if (onProgress) onProgress('Обчислення генеральної сукупності...');
     const popAgg: any[] = await this.db.query(`SELECT COUNT(*) as cnt, SUM(ABS(amount)) as val FROM population`);
     const popSize = popAgg[0]?.cnt || 0;
     const popValue = popAgg[0]?.val || 0;
@@ -31,6 +43,7 @@ export class SamplingService {
     let trivialValue = 0;
     let trivialItems: any[] = [];
     if (ctt > 0) {
+      if (onProgress) onProgress('Відбір тривіальних елементів...');
       const trivAgg: any[] = await this.db.query(`SELECT COUNT(*) as cnt, SUM(amount) as val FROM population WHERE ABS(amount) < ?`, [ctt]);
       trivialCount = trivAgg[0]?.cnt || 0;
       trivialValue = trivAgg[0]?.val || 0;
@@ -44,6 +57,7 @@ export class SamplingService {
     // 3. Key items
     let keyItems: any[] = [];
     if (tm > 0) {
+      if (onProgress) onProgress('Відбір ключових елементів...');
       keyItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) >= ?`, [tm]);
       keyItems = keyItems.map(item => ({
         ...item,
@@ -68,6 +82,7 @@ export class SamplingService {
 
     let sampleItems: any[] = [];
     
+    if (onProgress) onProgress('Застосування методу відбору...');
     if (config.method === 'RiskAssessment') {
         const closingDays = config.riskClosingDays ?? 5;
         const includeWeekend = config.riskWeekend !== false;

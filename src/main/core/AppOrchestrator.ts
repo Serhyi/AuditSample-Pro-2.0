@@ -135,7 +135,9 @@ export class AppOrchestrator {
 
     ipcMain.handle('sampling:execute', async (event, config) => {
       console.log('IPC sampling:execute received', config);
-      return await this.samplingService.runSampling(config);
+      return await this.samplingService.runSampling(config, (stage) => {
+          event.sender.send('sampling:progress', stage);
+      });
     });
 
     ipcMain.handle('export:project', async (event, state) => {

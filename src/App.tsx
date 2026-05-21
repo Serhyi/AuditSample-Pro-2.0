@@ -68,6 +68,7 @@ const App: React.FC = () => {
   const [results, setResults] = useState<SamplingResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [importProgress, setImportProgress] = useState<{pct: number, stage: string} | null>(null);
+  const [samplingProgressStage, setSamplingProgressStage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [samplingError, setSamplingError] = useState<string | null>(null);
 
@@ -267,6 +268,15 @@ const App: React.FC = () => {
   const handleRunSampling = async () => {
     setIsProcessing(true);
     setSamplingError(null);
+    setSamplingProgressStage(null);
+    
+    let unsubscribe: (() => void) | undefined;
+    if (isElectron() && window.api && window.api.on) {
+        unsubscribe = window.api.on('sampling:progress', (stage: string) => {
+            setSamplingProgressStage(stage);
+        });
+    }
+
     // Allow UI to render the spinner before blocking
     await new Promise(resolve => setTimeout(resolve, 50));
     
@@ -290,6 +300,8 @@ const App: React.FC = () => {
         setSamplingError(errorMsg);
     } finally {
         setIsProcessing(false);
+        setSamplingProgressStage(null);
+        if (unsubscribe) unsubscribe();
     }
   };
 
@@ -449,7 +461,12 @@ const App: React.FC = () => {
                 <div className="flex justify-between">
                      <button onClick={() => setCurrentStep(0)} className="text-brand-600 bg-white border border-brand-200 hover:bg-brand-50 px-10 py-3.5 rounded-xl text-sm font-bold transition-all shadow-sm">{t('back', lang)}</button>
                     <button onClick={handleRunSampling} disabled={isProcessing} className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-12 py-3.5 rounded-xl text-sm font-bold transition-all shadow-[0_4px_12px_rgba(0,133,75,0.25)] disabled:opacity-70">
-                      {isProcessing ? <><Loader2 className="w-5 h-5 animate-spin" /> {t('processing', lang)}</> : t('run', lang)}
+                      {isProcessing ? (
+                          <>
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                              {samplingProgressStage ? samplingProgressStage : t('processing', lang)}
+                          </>
+                      ) : t('run', lang)}
                     </button>
                 </div>
             </div>

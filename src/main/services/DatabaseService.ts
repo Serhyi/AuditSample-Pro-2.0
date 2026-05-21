@@ -106,6 +106,24 @@ export class DatabaseService {
         }
         stmt.free();
         return pickedRowIds;
+      },
+      getRandomPickedRows: (sql: string, params: any[], sampleSize: number): number[] => {
+        if (!this.db) throw new Error('Database not initialized');
+        const stmt = this.db.prepare(sql);
+        stmt.bind(params);
+        const allRowIds: number[] = [];
+        while(stmt.step()){
+           allRowIds.push(stmt.get()[0] as number);
+        }
+        stmt.free();
+        if(allRowIds.length === 0) return [];
+        for(let i = allRowIds.length - 1; i > 0; i--){
+            const j = Math.floor(Math.random() * (i + 1));
+            const temp = allRowIds[i];
+            allRowIds[i] = allRowIds[j];
+            allRowIds[j] = temp;
+        }
+        return allRowIds.slice(0, sampleSize);
       }
     };
   }
