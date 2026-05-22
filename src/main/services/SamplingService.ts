@@ -92,6 +92,12 @@ export class SamplingService {
 
     const tm = Number(config.tolerableMisstatement) || 0;
     const ctt = Number(config.clearlyTrivialThreshold) || 0;
+    const isAnomalyDisabled = config.anomalyMethod === 'None';
+    // Only extract key items for these variable/stratified approaches. 
+    // It shouldn't be extracted for MUS, StopOrGo, Attribute, Pareto, etc.
+    const allowedMethodsForKeyItems = ['Random', 'FixedRandom', 'CVS', 'Cluster'];
+    const excludeKeyItems = !isAnomalyDisabled && tm > 0 && allowedMethodsForKeyItems.includes(config.method);
+    const upperLimit = excludeKeyItems ? tm : 999999999999;
 
     // 2. Trivial items
     let trivialCount = 0;
@@ -111,7 +117,7 @@ export class SamplingService {
 
     // 3. Key items
     let keyItems: any[] = [];
-    if (tm > 0) {
+    if (excludeKeyItems) {
       await updateProgress('Відбір ключових елементів...');
       keyItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) >= ? LIMIT 5000`, [tm]);
       keyItems = keyItems.map(item => ({
@@ -163,7 +169,7 @@ export class SamplingService {
           WHERE ABS(amount) < ? AND ABS(amount) >= ? AND ${riskWhereStr}
           LIMIT 5000
         `;
-        const riskMatched: any[] = await this.db.query(riskMatchedQuery, [tm > 0 ? tm : 999999999999, ctt]);
+        const riskMatched: any[] = await this.db.query(riskMatchedQuery, [upperLimit, ctt]);
         
         for (const item of riskMatched) {
             sampleItems.push({
@@ -180,7 +186,7 @@ export class SamplingService {
         // Find risk unmatched (random ones)
         const randomCount = config.riskRandomCount ?? 5;
         const riskUnmatchedWhere = `ABS(amount) < ? AND ABS(amount) >= ? AND NOT ${riskWhereStr}`;
-        const randomMatched: any[] = await this.getRandomSample(riskUnmatchedWhere, [tm > 0 ? tm : 999999999999, ctt], randomCount);
+        const randomMatched: any[] = await this.getRandomSample(riskUnmatchedWhere, [upperLimit, ctt], randomCount);
         
         for (const item of randomMatched) {
             sampleItems.push({
@@ -201,7 +207,7 @@ export class SamplingService {
         
         await updateProgress('Вибір найбільших елементів таблиці...');
         const paretoItemsQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY ABS(amount) DESC`;
-        const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getParetoPickedRows(paretoItemsQuery, [tm > 0 ? tm : 999999999999, ctt], targetValue);
+        const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getParetoPickedRows(paretoItemsQuery, [upperLimit, ctt], targetValue);
         
         if (pickedRowIds.length > 0) {
             await updateProgress(`Отримання даних вибраних елементів (${pickedRowIds.length})...`);
@@ -230,8 +236,8 @@ export class SamplingService {
         const topQuery = `SELECT * FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY amount DESC LIMIT ?`;
         const bottomQuery = `SELECT * FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY amount ASC LIMIT ?`;
         
-        const topItems: any[] = await this.db.query(topQuery, [tm > 0 ? tm : 999999999999, ctt, limitCount]);
-        const bottomItems: any[] = await this.db.query(bottomQuery, [tm > 0 ? tm : 999999999999, ctt, limitCount]);
+        const topItems: any[] = await this.db.query(topQuery, [upperLimit, ctt, limitCount]);
+        const bottomItems: any[] = await this.db.query(bottomQuery, [upperLimit, ctt, limitCount]);
         
         const combined = [...topItems, ...bottomItems];
         // Deduplicate
@@ -254,7 +260,7 @@ export class SamplingService {
     } else if (config.method === 'Benford') {
         const benfordCount = config.benfordSampleSize || 50;
         const whereCond = `ABS(amount) < ? AND ABS(amount) >= ?`;
-        const items: any[] = await this.getRandomSample(whereCond, [tm > 0 ? tm : 999999999999, ctt], benfordCount);
+        const items: any[] = await this.getRandomSample(whereCond, [upperLimit, ctt], benfordCount);
         sampleItems = items.map(item => ({
             ...item,
             bookValue: item.amount,
@@ -266,7 +272,7 @@ export class SamplingService {
         }));
 
     } else if (config.method === 'Grubbs') {
-        const grubbsItems: any[] = await this.db.query(`SELECT * FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY ABS(amount) DESC LIMIT 15`, [tm > 0 ? tm : 999999999999, ctt]);
+        const grubbsItems: any[] = await this.db.query(`SELECT * FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY ABS(amount) DESC LIMIT 15`, [upperLimit, ctt]);
         sampleItems = grubbsItems.map(item => ({
             ...item,
             bookValue: item.amount,
@@ -306,7 +312,7 @@ export class SamplingService {
             
             await updateProgress(`Застосування інтервалу (${interval.toFixed(2)})...`);
             const musQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`;
-            const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getMUSPickedRows(musQuery, [tm > 0 ? tm : 999999999999, ctt], interval, sampleSize);
+            const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getMUSPickedRows(musQuery, [upperLimit, ctt], interval, sampleSize);
 
             if (pickedRowIds.length > 0) {
                 await updateProgress(`Отримання даних вибраних елементів (${pickedRowIds.length})...`);
@@ -330,7 +336,7 @@ export class SamplingService {
         } else {
             await updateProgress(`Виконання випадкового вибору (${sampleSize} елементів)...`);
             const whereStr = `ABS(amount) < ? AND ABS(amount) >= ?`;
-            const rawSampleItems: any[] = await this.getRandomSample(whereStr, [tm > 0 ? tm : 999999999999, ctt], sampleSize);
+            const rawSampleItems: any[] = await this.getRandomSample(whereStr, [upperLimit, ctt], sampleSize);
     
             sampleItems = rawSampleItems.map((item, idx) => ({
               ...item,

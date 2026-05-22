@@ -2,7 +2,7 @@ import { TransactionItem, SamplingConfig, SamplingResult, SampledItem, GlobalSet
 
 export const methodsSupportingAnomalies = ['MUS', 'CVS', 'Random', 'FixedRandom'];
 
-export function formatMoney(val: number, settings?: GlobalSettings): string {
+export function formatMoney(val: number): string {
     return new Intl.NumberFormat('en-US', { 
         style: 'decimal', 
         minimumFractionDigits: 2, 
@@ -117,7 +117,12 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
             if (trivialItems.length < 10) trivialItems.push(item);
             trivialCount++;
             trivialValue += item.amount;
-        } else if (!['StopOrGo', 'Attribute'].includes(config.method) && config.tolerableMisstatement && Math.abs(item.amount) >= config.tolerableMisstatement) {
+        } else if (
+            config.anomalyMethod !== 'None' && 
+            ['Random', 'FixedRandom', 'CVS', 'Cluster'].includes(config.method) && 
+            config.tolerableMisstatement && 
+            Math.abs(item.amount) >= config.tolerableMisstatement
+        ) {
             keyItems.push({
                 ...item,
                 bookValue: item.amount,
@@ -244,29 +249,62 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
     } else {
         if (config.method === 'MUS') {
             const pm = config.tolerableMisstatement || 1;
-            sampleSize = Math.ceil((remPopValue * rf) / pm);
-        } else if (config.method === 'FixedRandom') {
-            sampleSize = config.fixedSampleSize || 10;
-        } else if (config.method === 'StopOrGo') {
-            sampleSize = (config.stopOrGoInitialSize || 25) + (config.stopOrGoExpansionSize || 25);
-        } else if (config.method === 'Attribute') {
-            sampleSize = 25; // simplified
-        } else {
-            sampleSize = config.fixedSampleSize || 25; // fallback for others like CVS, Random
-        }
-        
-        if (sampleSize > 5000) sampleSize = 5000;
-        if (sampleSize > regularItems.length) sampleSize = regularItems.length;
+            const interval = Math.max(pm / rf, 1);
+            sampleSize = Math.ceil((remPopValue * rf) / Math.max(pm, 0.01));
+            if (sampleSize > 5000) sampleSize = 5000;
 
-        sampleItems = getRandomSamples(regularItems, sampleSize).map((item, idx) => ({
-            ...item,
-            bookValue: item.amount,
-            auditedValue: '',
-            difference: item.amount,
-            tainting: 1,
-            isSampled: true,
-            selectionReason: config.method === 'StopOrGo' ? (idx < (config.stopOrGoInitialSize || 25) ? 'Stage 1' : 'Stage 2') : 'Sampled'
-        }));
+            let runningTotal = 0;
+            let nextHit = Math.random() * interval;
+            const picked = new Set<number>();
+            
+            for (let i = 0; i < regularItems.length; i++) {
+                const item = regularItems[i];
+                runningTotal += Math.abs(item.amount);
+                while (runningTotal >= nextHit) {
+                    picked.add(i);
+                    nextHit += interval;
+                    if (picked.size >= sampleSize) break;
+                }
+                if (picked.size >= sampleSize) break;
+            }
+            
+            sampleItems = Array.from(picked).map((idx) => {
+                const item = regularItems[idx];
+                return {
+                    ...item,
+                    bookValue: item.amount,
+                    auditedValue: '',
+                    difference: item.amount,
+                    tainting: 1,
+                    isSampled: true,
+                    selectionReason: 'MUS Hit'
+                };
+            });
+
+        } else {
+            if (config.method === 'FixedRandom') {
+                sampleSize = config.fixedSampleSize || 10;
+            } else if (config.method === 'StopOrGo') {
+                sampleSize = (config.stopOrGoInitialSize || 25) + (config.stopOrGoExpansionSize || 25);
+            } else if (config.method === 'Attribute') {
+                sampleSize = 25; // simplified
+            } else {
+                sampleSize = config.fixedSampleSize || 25; // fallback for others like CVS, Random
+            }
+            
+            if (sampleSize > 5000) sampleSize = 5000;
+            if (sampleSize > regularItems.length) sampleSize = regularItems.length;
+
+            sampleItems = getRandomSamples(regularItems, sampleSize).map((item, idx) => ({
+                ...item,
+                bookValue: item.amount,
+                auditedValue: '',
+                difference: item.amount,
+                tainting: 1,
+                isSampled: true,
+                selectionReason: config.method === 'StopOrGo' ? (idx < (config.stopOrGoInitialSize || 25) ? 'Stage 1' : 'Stage 2') : 'Sampled'
+            }));
+        }
     }
 
     const interval = sampleItems.length > 0 ? (remPopValue / sampleItems.length) : 1;

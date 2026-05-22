@@ -464,6 +464,9 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
 
   const tableContainerRefs = useRef<(HTMLDivElement | null)[]>([]);
 
+  const samplingItemsLength = (currentResults.samplingItems || []).length;
+  const keyItemsLength = (currentResults.keyItems || []).length;
+
   useEffect(() => {
     // Scroll all table containers to the right when component mounts or updates
     tableContainerRefs.current.forEach(container => {
@@ -481,7 +484,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
       });
     }, 50);
     return () => clearTimeout(timer);
-  }, [(currentResults.samplingItems || []).length, (currentResults.keyItems || []).length, activeTab]);
+  }, [samplingItemsLength, keyItemsLength, activeTab]);
 
   const renderTable = (items: SampledItem[], title?: string, isKey: boolean = false) => (
     <div className="mb-10">
