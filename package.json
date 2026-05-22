@@ -2,7 +2,7 @@
   "name": "audit-sample-pro",
   "version": "2.0.0",
   "description": "Professional audit sampling tool compliant with ISA 530 standards.",
-  "author": "Serhii Minin <serhii.minin@example.com>",
+  "author": "Serhii Minin <serhyi.minin@gmail.com>",
   "type": "module",
   "main": "main.cjs",
   "engines": {
@@ -86,9 +86,15 @@
       "main.cjs",
       "preload.cjs",
       "splash.html",
+      "icon.png",
+      "icon.ico",
       "node_modules/**/*"
     ],
+    "mac": {
+      "icon": "icon.png"
+    },
     "win": {
+      "icon": "icon.ico",
       "target": [
         "portable",
         "nsis"
