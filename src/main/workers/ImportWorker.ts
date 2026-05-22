@@ -3,16 +3,33 @@ import * as fs from 'fs';
 
 function parseAmount(val: any): number {
     if (typeof val === 'number') return val;
-    const cleanStr = String(val).replace(/\s/g, '').replace(/[\u00A0\u202F]/g, '').trim();
-    if (!cleanStr) return 0;
-    if (cleanStr.includes(',') && !cleanStr.includes('.')) return parseFloat(cleanStr.replace(',', '.')) || 0;
-    if (cleanStr.includes(',') && cleanStr.includes('.')) {
-        const lastComma = cleanStr.lastIndexOf(',');
-        const lastDot = cleanStr.lastIndexOf('.');
-        if (lastComma > lastDot) return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.')) || 0;
-        else return parseFloat(cleanStr.replace(/,/g, '')) || 0;
+    if (val === null || val === undefined) return 0;
+    let str = String(val).replace(/[\s\u00A0\u202F$€£₴]/g, '').trim();
+    if (!str) return 0;
+    if (str.startsWith('(') && str.endsWith(')')) str = '-' + str.slice(1, -1);
+    
+    if (str.includes(',') && str.includes('.')) {
+        const lastComma = str.lastIndexOf(',');
+        const lastDot = str.lastIndexOf('.');
+        if (lastComma > lastDot) return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+        else return parseFloat(str.replace(/,/g, '')) || 0;
     }
-    return parseFloat(cleanStr) || 0;
+    
+    if (str.includes(',')) {
+        const parts = str.split(',');
+        if (parts.length > 2) return parseFloat(str.replace(/,/g, '')) || 0;
+        if (parts[parts.length - 1].length === 3) return parseFloat(str.replace(/,/g, '')) || 0;
+        return parseFloat(str.replace(/,/g, '.')) || 0;
+    }
+    
+    if (str.includes('.')) {
+        const parts = str.split('.');
+        if (parts.length > 2) return parseFloat(str.replace(/\./g, '')) || 0;
+        if (parts[parts.length - 1].length === 3) return parseFloat(str.replace(/\./g, '')) || 0;
+        return parseFloat(str) || 0;
+    }
+    
+    return parseFloat(str) || 0;
 }
 
 async function startTask() {

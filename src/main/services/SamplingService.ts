@@ -95,7 +95,7 @@ export class SamplingService {
     const isAnomalyDisabled = config.anomalyMethod === 'None';
     // Only extract key items for these variable/stratified approaches. 
     // It shouldn't be extracted for MUS, StopOrGo, Attribute, Pareto, etc.
-    const allowedMethodsForKeyItems = ['Random', 'FixedRandom', 'CVS', 'Cluster'];
+    const allowedMethodsForKeyItems = ['Random', 'FixedRandom', 'CVS', 'Cluster', 'RiskAssessment'];
     const excludeKeyItems = !isAnomalyDisabled && tm > 0 && allowedMethodsForKeyItems.includes(config.method);
     const upperLimit = excludeKeyItems ? tm : 999999999999;
 

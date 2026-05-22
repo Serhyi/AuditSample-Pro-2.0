@@ -119,7 +119,7 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
             trivialValue += item.amount;
         } else if (
             config.anomalyMethod !== 'None' && 
-            ['Random', 'FixedRandom', 'CVS', 'Cluster'].includes(config.method) && 
+            ['Random', 'FixedRandom', 'CVS', 'Cluster', 'RiskAssessment'].includes(config.method) && 
             config.tolerableMisstatement && 
             Math.abs(item.amount) >= config.tolerableMisstatement
         ) {

@@ -91,10 +91,10 @@
       "node_modules/**/*"
     ],
     "mac": {
-      "icon": "icon.png"
+      "icon": "./icon.png"
     },
     "win": {
-      "icon": "icon.ico",
+      "icon": "./icon.ico",
       "target": [
         "portable",
         "nsis"

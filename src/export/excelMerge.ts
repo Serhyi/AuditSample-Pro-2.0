@@ -17,14 +17,29 @@ export async function mergeExcelResults(
     let str = String(rawAmt).trim();
     if (str === '') return NaN;
     if (str.startsWith('(') && str.endsWith(')')) str = '-' + str.slice(1, -1);
-    const cleanStr = str.replace(/[\s\u00A0\u200B$€£₴]/g, '');
-    if (cleanStr.includes(',') && !cleanStr.includes('.')) return parseFloat(cleanStr.replace(',', '.'));
+    const cleanStr = str.replace(/[\s\u00A0\u200B\u202F$€£₴]/g, '');
+    
     if (cleanStr.includes(',') && cleanStr.includes('.')) {
       const lastDot = cleanStr.lastIndexOf('.');
       const lastComma = cleanStr.lastIndexOf(',');
       if (lastComma > lastDot) return parseFloat(cleanStr.replace(/\./g, '').replace(',', '.'));
       else return parseFloat(cleanStr.replace(/,/g, ''));
     }
+    
+    if (cleanStr.includes(',')) {
+      const parts = cleanStr.split(',');
+      if (parts.length > 2) return parseFloat(cleanStr.replace(/,/g, ''));
+      if (parts[parts.length - 1].length === 3) return parseFloat(cleanStr.replace(/,/g, ''));
+      return parseFloat(cleanStr.replace(/,/g, '.'));
+    }
+    
+    if (cleanStr.includes('.')) {
+      const parts = cleanStr.split('.');
+      if (parts.length > 2) return parseFloat(cleanStr.replace(/\./g, ''));
+      if (parts[parts.length - 1].length === 3) return parseFloat(cleanStr.replace(/\./g, ''));
+      return parseFloat(cleanStr);
+    }
+    
     return parseFloat(cleanStr);
   };
 
