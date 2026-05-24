@@ -154,9 +154,11 @@ self.onmessage = async (e) => {
     if (type === 'PARSE_FILE') {
         const { buffer, isCsv } = e.data.payload;
         try {
+            self.postMessage({ type: 'PARSE_PROGRESS', payload: { pct: 10, stage: 'Reading file...' } });
             const data: any[][] = [];
             
             if (isCsv) {
+                self.postMessage({ type: 'PARSE_PROGRESS', payload: { pct: 30, stage: 'Importing...' } });
                 const uint8 = new Uint8Array(buffer);
                 const hasBOM = uint8.length >= 3 && uint8[0] === 0xEF && uint8[1] === 0xBB && uint8[2] === 0xBF;
                 let isUtf8 = hasBOM;
@@ -192,6 +194,7 @@ self.onmessage = async (e) => {
                     else if (commaCount > semiCount && commaCount > tabCount) detectedDelimiter = ',';
                 }
 
+                self.postMessage({ type: 'PARSE_PROGRESS', payload: { pct: 60, stage: 'Importing...' } });
                 const results = Papa.parse(text, { 
                     skipEmptyLines: true, 
                     ...(detectedDelimiter ? { delimiter: detectedDelimiter } : {}) 
@@ -207,6 +210,7 @@ self.onmessage = async (e) => {
                     data.push(row);
                 }
             } else {
+                self.postMessage({ type: 'PARSE_PROGRESS', payload: { pct: 30, stage: 'Importing...' } });
                 const workbook = new ExcelJS.Workbook();
                 await workbook.xlsx.load(buffer);
                 
@@ -230,6 +234,7 @@ self.onmessage = async (e) => {
                 };
 
                 const rowCount = sheet.rowCount;
+                self.postMessage({ type: 'PARSE_PROGRESS', payload: { pct: 75, stage: `Parsing ${rowCount} rows...` } });
                 for (let r = 1; r <= rowCount; r++) {
                     const row = sheet.getRow(r);
                     if (!row) continue;
@@ -246,9 +251,11 @@ self.onmessage = async (e) => {
                 if (!data || data.length === 0) throw new Error('errFileEmpty');
             }
 
+            self.postMessage({ type: 'PARSE_PROGRESS', payload: { pct: 85, stage: 'Validating data...' } });
             const { startRow, indices } = detectTableStructure(data);
             const validationRaw = doValidation(data, startRow, indices);
 
+            self.postMessage({ type: 'PARSE_PROGRESS', payload: { pct: 100, stage: 'Complete' } });
             self.postMessage({
                 type: 'PARSE_SUCCESS',
                 payload: {

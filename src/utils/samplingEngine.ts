@@ -2,12 +2,26 @@ import { TransactionItem, SamplingConfig, SamplingResult, SampledItem, GlobalSet
 
 export const methodsSupportingAnomalies = ['MUS', 'CVS', 'Random', 'FixedRandom'];
 
-export function formatMoney(val: number): string {
-    return new Intl.NumberFormat('en-US', { 
+export function formatMoney(val: number, settings?: GlobalSettings): string {
+    const raw = new Intl.NumberFormat('en-US', { 
         style: 'decimal', 
         minimumFractionDigits: 2, 
         maximumFractionDigits: 2 
-    }).format(val).replace(/,/g, ' ');
+    }).format(val);
+    
+    if (settings) {
+        if (settings.numberSeparator === 'comma_dot') {
+            return raw; // 1,000.00
+        } else if (settings.numberSeparator === 'dot_comma') {
+            // 1.000,00
+            return raw.replace(/,/g, 'X').replace(/\./g, ',').replace(/X/g, '.');
+        } else {
+            // space_comma: 1 000,00
+            return raw.replace(/,/g, ' ').replace(/\./g, ',');
+        }
+    }
+    
+    return raw.replace(/,/g, ' ');
 }
 
 export function formatDate(val: string, settings?: GlobalSettings): string {

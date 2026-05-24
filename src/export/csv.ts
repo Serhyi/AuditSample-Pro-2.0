@@ -1,6 +1,7 @@
 export function exportToCSV(
   results: any,
   sourceHeaders: string[],
+  settings: any,
   filename: string,
   isUa: boolean
 ) {

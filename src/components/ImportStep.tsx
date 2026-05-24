@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, Download, AlertTriangle, CheckCircle, FileSpreadsheet, Loader2, Database, Info, Settings2, ChevronDown, ChevronUp, XCircle } from 'lucide-react';
+import { Upload, Download, AlertTriangle, CheckCircle, FileSpreadsheet, Database, Info, Settings2, ChevronDown, ChevronUp, XCircle } from 'lucide-react';
 import { TransactionItem, ValidationResult, Language, Currency, ColumnIndices, GlobalSettings } from '../types';
 import { t } from '../utils/translations';
 import { formatMoney, formatDate } from '../utils/samplingEngine';
@@ -8,6 +8,7 @@ import WebImportWorker from './ImportWorker?worker';
 
 interface ImportStepProps {
   onDataLoaded: (filePath: string | null, headers: string[], indices: ColumnIndices, startRow: number, parsedData?: TransactionItem[]) => void;
+  onLoadingStateChange?: (isLoading: boolean, progress: { pct: number, stage: string } | null) => void;
   onImportProject?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   lang: Language;
   currency: Currency;
@@ -112,10 +113,9 @@ const detectTableStructure = (rawData: any[][]): { startRow: number, indices: Co
     return { startRow: 6, indices: { id: 0, amount: 1, date: 2 } };
 };
 
-const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, lang, currency, setCurrency, settings }) => {
+const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onLoadingStateChange, onImportProject, lang, currency, setCurrency, settings }) => {
   const [dragActive, setDragActive] = useState(false);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
-  const [loadingStage, setLoadingStage] = useState<'reading' | 'validating'>('reading');
   const [fileError, setFileError] = useState<string | null>(null);
   
   const [rawData, setRawData] = useState<any[][]>([]);
@@ -171,12 +171,16 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
   const [currentFile, setCurrentFile] = useState<string | null>(null);
 
   // Debounced Validation Effect
+  const onLoadingStateChangeRef = useRef(onLoadingStateChange);
+  useEffect(() => {
+      onLoadingStateChangeRef.current = onLoadingStateChange;
+  }, [onLoadingStateChange]);
+
   useEffect(() => {
       if (rawData.length === 0 || !workerRef.current) return;
 
-      setIsLoadingFile(true);
-      setLoadingStage('validating');
       setValidation(null);
+      if (onLoadingStateChangeRef.current) onLoadingStateChangeRef.current(true, { pct: 90, stage: 'Validating data...' });
 
       const timer = setTimeout(() => {
           workerRef.current!.onmessage = (e) => {
@@ -184,12 +188,18 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
                   const res = e.data.payload;
                   setValidation(res);
                   if (res.isValid) {
-                      onDataLoadedRef.current(currentFile, headersRef.current, activeIndices, startRow, res.normalized);
+                      if (onLoadingStateChangeRef.current) onLoadingStateChangeRef.current(true, { pct: 100, stage: 'Complete' });
+                      setTimeout(() => {
+                          onDataLoadedRef.current(currentFile, headersRef.current, activeIndices, startRow, res.normalized);
+                          if (onLoadingStateChangeRef.current) onLoadingStateChangeRef.current(false, null);
+                      }, 500); // give the user time to see 100%
+                  } else {
+                      onDataLoadedRef.current(null, headersRef.current, activeIndices, startRow, undefined);
+                      if (onLoadingStateChangeRef.current) onLoadingStateChangeRef.current(false, null);
                   }
-                  setIsLoadingFile(false);
               } else if (e.data.type === 'VALIDATE_ERROR') {
                   console.error(e.data.payload);
-                  setIsLoadingFile(false);
+                  if (onLoadingStateChangeRef.current) onLoadingStateChangeRef.current(false, null);
               }
           };
           
@@ -204,7 +214,7 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
 
   const handleFile = async (file: File) => {
     setIsLoadingFile(true);
-    setLoadingStage('reading');
+    if (onLoadingStateChange) onLoadingStateChange(true, { pct: 5, stage: 'Reading file...' });
     setValidation(null);
     setRawData([]);
     setFileError(null);
@@ -219,21 +229,26 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
 
     if (isElectron && window.api && filePathStr) {
         try {
+            if (onLoadingStateChange) onLoadingStateChange(true, { pct: 50, stage: 'Importing...' });
             const filePath = filePathStr;
             setCurrentFile(filePath);
             const { data } = await window.api.import.preview(filePath);
             
             if (!data || data.length === 0) throw new Error(t('errFileEmpty', lang));
 
+            if (onLoadingStateChange) onLoadingStateChange(true, { pct: 85, stage: 'Validating data...' });
             const { startRow: detStartRow, indices: detIndices } = detectTableStructure(data);
             
             setRawData(data);
             setStartRow(detStartRow);
             setActiveIndices(detIndices);
+            setIsLoadingFile(false);
+            // Do not set onLoadingStateChange(false) yet! Validation effect will pick this up.
         } catch (e: any) {
             console.error("IPC Import Preview Error", e);
             setFileError(e.message);
             setIsLoadingFile(false);
+            if (onLoadingStateChange) onLoadingStateChange(false, null);
         }
         return;
     }
@@ -245,25 +260,24 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
         const buffer = e.target?.result as ArrayBuffer;
 
         workerRef.current!.onmessage = (msgEvent) => {
-            if (msgEvent.data.type === 'PARSE_SUCCESS') {
-                const { data, startRow: detStartRow, indices: detIndices, validation: valInfo } = msgEvent.data.payload;
+            if (msgEvent.data.type === 'PARSE_PROGRESS') {
+                if (onLoadingStateChange) {
+                    onLoadingStateChange(true, msgEvent.data.payload);
+                }
+            } else if (msgEvent.data.type === 'PARSE_SUCCESS') {
+                const { data, startRow: detStartRow, indices: detIndices } = msgEvent.data.payload;
                 
                 setStartRow(detStartRow);
                 setActiveIndices(detIndices);
-                setRawData(data); // this will trigger the useEffect for headers and then validation
+                setRawData(data);
                 
-                // We don't call setIsLoadingFile(false) here, we let the validate_success effect do it
-                // Actually wait! The Parse step ALREADY did the first validation! We can use it!
-                setValidation(valInfo);
-                if (valInfo.isValid) {
-                   // headersRef is not ready yet because we just setRawData! 
-                   // So we let the useEffect handle validation on rawData change, OR we can wait for headers.
-                   // The easiest is just to let the normal useEffect pick it up. We do nothing here except setRawData.
-                }
+                setIsLoadingFile(false);
+                // Do not set onLoadingStateChange(false) yet! Validation effect will pick this up.
             } else if (msgEvent.data.type === 'PARSE_ERROR') {
                 const errMessage = msgEvent.data.payload;
                 setFileError(errMessage === 'errFileEmpty' ? t('errFileEmpty', lang) : errMessage);
                 setIsLoadingFile(false);
+                if (onLoadingStateChange) onLoadingStateChange(false, null);
             }
         };
 
@@ -379,26 +393,17 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onImportProject, 
           )}
 
           <div 
-            className={`border-2 border-dashed rounded-[2rem] p-16 text-center transition-all flex flex-col items-center justify-center gap-5 relative group ${dragActive ? 'border-brand-500 bg-brand-50/50' : 'border-slate-200 hover:border-brand-400 hover:bg-slate-50/50'}`}
+            className={`border-2 border-dashed rounded-[2rem] p-16 text-center transition-all flex flex-col items-center justify-center gap-5 relative group ${dragActive ? 'border-brand-500 bg-brand-50/50' : 'border-slate-200 hover:border-brand-400 hover:bg-slate-50/50'} ${isLoadingFile ? 'opacity-50 pointer-events-none grayscale' : ''}`}
             onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
             onDragLeave={() => setDragActive(false)}
             onDrop={(e) => { e.preventDefault(); setDragActive(false); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); }}
           >
-            <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} accept=".xlsx,.csv,.xls" />
-            {isLoadingFile ? (
-              <div className="flex flex-col items-center gap-4">
-                <Loader2 className="w-14 h-14 text-brand-600 animate-spin" />
-                <span className="text-[11px] font-black text-brand-600 uppercase tracking-widest">{loadingStage === 'reading' ? t('loadingFile', lang) : t('validatingFile', lang)}</span>
-              </div>
-            ) : (
-              <>
-                <div className="bg-brand-100 p-6 rounded-3xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-brand-100/50 shadow-lg"><Upload className="w-10 h-10 text-brand-600" /></div>
-                <div>
-                   <p className="text-xl font-bold text-neutral-900">{t('dragDrop', lang)}</p>
-                   <p className="text-[13px] text-slate-400 mt-2 font-medium">{t('dragDropSub', lang)}</p>
-                </div>
-              </>
-            )}
+            <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} accept=".xlsx,.csv,.xls" disabled={isLoadingFile} />
+            <div className="bg-brand-100 p-6 rounded-3xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 shadow-brand-100/50 shadow-lg"><Upload className="w-10 h-10 text-brand-600" /></div>
+            <div>
+               <p className="text-xl font-bold text-neutral-900">{isLoadingFile ? t('loadingFile', lang) : t('dragDrop', lang)}</p>
+               <p className="text-[13px] text-slate-400 mt-2 font-medium">{t('dragDropSub', lang)}</p>
+            </div>
           </div>
         </div>
 

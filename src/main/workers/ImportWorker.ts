@@ -130,7 +130,7 @@ async function startTask() {
     const { activeIndices, startRow } = config;
 
     if (filePath.endsWith('.csv')) {
-      parentPort?.postMessage({ type: 'progress', pct: 50, stage: 'Importing via DuckDB...' });
+      parentPort?.postMessage({ type: 'progress', pct: 50, stage: 'Importing...' });
       
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const initSqlJs = require('sql.js');

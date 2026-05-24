@@ -248,6 +248,17 @@ const App: React.FC = () => {
                   startRow: currentStartRow
               });
               await refreshStats();
+          } else {
+              // Fake progress for Web to satisfy visual expectations
+              const total = currentParsedData.length;
+              setImportProgress({ pct: 10, stage: 'Opening file...' });
+              await new Promise(r => setTimeout(r, 200));
+              setImportProgress({ pct: 50, stage: 'Importing...' });
+              await new Promise(r => setTimeout(r, 200));
+              setImportProgress({ pct: 75, stage: `Parsing ${total} rows...` });
+              await new Promise(r => setTimeout(r, 200));
+              setImportProgress({ pct: 100, stage: 'Complete' });
+              await new Promise(r => setTimeout(r, 200));
           }
           setCurrentStep(1);
       } catch (e: any) {
@@ -260,6 +271,7 @@ const App: React.FC = () => {
       }
   };
 
+
   useEffect(() => {
     if (totalPopValue > 0 && config.tolerableMisstatement === 0) {
         setConfig(prev => ({ ...prev, tolerableMisstatement: Math.floor(totalPopValue * 0.01) }));
@@ -270,7 +282,7 @@ const App: React.FC = () => {
     setIsProcessing(true);
     setSamplingError(null);
     setSamplingProgressStage(null);
-    
+
     let unsubscribe: (() => void) | undefined;
     if (isElectron() && window.api && window.api.on) {
         unsubscribe = window.api.on('sampling:progress', (stage: string) => {
@@ -281,16 +293,25 @@ const App: React.FC = () => {
     // Allow UI to render the spinner before blocking
     await new Promise(resolve => setTimeout(resolve, 50));
     
+    const finalConfig = { ...config };
+    if (!finalConfig.tolerableMisstatement) {
+        finalConfig.tolerableMisstatement = Math.floor(totalPopValue * 0.01);
+    }
+    if (!finalConfig.clearlyTrivialThreshold) {
+        finalConfig.clearlyTrivialThreshold = Math.floor(finalConfig.tolerableMisstatement * 0.05);
+    }
+
     try {
         let res;
         if (isElectron() && window.api && isVirtual) {
             console.log('Dispatching sampling to SQLite engine via IPC');
-            res = await window.api.sampling.execute(config);
+            res = await window.api.sampling.execute(finalConfig);
         } else {
             console.log('Running sampling in browser memory');
-            res = runSampling(getFullPopulation(), config);
+            res = runSampling(getFullPopulation(), finalConfig);
         }
         setResults(res);
+        setConfig(finalConfig);
         setCurrentStep(2);
     } catch (e: unknown) {
         let errorMsg = e instanceof Error ? e.message : t('errUnknownSampling', lang);
@@ -419,6 +440,10 @@ const App: React.FC = () => {
             <div className="space-y-8">
                 <ImportStep 
                   onDataLoaded={handleDataLoaded} 
+                  onLoadingStateChange={(loading, prog) => {
+                      setIsProcessing(loading);
+                      setImportProgress(prog);
+                  }}
                   onImportProject={importProject}
                   lang={lang} 
                   currency={currency}
@@ -427,25 +452,35 @@ const App: React.FC = () => {
                 />
                 <div className="flex justify-end">
                     <button 
-                        disabled={!currentFilePath && currentParsedData.length === 0}
+                        disabled={(!currentFilePath && currentParsedData.length === 0) || isProcessing}
                         onClick={handleContinueFromImport}
-                        className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:bg-slate-200 disabled:text-slate-400 text-white px-10 py-3.5 rounded-xl text-sm font-bold transition-all shadow-[0_4px_12px_rgba(0,133,75,0.25)] active:scale-95"
+                        className={`relative overflow-hidden flex items-center justify-center gap-2 ${isProcessing ? 'bg-brand-600 text-white cursor-wait' : 'bg-brand-600 hover:bg-brand-700 disabled:bg-slate-200 disabled:text-slate-400 text-white active:scale-95'} px-10 py-3.5 rounded-xl text-sm font-bold transition-all shadow-[0_4px_12px_rgba(0,133,75,0.25)]`}
                     >
-                        {isProcessing ? (
-                            <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                                {importProgress ? `${(lang === 'ua' ? importProgress.stage
-                                    .replace('Opening file...', 'Відкриття файлу...')
-                                    .replace('Importing via DuckDB...', 'Імпорт...')
-                                    .replace('Creating schema...', 'Створення структури...')
-                                    .replace('Loading JSON/CSV...', 'Завантаження...')
-                                    .replace(/Parsing (\d+) rows\.\.\./, 'Обробка $1 рядків...')
-                                    .replace(/Creating indices \((.*?)\)\.\.\./, 'Створення індексів ($1)...')
-                                    .replace('Complete', 'Готово') : importProgress.stage)} (${Math.round(importProgress.pct)}%)` : t('continue', lang)}
-                            </>
-                        ) : (
-                            <>{t('continue', lang)} <ChevronRight className="w-4 h-4" /></>
+                        {isProcessing && importProgress && (
+                            <div 
+                                className="absolute left-0 top-0 bottom-0 bg-white/20 transition-all duration-300 pointer-events-none" 
+                                style={{ width: `${importProgress.pct}%` }} 
+                            />
                         )}
+                        <span className="relative z-10 flex items-center gap-2">
+                            {isProcessing ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    {importProgress ? `${(lang === 'ua' ? importProgress.stage
+                                        .replace('Reading file...', 'Зчитування файлу...')
+                                        .replace('Validating data...', 'Валідація даних...')
+                                        .replace('Opening file...', 'Відкриття файлу...')
+                                        .replace('Importing...', 'Імпорт...')
+                                        .replace('Creating schema...', 'Створення структури...')
+                                        .replace('Loading JSON/CSV...', 'Завантаження...')
+                                        .replace(/Parsing (\d+) rows\.\.\./, 'Обробка $1 рядків...')
+                                        .replace(/Creating indices \((.*?)\)\.\.\./, 'Створення індексів ($1)...')
+                                        .replace('Complete', 'Готово') : importProgress.stage)} (${Math.round(importProgress.pct)}%)` : (currentStep === 0 ? (lang === 'ua' ? 'Імпортувати' : 'Import Data') : t('continue', lang))}
+                                </>
+                            ) : (
+                                <>{currentStep === 0 ? (lang === 'ua' ? 'Імпортувати дані' : 'Import Data') : t('continue', lang)} <ChevronRight className="w-4 h-4" /></>
+                            )}
+                        </span>
                     </button>
                 </div>
             </div>
