@@ -1,6 +1,12 @@
+import './worker-polyfill';
 import Papa from 'papaparse';
-import ExcelJS from 'exceljs';
+import * as ExcelJSModule from 'exceljs';
 import { TransactionItem, ColumnIndices } from '../types';
+
+const ExcelJS: any = (ExcelJSModule as any).default || ExcelJSModule;
+console.log('WORKER init: ExcelJS keys:', Object.keys(ExcelJSModule).join(', '));
+if (ExcelJS) console.log('WORKER init: ExcelJS is truthy, Workbook is:', typeof ExcelJS.Workbook);
+else console.log('WORKER init: ExcelJS is falsy');
 
 const parseExcelRawDate = (rawVal: any): string | null => {
     if (rawVal === undefined || rawVal === null || rawVal === '') return null;
@@ -150,6 +156,7 @@ const doValidation = (data: any[][], sRow: number, indices: ColumnIndices) => {
 };
 
 self.onmessage = async (e) => {
+    console.log("WORKER RECEIVED MESSAGE", e.data?.type);
     const { type } = e.data;
     if (type === 'PARSE_FILE') {
         const { buffer, isCsv } = e.data.payload;
@@ -210,8 +217,9 @@ self.onmessage = async (e) => {
                     data.push(row);
                 }
             } else {
-                self.postMessage({ type: 'PARSE_PROGRESS', payload: { pct: 30, stage: 'Importing...' } });
-                const workbook = new ExcelJS.Workbook();
+                self.postMessage({ type: 'PARSE_PROGRESS', payload: { pct: 30, stage: 'Importing Excel...' } });
+                
+                const workbook = new (ExcelJS as any).Workbook();
                 await workbook.xlsx.load(buffer);
                 
                 const sheet = workbook.worksheets[0];
@@ -239,7 +247,7 @@ self.onmessage = async (e) => {
                     const row = sheet.getRow(r);
                     if (!row) continue;
                     const rowData: any[] = [];
-                    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                    row.eachCell({ includeEmpty: true }, (cell: any, colNumber: number) => {
                         rowData[colNumber - 1] = getCellValue(cell.value);
                     });
                     while(rowData.length > 0 && isCellEmpty(rowData[rowData.length - 1])) {
@@ -271,6 +279,7 @@ self.onmessage = async (e) => {
                 }
             });
         } catch (err: any) {
+            console.error("Worker extraction error", err);
             self.postMessage({
                 type: 'PARSE_ERROR',
                 payload: err.message

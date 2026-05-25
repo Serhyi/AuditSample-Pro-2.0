@@ -129,6 +129,7 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onLoadingStateCha
 
   useEffect(() => {
       workerRef.current = new WebImportWorker();
+      workerRef.current.onerror = (err) => console.error('Worker initialization error:', err);
       return () => {
           workerRef.current?.terminate();
       };
@@ -259,6 +260,13 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onLoadingStateCha
     reader.onload = (e) => {
         const buffer = e.target?.result as ArrayBuffer;
 
+        workerRef.current!.onerror = (err) => {
+            console.error('Worker global error:', err);
+            setFileError('Помилка завантаження обробника файлів. Спробуйте оновити сторінку.');
+            setIsLoadingFile(false);
+            if (onLoadingStateChange) onLoadingStateChange(false, null);
+        };
+
         workerRef.current!.onmessage = (msgEvent) => {
             if (msgEvent.data.type === 'PARSE_PROGRESS') {
                 if (onLoadingStateChange) {
@@ -354,10 +362,10 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onLoadingStateCha
                {/* Project Import Buttons */}
                <div className="flex gap-2 mr-4">
                    {onImportProject && (
-                       <label className="cursor-pointer flex items-center gap-3 text-[11px] text-white font-black uppercase tracking-widest bg-brand-600 hover:bg-brand-700 px-7 py-3 rounded-xl shadow-[0_4px_12px_rgba(0,133,75,0.25)] transition-all active:scale-95">
+                       <label className="cursor-pointer flex items-center gap-3 text-[11px] text-brand-600 font-black uppercase tracking-widest bg-brand-100 hover:bg-brand-200 px-7 py-3 rounded-xl transition-all active:scale-95">
                            <Download className="w-4 h-4 stroke-[3px]" />
                            {t('importXlsx', lang)}
-                           <input type="file" className="hidden" accept=".xlsx" onChange={onImportProject} />
+                           <input type="file" className="hidden" accept=".xlsx,.csv,.xls" onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); }} />
                        </label>
                    )}
                </div>
@@ -417,7 +425,7 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onLoadingStateCha
                     </div>
                     <div>
                       <h4 className={`text-[11px] font-black uppercase tracking-[0.15em] mb-3 ${validation.isValid ? 'text-brand-600' : 'text-red-600'}`}>
-                          {validation.isValid ? lang === 'ua' ? 'Відображення налаштовано' : 'Mapping Ready' : t('validationError', lang)}
+                          {validation.isValid ? t('mappingReady', lang) : t('validationError', lang)}
                       </h4>
                       <div className="grid grid-cols-2 gap-x-10 gap-y-4 mt-1">
                         {(validation.negativeCount > 0 || validation.zeroCount > 0) && (
@@ -432,7 +440,7 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onLoadingStateCha
                         )}
                         {!validation.isValid && (
                             <div className="col-span-2 text-red-500 text-[11px] font-bold mt-2 leading-tight">
-                                {lang === 'ua' ? 'Налаштуйте колонки для коректного зчитування даних.' : 'Adjust columns to read data correctly.'}
+                                {t('adjustColumnsRequired', lang)}
                             </div>
                         )}
                       </div>

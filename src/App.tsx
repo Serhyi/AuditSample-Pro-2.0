@@ -94,10 +94,10 @@ const App: React.FC = () => {
     if (isElectron() && window.api && isVirtual) {
         try {
             await window.api.export.project(projectData);
-            alert(lang === 'ua' ? 'Проєкт успішно збережено!' : 'Project saved successfully!');
+            alert(t('msgProjectSaved', lang));
         } catch (e: any) {
             console.error(e);
-            alert((lang === 'ua' ? 'Помилка збереження: ' : 'Export error: ') + e.message);
+            alert(t('errSaveError', lang) + e.message);
         }
         setIsSaving(false);
         return;
@@ -117,7 +117,7 @@ const App: React.FC = () => {
         URL.revokeObjectURL(url);
     } catch (e: any) {
         console.error(e);
-        alert((lang === 'ua' ? 'Помилка збереження: ' : 'Export error: ') + e.message);
+        alert(t('errSaveError', lang) + e.message);
     } finally {
         setIsSaving(false);
     }
@@ -126,14 +126,19 @@ const App: React.FC = () => {
   const importProject = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    setIsProcessing(true);
+    setImportProgress({ pct: 10, stage: t('msgReadingProject', lang) });
     
     // Electron optimized path for SQLite .audsmpl
     if (file.name.endsWith('.audsmpl') && isElectron() && window.api) {
         try {
+            setImportProgress({ pct: 30, stage: t('msgOpeningDb', lang) });
             const rawFilePath = window.api.utils && window.api.utils.getPathForFile 
               ? window.api.utils.getPathForFile(file as any) 
               : (file as any).path || '';
               
+            setImportProgress({ pct: 60, stage: t('msgLoadingData', lang) });
             const data = await window.api.import.project(rawFilePath);
             
             await refreshStats();
@@ -143,10 +148,18 @@ const App: React.FC = () => {
             setResults(data.results);
             if (data.settings) updateSettings(data.settings);
             setCurrentStep(data.currentStep || 0);
-            alert(lang === 'ua' ? 'Проєкт успішно відкрито!' : 'Project opened successfully!');
+            
+            setImportProgress({ pct: 100, stage: t('msgComplete', lang) });
+            setTimeout(() => {
+                alert(t('msgProjectOpened', lang));
+                setIsProcessing(false);
+                setImportProgress(null);
+            }, 300);
         } catch (e: any) {
             console.error(e);
             setSamplingError(t('errInvalidProjectFormat', lang));
+            setIsProcessing(false);
+            setImportProgress(null);
         }
         return;
     }
@@ -154,12 +167,18 @@ const App: React.FC = () => {
     const reader = new FileReader();
 
     reader.onload = async (event) => {
+      const waitRender = () => new Promise(r => setTimeout(r, 50));
       try {
         const content = event.target?.result;
         
         if (file.name.endsWith('.audsmpl')) {
             try {
+                setImportProgress({ pct: 50, stage: t('msgParsing', lang) });
+                await waitRender();
                 const data = JSON.parse(content as string);
+                
+                setImportProgress({ pct: 80, stage: t('msgLoadingData', lang) });
+                await waitRender();
                 setPopulation(data.population || []);
                 setSourceHeaders(data.sourceHeaders || []);
                 setColumnIndices(data.columnIndices || {id: -1, date: -1, amount: -1});
@@ -167,39 +186,64 @@ const App: React.FC = () => {
                 setResults(data.results || null);
                 if (data.settings) updateSettings(data.settings);
                 setCurrentStep(data.currentStep || 0);
-                alert(lang === 'ua' ? 'Проєкт успішно відкрито!' : 'Project opened successfully!');
+                
+                setImportProgress({ pct: 100, stage: t('msgComplete', lang) });
+                setTimeout(() => {
+                    alert(t('msgProjectOpened', lang));
+                    setIsProcessing(false);
+                    setImportProgress(null);
+                }, 300);
             } catch {
-                alert(lang === 'ua' ? 'Помилка: файл .audsmpl є базою даних SQLite, і його потрібно відкривати в десктопній версії програми.' : 'Error: .audsmpl file is a SQLite database and must be opened in the desktop application.');
+                alert(t('errSqliteDb', lang));
+                setIsProcessing(false);
+                setImportProgress(null);
             }
             return;
         }
         
           if (file.name.endsWith('.xlsx')) {
-              alert(lang === 'ua' ? 'Файли XLSX з перевіреними даними потрібно імпортувати на кроці "Результати". Проєкти можна завантажити тільки у форматі .audsmpl.' : 'XLSX files with audited data should be imported at the "Results" step. Projects can only be loaded in .audsmpl format.');
+              alert(t('errImportXlsxResults', lang));
+              setIsProcessing(false);
+              setImportProgress(null);
               return;
           }
           
+          setImportProgress({ pct: 50, stage: t('msgParsing', lang) });
+          await waitRender();
           const data = JSON.parse(content as string);
           
           if (data.version && Array.isArray(data.population)) {
+             setImportProgress({ pct: 75, stage: t('msgLoadingPop', lang) });
+             await waitRender();
              if (isElectron() && window.api && isVirtual) {
                  await window.api.query.insertRows('population', data.population);
                  await refreshStats();
              } else {
                  setPopulation(data.population);
              }
+             
              setSourceHeaders(data.sourceHeaders || []);
              setColumnIndices(data.columnIndices || {id: -1, date: -1, amount: -1});
              setConfig(data.config);
              setResults(data.results);
              if (data.settings) updateSettings(data.settings);
              setCurrentStep(data.currentStep || 0);
+             
+             setImportProgress({ pct: 100, stage: t('msgComplete', lang) });
+             setTimeout(() => {
+                  setIsProcessing(false);
+                 setImportProgress(null);
+             }, 300);
           } else {
              setSamplingError(t('errInvalidProjectFormat', lang));
+             setIsProcessing(false);
+             setImportProgress(null);
           }
       } catch (err) {
         console.error("Error importing project:", err);
         setSamplingError(t('errReadProject', lang));
+        setIsProcessing(false);
+        setImportProgress(null);
       }
     };
 
@@ -368,6 +412,26 @@ const App: React.FC = () => {
     );
   }
 
+  const translateStage = (stage: string, l: Language) => {
+      if (l === 'en') return stage;
+      return stage
+          .replace('Reading project file...', 'Зчитування файлу...')
+          .replace('Opening project DB...', 'Відкриття БД проєкту...')
+          .replace('Parsing project JSON...', 'Обробка проєкту...')
+          .replace('Loading project data...', 'Завантаження даних...')
+          .replace('Loading population...', 'Завантаження вибірки...')
+          .replace('Reading file...', 'Зчитування файлу...')
+          .replace('Validating data...', 'Валідація даних...')
+          .replace('Opening file...', 'Відкриття файлу...')
+          .replace('Importing...', 'Імпорт...')
+          .replace('Creating schema...', 'Створення структури...')
+          .replace('Loading JSON/CSV...', 'Завантаження...')
+          .replace(/Parsing (\d+) rows\.\.\./, 'Обробка $1 рядків...')
+          .replace(/Creating indices \((.*?)\)\.\.\./, 'Створення індексів ($1)...')
+          .replace('Complete', 'Готово')
+          .replace('Parsing...', 'Обробка...');
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-neutral-900 flex flex-col selection:bg-brand-100">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
@@ -386,10 +450,10 @@ const App: React.FC = () => {
              </div>
              
              <div className="flex items-center gap-2 mr-2 border-r border-slate-200 pr-4">
-                <button onClick={exportProject} disabled={isSaving} title={lang === 'ua' ? "Зберегти проєкт" : "Save Project"} className="p-2 text-slate-500 hover:text-brand-600 hover:bg-slate-50 rounded-full transition-all disabled:opacity-50">
+                <button onClick={exportProject} disabled={isSaving} title={t('msgSaveProject', lang)} className="p-2 text-slate-500 hover:text-brand-600 hover:bg-slate-50 rounded-full transition-all disabled:opacity-50">
                   {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                 </button>
-                <label title={lang === 'ua' ? "Відкрити проєкт" : "Open Project"} className="p-2 text-slate-500 hover:text-brand-600 hover:bg-slate-50 rounded-full transition-all cursor-pointer">
+                <label title={t('msgLoadProject', lang)} className="p-2 text-slate-500 hover:text-brand-600 hover:bg-slate-50 rounded-full transition-all cursor-pointer">
                   <FolderOpen className="w-5 h-5" />
                   <input type="file" accept=".audsmpl" className="hidden" onChange={importProject} />
                 </label>
@@ -466,19 +530,10 @@ const App: React.FC = () => {
                             {isProcessing ? (
                                 <>
                                     <Loader2 className="w-5 h-5 animate-spin" />
-                                    {importProgress ? `${(lang === 'ua' ? importProgress.stage
-                                        .replace('Reading file...', 'Зчитування файлу...')
-                                        .replace('Validating data...', 'Валідація даних...')
-                                        .replace('Opening file...', 'Відкриття файлу...')
-                                        .replace('Importing...', 'Імпорт...')
-                                        .replace('Creating schema...', 'Створення структури...')
-                                        .replace('Loading JSON/CSV...', 'Завантаження...')
-                                        .replace(/Parsing (\d+) rows\.\.\./, 'Обробка $1 рядків...')
-                                        .replace(/Creating indices \((.*?)\)\.\.\./, 'Створення індексів ($1)...')
-                                        .replace('Complete', 'Готово') : importProgress.stage)} (${Math.round(importProgress.pct)}%)` : (currentStep === 0 ? (lang === 'ua' ? 'Імпортувати' : 'Import Data') : t('continue', lang))}
+                                    {importProgress ? `${translateStage(importProgress.stage, lang)} (${Math.round(importProgress.pct)}%)` : (currentStep === 0 ? t('step1', lang) : t('continue', lang))}
                                 </>
                             ) : (
-                                <>{currentStep === 0 ? (lang === 'ua' ? 'Імпортувати дані' : 'Import Data') : t('continue', lang)} <ChevronRight className="w-4 h-4" /></>
+                                <>{currentStep === 0 ? t('step1', lang) : t('continue', lang)} <ChevronRight className="w-4 h-4" /></>
                             )}
                         </span>
                     </button>
@@ -676,6 +731,30 @@ const App: React.FC = () => {
               </div>
           </div>
       )}
+
+      {/* Global Processing Overlay */}
+      {isProcessing && importProgress && (
+          <div className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex flex-col items-center justify-center p-4 animate-in fade-in duration-200">
+              <div className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center gap-6 max-w-sm w-full mx-4 border border-brand-100">
+                  <div className="relative">
+                      <div className="w-16 h-16 border-4 border-brand-100 border-t-brand-600 rounded-full animate-spin"></div>
+                      <div className="absolute inset-0 flex items-center justify-center text-brand-600 font-bold text-[10px]">
+                          {Math.round(importProgress.pct)}%
+                      </div>
+                  </div>
+                  <div className="w-full text-center">
+                      <div className="text-sm font-bold text-slate-800 mb-1">
+                          {translateStage(importProgress.stage, lang)}
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-medium">{t('msgPleaseWait', lang)}</div>
+                  </div>
+                  <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                      <div className="bg-brand-600 h-full transition-all duration-300" style={{ width: `${importProgress.pct}%` }} />
+                  </div>
+              </div>
+          </div>
+      )}
+
     </div>
   );
 };

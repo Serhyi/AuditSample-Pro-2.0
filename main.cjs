@@ -258,6 +258,10 @@ var SamplingService = class {
     }
     const tm = Number(config.tolerableMisstatement) || 0;
     const ctt = Number(config.clearlyTrivialThreshold) || 0;
+    const isAnomalyDisabled = config.anomalyMethod === "None";
+    const allowedMethodsForKeyItems = ["Random", "FixedRandom", "CVS", "Cluster", "RiskAssessment"];
+    const excludeKeyItems = !isAnomalyDisabled && tm > 0 && allowedMethodsForKeyItems.includes(config.method);
+    const upperLimit = excludeKeyItems ? tm : 999999999999;
     let trivialCount = 0;
     let trivialValue = 0;
     let trivialItems = [];
@@ -273,7 +277,7 @@ var SamplingService = class {
       }));
     }
     let keyItems = [];
-    if (tm > 0) {
+    if (excludeKeyItems) {
       await updateProgress("\u0412\u0456\u0434\u0431\u0456\u0440 \u043A\u043B\u044E\u0447\u043E\u0432\u0438\u0445 \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432...");
       keyItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) >= ? LIMIT 5000`, [tm]);
       keyItems = keyItems.map((item) => ({
@@ -316,7 +320,7 @@ var SamplingService = class {
           WHERE ABS(amount) < ? AND ABS(amount) >= ? AND ${riskWhereStr}
           LIMIT 5000
         `;
-      const riskMatched = await this.db.query(riskMatchedQuery, [tm > 0 ? tm : 999999999999, ctt]);
+      const riskMatched = await this.db.query(riskMatchedQuery, [upperLimit, ctt]);
       for (const item of riskMatched) {
         sampleItems.push({
           ...item,
@@ -330,7 +334,7 @@ var SamplingService = class {
       }
       const randomCount = config.riskRandomCount ?? 5;
       const riskUnmatchedWhere = `ABS(amount) < ? AND ABS(amount) >= ? AND NOT ${riskWhereStr}`;
-      const randomMatched = await this.getRandomSample(riskUnmatchedWhere, [tm > 0 ? tm : 999999999999, ctt], randomCount);
+      const randomMatched = await this.getRandomSample(riskUnmatchedWhere, [upperLimit, ctt], randomCount);
       for (const item of randomMatched) {
         sampleItems.push({
           ...item,
@@ -348,7 +352,7 @@ var SamplingService = class {
       const targetValue = remPopValue * targetPercent;
       await updateProgress("\u0412\u0438\u0431\u0456\u0440 \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0438\u0445 \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432 \u0442\u0430\u0431\u043B\u0438\u0446\u0456...");
       const paretoItemsQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY ABS(amount) DESC`;
-      const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getParetoPickedRows(paretoItemsQuery, [tm > 0 ? tm : 999999999999, ctt], targetValue);
+      const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getParetoPickedRows(paretoItemsQuery, [upperLimit, ctt], targetValue);
       if (pickedRowIds.length > 0) {
         await updateProgress(`\u041E\u0442\u0440\u0438\u043C\u0430\u043D\u043D\u044F \u0434\u0430\u043D\u0438\u0445 \u0432\u0438\u0431\u0440\u0430\u043D\u0438\u0445 \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432 (${pickedRowIds.length})...`);
         const results = [];
@@ -373,8 +377,8 @@ var SamplingService = class {
       const limitCount = Math.max(1, Math.ceil(popSize * percent / 100));
       const topQuery = `SELECT * FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY amount DESC LIMIT ?`;
       const bottomQuery = `SELECT * FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY amount ASC LIMIT ?`;
-      const topItems = await this.db.query(topQuery, [tm > 0 ? tm : 999999999999, ctt, limitCount]);
-      const bottomItems = await this.db.query(bottomQuery, [tm > 0 ? tm : 999999999999, ctt, limitCount]);
+      const topItems = await this.db.query(topQuery, [upperLimit, ctt, limitCount]);
+      const bottomItems = await this.db.query(bottomQuery, [upperLimit, ctt, limitCount]);
       const combined = [...topItems, ...bottomItems];
       const uniqueSet = /* @__PURE__ */ new Set();
       for (const item of combined) {
@@ -394,7 +398,7 @@ var SamplingService = class {
     } else if (config.method === "Benford") {
       const benfordCount = config.benfordSampleSize || 50;
       const whereCond = `ABS(amount) < ? AND ABS(amount) >= ?`;
-      const items = await this.getRandomSample(whereCond, [tm > 0 ? tm : 999999999999, ctt], benfordCount);
+      const items = await this.getRandomSample(whereCond, [upperLimit, ctt], benfordCount);
       sampleItems = items.map((item) => ({
         ...item,
         bookValue: item.amount,
@@ -405,7 +409,7 @@ var SamplingService = class {
         selectionReason: "Benford Review"
       }));
     } else if (config.method === "Grubbs") {
-      const grubbsItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY ABS(amount) DESC LIMIT 15`, [tm > 0 ? tm : 999999999999, ctt]);
+      const grubbsItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY ABS(amount) DESC LIMIT 15`, [upperLimit, ctt]);
       sampleItems = grubbsItems.map((item) => ({
         ...item,
         bookValue: item.amount,
@@ -440,7 +444,7 @@ var SamplingService = class {
         const interval2 = Math.max(pm / rf, 1);
         await updateProgress(`\u0417\u0430\u0441\u0442\u043E\u0441\u0443\u0432\u0430\u043D\u043D\u044F \u0456\u043D\u0442\u0435\u0440\u0432\u0430\u043B\u0443 (${interval2.toFixed(2)})...`);
         const musQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`;
-        const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getMUSPickedRows(musQuery, [tm > 0 ? tm : 999999999999, ctt], interval2, sampleSize);
+        const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getMUSPickedRows(musQuery, [upperLimit, ctt], interval2, sampleSize);
         if (pickedRowIds.length > 0) {
           await updateProgress(`\u041E\u0442\u0440\u0438\u043C\u0430\u043D\u043D\u044F \u0434\u0430\u043D\u0438\u0445 \u0432\u0438\u0431\u0440\u0430\u043D\u0438\u0445 \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432 (${pickedRowIds.length})...`);
           const results = [];
@@ -463,7 +467,7 @@ var SamplingService = class {
       } else {
         await updateProgress(`\u0412\u0438\u043A\u043E\u043D\u0430\u043D\u043D\u044F \u0432\u0438\u043F\u0430\u0434\u043A\u043E\u0432\u043E\u0433\u043E \u0432\u0438\u0431\u043E\u0440\u0443 (${sampleSize} \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432)...`);
         const whereStr = `ABS(amount) < ? AND ABS(amount) >= ?`;
-        const rawSampleItems = await this.getRandomSample(whereStr, [tm > 0 ? tm : 999999999999, ctt], sampleSize);
+        const rawSampleItems = await this.getRandomSample(whereStr, [upperLimit, ctt], sampleSize);
         sampleItems = rawSampleItems.map((item, idx) => ({
           ...item,
           bookValue: item.amount,
@@ -752,6 +756,8 @@ function createWindow() {
     transparent: true,
     frame: false,
     alwaysOnTop: true,
+    icon: path5.join(__dirname, "icon.png"),
+    // Або icon.ico
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true
@@ -763,6 +769,8 @@ function createWindow() {
     height: 900,
     show: false,
     // Don't show the main window immediately
+    icon: path5.join(__dirname, "icon.png"),
+    // Або icon.ico
     webPreferences: {
       preload: path5.join(__dirname, "preload.cjs"),
       contextIsolation: true,

@@ -329,10 +329,10 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
           const newResults = await mergeExcelResults(file, currentResults, sourceHeaders.length, colIndices.id);
           const updatedCount = (newResults as any)._importUpdatedCount || 0;
           onResultsUpdate(newResults);
-          alert(lang === 'ua' ? `Дані успішно імпортовано з файлу клієнта! Оновлено ${updatedCount} рядків.` : `Data successfully imported from the client file! Updated ${updatedCount} rows.`);
+          alert(t('msgImportSuccess', lang).replace('{0}', updatedCount.toString()));
       } catch (err: any) {
           console.error(err);
-          alert((lang === 'ua' ? 'Помилка імпорту: ' : 'Import Error: ') + err.message);
+          alert(t('errImportClient', lang) + err.message);
       }
       e.target.value = '';
   };
@@ -354,13 +354,9 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
     
     let trivialActionDesc = t('trivialItemsNotExcluded', lang);
     if (currentResults.areTrivialExcluded) {
-        trivialActionDesc = lang === 'ua' 
-            ? "Виключені: їх сумарна вартість не створює ризику суттєвого викривлення (МСА 450)."
-            : "Excluded: their aggregate value does not pose a risk of material misstatement (ISA 450).";
+        trivialActionDesc = t('trivialActionExcluded', lang);
     } else if (config.clearlyTrivialThreshold > 0) {
-        trivialActionDesc = lang === 'ua'
-            ? "Залишені: сумарна вартість перевищує ліміти або потребує тестування."
-            : "Kept: aggregate value exceeds limits or requires testing.";
+        trivialActionDesc = t('trivialActionNotExcluded', lang);
     } else {
         trivialActionDesc = t('noneLabel', lang);
     }
@@ -407,12 +403,12 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
             <Section title={t('trivialLabel', lang)} icon={Database}>
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-2">
                     <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase">{lang === 'ua' ? 'Поріг ВНС' : 'CTT Threshold'}</span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase">{t('cttThreshold', lang)}</span>
                         <span className="text-neutral-900 font-bold">{formatMoney(config.clearlyTrivialThreshold, settings)}</span>
                     </div>
                     <div className="text-[11px] text-slate-600 leading-snug">{trivialActionDesc}</div>
                     <div className="flex justify-between items-center pt-1">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase">{lang === 'ua' ? 'Кількість ВНС' : 'Trivial count'}</span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase">{t('trivialCount', lang)}</span>
                         <span className="text-slate-600 font-mono font-bold">{currentResults.trivialCount} {t('items', lang)}</span>
                     </div>
                 </div>
@@ -443,12 +439,10 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                 </div>
             </Section>
 
-            <Section title={lang === 'ua' ? "АНАЛІЗ ПОКРИТТЯ" : "COVERAGE ANALYSIS"} icon={Sigma}>
+            <Section title={t('coverageAnalysis', lang)} icon={Sigma}>
                 <div className="space-y-3">
                    <p className="text-[11px] text-slate-600 leading-snug">
-                       {lang === 'ua' 
-                         ? "Відсоток вартості ген. сукупності, що був безпосередньо перевірений (Вибірка + Ключові)."
-                         : "Directly tested percentage of the population value (Sample + Key items)."}
+                       {t('coverageDesc', lang)}
                    </p>
                    <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-inner">
                       <div className="w-3/4 bg-slate-200 rounded-full h-2.5 overflow-hidden">
@@ -620,7 +614,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                 <div className="mt-auto pt-4 border-t border-white/50 flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
                     <span className={stage2Errors > 0 ? 'text-red-400' : 'text-brand-400'}>Резерв:</span>
                     <span className={stage2Errors > 0 ? 'text-red-700 font-black' : 'text-brand-700'}>
-                        {isStage1Clean ? t('sogStage2NotReq', lang) : (stage1Errors > 0 ? (lang === 'ua' ? "Потрібно" : "Required") : (lang === 'ua' ? "Очікує" : "Pending"))}
+                        {isStage1Clean ? t('sogStage2NotReq', lang) : (stage1Errors > 0 ? t('sogStage2Req', lang) : t('sogStage2Pending', lang))}
                     </span>
                 </div>
             </div>
@@ -654,10 +648,10 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
             <div className="flex gap-2">
                 <label className="flex items-center gap-3 text-[11px] text-brand-700 font-black uppercase tracking-widest bg-brand-100 border border-brand-300 hover:bg-brand-200 px-7 py-3 rounded-xl transition-all active:scale-95 cursor-pointer">
                     <Download className="w-4 h-4 stroke-[3px]"/> 
-                    {lang === 'ua' ? 'Імпорт від клієнта' : 'Import from Client'}
+                    {t('btnImportClient', lang)}
                     <input type="file" accept=".xlsx" className="hidden" onChange={handleImportClient} />
                 </label>
-                <button onClick={handleExportClient} className="flex items-center gap-3 text-[11px] text-brand-600 font-black uppercase tracking-widest bg-brand-50 border border-brand-200 hover:bg-brand-100 px-7 py-3 rounded-xl transition-all active:scale-95"><Upload className="w-4 h-4 stroke-[3px]"/> {lang === 'ua' ? 'Експорт для клієнта' : 'Export for Client'}</button>
+                <button onClick={handleExportClient} className="flex items-center gap-3 text-[11px] text-brand-600 font-black uppercase tracking-widest bg-brand-50 border border-brand-200 hover:bg-brand-100 px-7 py-3 rounded-xl transition-all active:scale-95"><Upload className="w-4 h-4 stroke-[3px]"/> {t('btnExportClient', lang)}</button>
                 <button onClick={handleExport} className="flex items-center gap-3 text-[11px] text-white font-black uppercase tracking-widest bg-brand-600 hover:bg-brand-700 px-7 py-3 rounded-xl shadow-[0_4px_12px_rgba(0,133,75,0.25)] transition-all active:scale-95"><Upload className="w-4 h-4 stroke-[3px]"/> {t('exportBtn', lang)}</button>
             </div>
           </div>
