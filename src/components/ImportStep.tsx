@@ -8,6 +8,7 @@ import WebImportWorker from './ImportWorker?worker';
 
 interface ImportStepProps {
   onDataLoaded: (filePath: string | null, headers: string[], indices: ColumnIndices, startRow: number, parsedData?: TransactionItem[]) => void;
+  onProjectRecovered?: (payload: any) => void;
   onLoadingStateChange?: (isLoading: boolean, progress: { pct: number, stage: string } | null) => void;
   onImportProject?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   lang: Language;
@@ -113,7 +114,7 @@ const detectTableStructure = (rawData: any[][]): { startRow: number, indices: Co
     return { startRow: 6, indices: { id: 0, amount: 1, date: 2 } };
 };
 
-const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onLoadingStateChange, onImportProject, lang, currency, setCurrency, settings }) => {
+const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onProjectRecovered, onLoadingStateChange, onImportProject, lang, currency, setCurrency, settings }) => {
   const [dragActive, setDragActive] = useState(false);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -272,6 +273,10 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onLoadingStateCha
                 if (onLoadingStateChange) {
                     onLoadingStateChange(true, msgEvent.data.payload);
                 }
+            } else if (msgEvent.data.type === 'PARSE_RECOVERED_PROJECT') {
+                setIsLoadingFile(false);
+                if (onLoadingStateChange) onLoadingStateChange(false, null);
+                if (onProjectRecovered) onProjectRecovered(msgEvent.data.payload);
             } else if (msgEvent.data.type === 'PARSE_SUCCESS') {
                 const { data, startRow: detStartRow, indices: detIndices } = msgEvent.data.payload;
                 

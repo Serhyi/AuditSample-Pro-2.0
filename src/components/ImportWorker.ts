@@ -47,10 +47,12 @@ const parseAmount = (rawAmt: any): number => {
     if (typeof rawAmt === 'number') return rawAmt;
     if (rawAmt === null || rawAmt === undefined) return NaN;
     let str = String(rawAmt).trim();
-    if (str === '') return NaN;
+    if (str === '' || str === '-') return NaN; // - may appear for zero formatting
     if (str.startsWith('(') && str.endsWith(')')) str = '-' + str.slice(1, -1);
     
+    // Also strip generic characters not parsing well
     const cleanStr = str.replace(/[\s\u00A0\u200B\u202F$€£₴]/g, ''); 
+    if (cleanStr === '') return NaN;
     
     if (cleanStr.includes(',') && cleanStr.includes('.')) {
         const lastDot = cleanStr.lastIndexOf('.');
@@ -221,9 +223,7 @@ self.onmessage = async (e) => {
                 
                 const workbook = new (ExcelJS as any).Workbook();
                 await workbook.xlsx.load(buffer);
-                
-                const sheet = workbook.worksheets[0];
-                
+
                 const getCellValue = (val: any): any => {
                     if (val === null || val === undefined) return null;
                     if (typeof val === 'object') {
@@ -240,6 +240,128 @@ self.onmessage = async (e) => {
                     if (v === null || v === undefined) return true;
                     return String(v).trim() === '';
                 };
+                
+                const extractSummaryInfo = (sheet: any): any => {
+                    let populationSize = 0, populationValue = 0, projectedMisstatement = 0, upperMisstatementBound = 0;
+                    let sampleSize = 0, trivialCount = 0;
+                    if (!sheet) return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount };
+                    
+                    for (let r = 1; r <= sheet.rowCount; r++) {
+                        const row = sheet.getRow(r);
+                        const lbl = String(getCellValue(row.getCell(1).value) || '');
+                        const val = getCellValue(row.getCell(2).value);
+                        
+                        if (lbl.includes('Кількість елементів (Сукупність)') || lbl.includes('Population Size') || lbl.includes('Обсяг ген. сукупності')) {
+                            populationSize = parseInt(String(val).replace(/\D/g, '')) || 0;
+                        }
+                        if (lbl.includes('Сума (Сукупність)') || lbl.includes('Population Value') || lbl.includes('ГЕНЕРАЛЬНА СУКУПНІСТЬ') || lbl.includes('TOTAL POPULATION')) {
+                            populationValue = parseAmount(val);
+                        }
+                        if (lbl.includes('ОБСЯГ ВИБІРКИ') || lbl.includes('SAMPLE SIZE')) {
+                            sampleSize = parseInt(String(val).replace(/\D/g, '')) || 0;
+                        }
+                        if (lbl.includes('Кількість ВНС') || lbl.includes('CTT Items Count')) {
+                            trivialCount = parseInt(String(val).replace(/\D/g, '')) || 0;
+                        }
+                        if (lbl.includes('Прогнозоване викривлення') || lbl.includes('Projected Misstatement')) {
+                            projectedMisstatement = parseAmount(val);
+                        }
+                        if (lbl.includes('Верхня межа викривлення') || lbl.includes('Upper Misstatement Bound') || lbl.includes('Максимальна помилка')) {
+                            upperMisstatementBound = parseAmount(val);
+                        }
+                    }
+                    return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount };
+                };
+                
+                const sampleSheet = workbook.getWorksheet('Вибірка') || workbook.getWorksheet('Sample');
+                if (sampleSheet) {
+                    self.postMessage({ type: 'PARSE_PROGRESS', payload: { pct: 50, stage: 'Reading exported project...' } });
+                    
+                    const summarySheet = workbook.getWorksheet('Опис та результат') || workbook.getWorksheet('Description and Result');
+                    const summaryData = extractSummaryInfo(summarySheet);
+                    
+                    const extractSheet = (sheet: any): {items: any[], headers: string[]} => {
+                        const items: any[] = [];
+                        const sourceHeaders: string[] = [];
+                        if (!sheet) return { items, headers: sourceHeaders };
+                        
+                        const headerRow = sheet.getRow(1);
+                        let docCol = -1, audCol = -1, diffCol = -1, commentCol = -1;
+                        for (let c=1; c<=sheet.columnCount; c++) {
+                            const valStr = String(getCellValue(headerRow.getCell(c).value) || '');
+                            if (valStr.includes('Облікова сума') || valStr.includes('Book Value')) docCol = c;
+                            if (valStr.includes('Аудиторська сума') || valStr.includes('Audit Value')) audCol = c;
+                            if (valStr.includes('Різниця') || valStr.includes('Difference')) diffCol = c;
+                            if (valStr.includes('Коментарі') || valStr.includes('Comments')) commentCol = c;
+                        }
+                        if (diffCol === -1) diffCol = audCol !== -1 ? audCol + 1 : -1;
+                        if (commentCol === -1) commentCol = audCol !== -1 ? audCol + 2 : -1;
+                        
+                        const baseN = (docCol !== -1) ? docCol - 1 : Math.max(0, sheet.columnCount - 4);
+                        
+                        for (let c=1; c<=baseN; c++) sourceHeaders.push(String(getCellValue(headerRow.getCell(c).value) || ''));
+
+                        for (let r=2; r<=sheet.rowCount; r++) {
+                            const row = sheet.getRow(r);
+                            const originalRow = [];
+                            for(let c=1; c<=baseN; c++) originalRow.push(getCellValue(row.getCell(c).value));
+                            
+                            const bookVal = (docCol !== -1) ? parseAmount(getCellValue(row.getCell(docCol).value)) : 0;
+                            const auditValRaw = (audCol !== -1) ? getCellValue(row.getCell(audCol).value) : null;
+                            const diffValRaw = (diffCol !== -1) ? getCellValue(row.getCell(diffCol).value) : null;
+                            const commentsVal = (commentCol !== -1) ? String(getCellValue(row.getCell(commentCol).value) || '') : '';
+                            
+                            const auditVal = auditValRaw !== null && auditValRaw !== '' ? parseAmount(auditValRaw) : '';
+                            
+                            let diffVal = 0;
+                            let parsedDiff = NaN;
+                            
+                            if (diffValRaw !== null && diffValRaw !== '') {
+                                parsedDiff = parseAmount(diffValRaw);
+                            }
+                            
+                            if (!isNaN(parsedDiff)) {
+                                diffVal = parsedDiff;
+                            } else {
+                                const auditNum = typeof auditVal === 'number' ? auditVal : 0;
+                                diffVal = bookVal - auditNum;
+                            }
+
+                            items.push({
+                                id: `row-${r-1}`,
+                                amount: bookVal,
+                                bookValue: bookVal,
+                                originalRow: originalRow,
+                                auditedValue: auditVal,
+                                difference: diffVal,
+                                comments: commentsVal
+                            });
+                        }
+                        return { items, headers: sourceHeaders };
+                    };
+                    
+                    const sampleData = extractSheet(sampleSheet);
+                    const keySheet = workbook.getWorksheet('Ключові') || workbook.getWorksheet('Key');
+                    const keyData = extractSheet(keySheet);
+                    
+                    const popSheet = workbook.getWorksheet('Генеральна сукупність') || workbook.getWorksheet('Population');
+                    const popData = extractSheet(popSheet);
+
+                    self.postMessage({ type: 'PARSE_PROGRESS', payload: { pct: 100, stage: 'Complete' } });
+                    self.postMessage({
+                        type: 'PARSE_RECOVERED_PROJECT',
+                        payload: {
+                            samplingItems: sampleData.items,
+                            keyItems: keyData.items,
+                            population: popData.items.map(i => ({...i, amount: i.bookValue})),
+                            sourceHeaders: sampleData.headers.length > 0 ? sampleData.headers : (popData.headers || []),
+                            summaryData
+                        }
+                    });
+                    return; // exit early since it was a recovered project
+                }
+                
+                const sheet = workbook.worksheets[0];
 
                 const rowCount = sheet.rowCount;
                 self.postMessage({ type: 'PARSE_PROGRESS', payload: { pct: 75, stage: `Parsing ${rowCount} rows...` } });

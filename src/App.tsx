@@ -423,6 +423,8 @@ const App: React.FC = () => {
           .replace('Reading file...', 'Зчитування файлу...')
           .replace('Validating data...', 'Валідація даних...')
           .replace('Opening file...', 'Відкриття файлу...')
+          .replace('Importing Excel...', 'Імпортування Excel...')
+          .replace('Reading exported project...', 'Зчитування експортованого проєкту...')
           .replace('Importing...', 'Імпорт...')
           .replace('Creating schema...', 'Створення структури...')
           .replace('Loading JSON/CSV...', 'Завантаження...')
@@ -504,6 +506,16 @@ const App: React.FC = () => {
             <div className="space-y-8">
                 <ImportStep 
                   onDataLoaded={handleDataLoaded} 
+                  onProjectRecovered={async (payload) => {
+                      const { reconstructProjectState } = await import('./export/projectRecovery');
+                      const projectData = reconstructProjectState(payload, settings);
+                      setPopulation(projectData.population);
+                      setSourceHeaders(projectData.sourceHeaders);
+                      setColumnIndices(projectData.columnIndices);
+                      setResults(projectData.results);
+                      setConfig(projectData.config);
+                      setCurrentStep(2); // Jump directly to Results step
+                  }}
                   onLoadingStateChange={(loading, prog) => {
                       setIsProcessing(loading);
                       setImportProgress(prog);

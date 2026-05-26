@@ -125,6 +125,8 @@ export async function exportToExcel(
 
     addSectionHeader(isUa ? '3. РЕЗУЛЬТАТИ ТА ЕКСТРАПОЛЯЦІЯ' : '3. RESULTS AND EXTRAPOLATION', 'FF0F172A');
     addDetailRow(isUa ? 'ОБСЯГ ВИБІРКИ' : 'SAMPLE SIZE', results.sampleSize, '0');
+    const coveragePercent = results.populationValue > 0 ? (results.sampleValue / results.populationValue) * 100 : 0;
+    addDetailRow(isUa ? 'АНАЛІЗ ПОКРИТТЯ' : 'COVERAGE ANALYSIS', `${coveragePercent.toFixed(2)}%`);
     
     const isAttribute = config.method === 'Attribute';
     
@@ -257,7 +259,7 @@ export async function exportToExcel(
           auditValNum = null; // Blank cell if not audited yet
       }
       
-      diffValObj = { formula: `IF(ISBLANK(${auditColName}${targetRowIdx}), "", ${bookColName}${targetRowIdx}-${auditColName}${targetRowIdx})` };
+      diffValObj = { formula: `${bookColName}${targetRowIdx}-${auditColName}${targetRowIdx}` };
 
       rowData.push(
         item.bookValue,

@@ -55,6 +55,11 @@ export function smartFormat(val: any, settings?: GlobalSettings): string {
 }
 
 export function calculateExtrapolation(results: SamplingResult, config: SamplingConfig): { projected: number, ub: number } {
+    if (results.samplingInterval === 0 && (results.projectedMisstatement !== 0 || results.upperMisstatementBound !== 0)) {
+        // Fallback for imported projects where config/interval is lost but we have final numbers
+        return { projected: results.projectedMisstatement, ub: results.upperMisstatementBound };
+    }
+
     let rf = 3.0; // 95% default
     if (config.confidenceLevel === 70) rf = 1.20;
     else if (config.confidenceLevel === 80) rf = 1.61;
