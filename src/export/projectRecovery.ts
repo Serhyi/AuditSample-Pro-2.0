@@ -6,7 +6,7 @@ export function reconstructProjectState(payload: any, settings: GlobalSettings):
     // Create dummy config since we cannot perfectly extract it from string descriptions reliably
     // The user just wants to see the Results step table with their data.
     const config: SamplingConfig = {
-        method: 'MUS', // fallback
+        method: summaryData?.method || 'MUS', // Extracted from Excel or fallback
         anomalyMethod: 'None',
         confidenceLevel: 95,
         tolerableMisstatement: 0,
@@ -15,15 +15,23 @@ export function reconstructProjectState(payload: any, settings: GlobalSettings):
         riskFactor: 'Moderate'
     };
 
+    const popValue = summaryData?.populationValue || population.reduce((sum: number, i: any) => sum + (i.amount || 0), 0);
+    const keysValue = (keyItems || []).reduce((sum: number, i: any) => sum + (i.bookValue || 0), 0);
+    const sSize = summaryData?.sampleSize || samplingItems.length;
+    
+    // Reverse engineer interval so any edits to audited values properly recalculate projected misstatements.
+    // (popValue - keysValue) / sSize is the robust calculation for MUS that does not depend on confidence level.
+    let recoveredInterval = sSize > 0 ? ((popValue - keysValue) / sSize) : 0;
+
     const results: SamplingResult = {
         populationSize: summaryData?.populationSize || population.length || 0,
-        populationValue: summaryData?.populationValue || population.reduce((sum: number, i: any) => sum + (i.amount || 0), 0),
+        populationValue: popValue,
         trivialCount: summaryData?.trivialCount || 0,
         trivialValue: 0,
         areTrivialExcluded: true,
-        sampleSize: summaryData?.sampleSize || samplingItems.length,
+        sampleSize: sSize,
         sampleValue: samplingItems.reduce((sum: number, i: any) => sum + (i.amount || 0), 0),
-        samplingInterval: 0,
+        samplingInterval: recoveredInterval,
         keyItems: keyItems || [],
         samplingItems: samplingItems || [],
         projectedMisstatement: summaryData?.projectedMisstatement || 0,

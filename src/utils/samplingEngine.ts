@@ -80,7 +80,14 @@ export function calculateExtrapolation(results: SamplingResult, config: Sampling
     }, 0);
 
     pm = keyMisstatements + sampleProjected;
-    let ub = (results.samplingInterval * rf) + pm;
+    
+    // In MUS, Basic Precision should equal Materiality (Tolerable Misstatement) when sample is planned ideally.
+    // We use Tolerable Misstatement for the Basic Precision if available, otherwise fallback to reconstructed standard.
+    const basicPrecision = config.method === 'MUS' && config.tolerableMisstatement > 0 
+        ? config.tolerableMisstatement 
+        : (results.samplingInterval * rf);
+        
+    let ub = basicPrecision + pm;
 
     if (config.method === 'Attribute') {
         const errors = (results.samplingItems || []).filter(item => Math.abs(item.difference || 0) > 0.001).length;

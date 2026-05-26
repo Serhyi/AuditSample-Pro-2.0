@@ -12,7 +12,6 @@ function createWindow() {
     transparent: true,
     frame: false,
     alwaysOnTop: true,
-    icon: path.join(__dirname, 'icon.png'), // Або icon.ico
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true
@@ -25,7 +24,6 @@ function createWindow() {
     width: 1400,
     height: 900,
     show: false, // Don't show the main window immediately
-    icon: path.join(__dirname, 'icon.png'), // Або icon.ico
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,

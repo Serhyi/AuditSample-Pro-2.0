@@ -2,8 +2,6 @@ import { ipcMain, dialog } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const initSqlJs = require('sql.js');
 
 import { DatabaseService } from '../services/DatabaseService';
 import { ImportService } from '../services/ImportService';
@@ -53,6 +51,8 @@ export class AppOrchestrator {
           // Verify it's an sqlite project file by reading audit_metadata
           const dbPath = filePath;
           const fb = fs.readFileSync(dbPath);
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const initSqlJs = require('sql.js');
           const SQL = await initSqlJs();
           const db = new SQL.Database(fb);
           

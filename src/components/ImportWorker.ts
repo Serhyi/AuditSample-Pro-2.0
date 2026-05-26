@@ -244,13 +244,25 @@ self.onmessage = async (e) => {
                 const extractSummaryInfo = (sheet: any): any => {
                     let populationSize = 0, populationValue = 0, projectedMisstatement = 0, upperMisstatementBound = 0;
                     let sampleSize = 0, trivialCount = 0;
-                    if (!sheet) return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount };
+                    let methodStr = 'MUS';
+                    
+                    if (!sheet) return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount, method: methodStr };
                     
                     for (let r = 1; r <= sheet.rowCount; r++) {
                         const row = sheet.getRow(r);
                         const lbl = String(getCellValue(row.getCell(1).value) || '');
                         const val = getCellValue(row.getCell(2).value);
                         
+                        if (lbl.includes('Метод:') || lbl.includes('Method:')) {
+                            const m = String(val).toLowerCase();
+                            if (m.includes('mus') || m.includes('монетарна')) methodStr = 'MUS';
+                            else if (m.includes('attribute') || m.includes('атрибутив')) methodStr = 'Attribute';
+                            else if (m.includes('cvs') || m.includes('стратиф')) methodStr = 'CVS';
+                            else if (m.includes('random') || m.includes('випад')) methodStr = 'Random';
+                            else if (m.includes('benford')) methodStr = 'Benford';
+                            else if (m.includes('stop') || m.includes('зупин')) methodStr = 'StopOrGo';
+                            else if (m.includes('risk') || m.includes('ризик')) methodStr = 'RiskAssessment';
+                        }
                         if (lbl.includes('Кількість елементів (Сукупність)') || lbl.includes('Population Size') || lbl.includes('Обсяг ген. сукупності')) {
                             populationSize = parseInt(String(val).replace(/\D/g, '')) || 0;
                         }
@@ -270,7 +282,7 @@ self.onmessage = async (e) => {
                             upperMisstatementBound = parseAmount(val);
                         }
                     }
-                    return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount };
+                    return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount, method: methodStr };
                 };
                 
                 const sampleSheet = workbook.getWorksheet('Вибірка') || workbook.getWorksheet('Sample');
