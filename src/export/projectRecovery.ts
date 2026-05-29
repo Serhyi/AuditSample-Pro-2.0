@@ -5,15 +5,19 @@ export function reconstructProjectState(payload: any, settings: GlobalSettings):
     
     // Create dummy config since we cannot perfectly extract it from string descriptions reliably
     // The user just wants to see the Results step table with their data.
-    const config: SamplingConfig = {
-        method: summaryData?.method || 'MUS', // Extracted from Excel or fallback
-        anomalyMethod: 'None',
-        confidenceLevel: summaryData?.confidenceLevel || 95,
-        tolerableMisstatement: summaryData?.tolerableMisstatement || 0,
-        expectedMisstatement: 0,
-        clearlyTrivialThreshold: 0,
-        riskFactor: 'Moderate'
-    };
+    // Prefer the lossless machine-readable config snapshot embedded in the
+    // summary sheet. Fall back to values reverse-engineered from text labels.
+    const config: SamplingConfig = summaryData?.config
+        ? { ...summaryData.config }
+        : {
+            method: summaryData?.method || 'MUS', // Extracted from Excel or fallback
+            anomalyMethod: 'None',
+            confidenceLevel: summaryData?.confidenceLevel || 95,
+            tolerableMisstatement: summaryData?.tolerableMisstatement || 0,
+            expectedMisstatement: 0,
+            clearlyTrivialThreshold: 0,
+            riskFactor: 'Moderate'
+        };
 
     const popValue = summaryData?.populationValue || population.reduce((sum: number, i: any) => sum + (i.amount || 0), 0);
     const keysValue = (keyItems || []).reduce((sum: number, i: any) => sum + (i.bookValue || 0), 0);

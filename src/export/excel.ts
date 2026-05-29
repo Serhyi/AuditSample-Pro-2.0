@@ -188,8 +188,19 @@ export async function exportToExcel(
     cr.getCell(2).font = { color: { argb: textColor }, bold: true };
     cr.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
     cr.getCell(2).alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
-    
+
     sheet.addRow([]);
+
+    // Machine-readable config snapshot for lossless project recovery on re-import.
+    // Stored in a hidden row so it does not clutter the human-readable report.
+    try {
+      const metaRow = sheet.addRow(['__AUDITSAMPLE_CONFIG__', JSON.stringify(config)]);
+      metaRow.hidden = true;
+      metaRow.getCell(1).font = { color: { argb: 'FFCBD5E1' } };
+      metaRow.getCell(2).font = { color: { argb: 'FFCBD5E1' } };
+    } catch {
+      // If config cannot be serialized, the text-based recovery still applies.
+    }
   };
 
   // Create summary sheet
