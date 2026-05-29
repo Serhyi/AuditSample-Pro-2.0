@@ -42,9 +42,9 @@ var DatabaseService = class {
     try {
       this.dbPath = `${directory}/${projectId}.sqlite`;
       console.log(`[DatabaseService] Initializing dbPath: ${this.dbPath}`);
-      const initSqlJs2 = require("sql.js");
+      const initSqlJs = require("sql.js");
       console.log(`[DatabaseService] requiring sql.js ...`);
-      this.SQL = await initSqlJs2();
+      this.SQL = await initSqlJs();
       console.log(`[DatabaseService] initSqlJs() awaited successfully`);
       if (fs.existsSync(this.dbPath)) {
         console.log(`[DatabaseService] db file exists, loading from fs: ${this.dbPath}`);
@@ -511,7 +511,8 @@ var SamplingService = class {
       return acc + tainting * results.samplingInterval;
     }, 0);
     pm = keyMisstatements + sampleProjected;
-    let ub = results.samplingInterval * rf + pm;
+    const basicPrecision = config.method === "MUS" && config.tolerableMisstatement > 0 ? config.tolerableMisstatement : results.samplingInterval * rf;
+    let ub = basicPrecision + pm;
     if (config.method === "Attribute") {
       const errors = (results.samplingItems || []).filter((item) => Math.abs(item.difference || 0) > 1e-3).length;
       const total = (results.samplingItems || []).length || 1;
@@ -607,7 +608,6 @@ var WorkerPool = class {
 };
 
 // src/main/core/AppOrchestrator.ts
-var initSqlJs = require("sql.js");
 var AppOrchestrator = class {
   dbService;
   importService;
@@ -641,6 +641,7 @@ var AppOrchestrator = class {
       try {
         const dbPath = filePath;
         const fb = fs3.readFileSync(dbPath);
+        const initSqlJs = require("sql.js");
         const SQL = await initSqlJs();
         const db = new SQL.Database(fb);
         const stateJson = await new Promise((resolve, reject) => {
@@ -756,8 +757,6 @@ function createWindow() {
     transparent: true,
     frame: false,
     alwaysOnTop: true,
-    icon: path5.join(__dirname, "icon.png"),
-    // Або icon.ico
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true
@@ -769,8 +768,6 @@ function createWindow() {
     height: 900,
     show: false,
     // Don't show the main window immediately
-    icon: path5.join(__dirname, "icon.png"),
-    // Або icon.ico
     webPreferences: {
       preload: path5.join(__dirname, "preload.cjs"),
       contextIsolation: true,
