@@ -38,7 +38,7 @@ export function getDynamicMethodDescription(config: SamplingConfig, lang: Langua
 
 
 import { formatMoney } from '../utils/samplingEngine';
-import { getReliabilityFactor } from '../statistics/reliabilityFactor';
+import { getReliabilityFactor, getExpansionFactor } from '../statistics/reliabilityFactor';
 
 export function getCalculationDetails(config: SamplingConfig, results: SamplingResult, settings: GlobalSettings, lang: string): { vars: Record<string, string|number>, subst: string } {
     const isUa = lang === 'ua';
@@ -57,12 +57,24 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
     const confLevelStr = isUa ? 'Рівень впевненості:' : 'Confidence Level:';
     
     if (config.method === 'MUS') {
+        const expectedMisstatement = config.expectedMisstatement || 0;
+        const expansionFactor = getExpansionFactor(config.confidenceLevel);
+        const denominator = Math.max(pm - expectedMisstatement * expansionFactor, pm * 0.01);
+        const denomStr = formatMoney(denominator, settings);
+
         vars[isUa ? 'Залишкова сукупність (BV):' : 'Residual Book Value (BV):'] = bvStr;
         vars[isUa ? `Коефіцієнт RF (${config.confidenceLevel}%):` : `Reliability Factor RF (${config.confidenceLevel}%):`] = rf;
         vars[isUa ? 'Допустиме викривлення (PM):' : 'Tolerable Misstatement (PM):'] = pmStr;
-        
-        const calcN = Math.ceil((bv * rf) / pm);
-        subst = `n = (${bvStr} × ${rf}) / ${pmStr}\nn = ${calcN}`;
+
+        const calcN = Math.ceil((bv * rf) / denominator);
+        if (expectedMisstatement > 0) {
+            const eeStr = formatMoney(expectedMisstatement, settings);
+            vars[isUa ? 'Очікуване викривлення (EM):' : 'Expected Misstatement (EM):'] = eeStr;
+            vars[isUa ? `Коефіцієнт розширення (EF):` : `Expansion Factor (EF):`] = expansionFactor;
+            subst = `n = (${bvStr} × ${rf}) / (${pmStr} − ${eeStr} × ${expansionFactor})\nn = (${bvStr} × ${rf}) / ${denomStr}\nn = ${calcN}`;
+        } else {
+            subst = `n = (${bvStr} × ${rf}) / ${pmStr}\nn = ${calcN}`;
+        }
     } else if (config.method === 'Random' || config.method === 'FixedRandom') {
         vars[methodStr] = config.method;
         if (config.method === 'Random') {
@@ -120,7 +132,7 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
 export function getStaticFormula(method: string, lang: string = 'en'): string {
     const isUa = lang === 'ua';
     switch(method) {
-        case 'MUS': return 'n = (BV × RF) / PM';
+        case 'MUS': return 'n = (BV × RF) / (PM − EM × EF)';
         case 'Random': return 'n = (N × Z² × p × (1-p)) / (E²)';
         case 'FixedRandom': return 'n = const';
         case 'CVS': return 'n = ((N × Z × σ) / PM)²';

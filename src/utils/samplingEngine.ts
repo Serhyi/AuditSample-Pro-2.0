@@ -1,6 +1,6 @@
 import { TransactionItem, SamplingConfig, SamplingResult, SampledItem, GlobalSettings } from '../types';
 import { Mulberry32 } from '../statistics/prng';
-import { getReliabilityFactor, getZScore } from '../statistics/reliabilityFactor';
+import { getReliabilityFactor, getZScore, getExpansionFactor } from '../statistics/reliabilityFactor';
 
 export const methodsSupportingAnomalies = ['MUS', 'CVS', 'Random', 'FixedRandom'];
 
@@ -269,9 +269,18 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
     } else {
         if (config.method === 'MUS') {
             const pm = config.tolerableMisstatement || 1;
-            const interval = Math.max(pm / rf, 1);
-            sampleSize = Math.ceil((remPopValue * rf) / Math.max(pm, 0.01));
+            // ISA 530 / AICPA: знаменник зменшується на очікувані помилки,
+            // зважені expansion factor. Захищаємо від нуля/від'ємного значення
+            // (коли очікувані помилки наближаються до допустимого викривлення).
+            const expectedMisstatement = config.expectedMisstatement || 0;
+            const expansionFactor = getExpansionFactor(config.confidenceLevel);
+            const denominator = Math.max(pm - expectedMisstatement * expansionFactor, pm * 0.01);
+            sampleSize = Math.ceil((remPopValue * rf) / denominator);
             if (sampleSize > 5000) sampleSize = 5000;
+
+            // Інтервал відбору узгоджуємо з фактичним (можливо обмеженим) розміром
+            // вибірки, щоб MUS-петля давала саме sampleSize влучань.
+            const interval = sampleSize > 0 && remPopValue > 0 ? remPopValue / sampleSize : Math.max(pm / rf, 1);
 
             let runningTotal = 0;
             let nextHit = rng.next() * interval;

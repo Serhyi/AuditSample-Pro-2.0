@@ -1,6 +1,6 @@
 import { SamplingMethod } from './base';
 import { PopulationItem, SamplingParams, SamplingMethodType } from '@types';
-import { getReliabilityFactor } from '../statistics/reliabilityFactor';
+import { getReliabilityFactor, getExpansionFactor } from '../statistics/reliabilityFactor';
 
 export class MUSSampling extends SamplingMethod {
   readonly name = 'Monetary Unit Sampling';
@@ -13,7 +13,12 @@ export class MUSSampling extends SamplingMethod {
     // confidenceLevel у SamplingParams зберігається як дріб (напр. 0.95).
     const confidencePct = params.confidenceLevel <= 1 ? Math.round(params.confidenceLevel * 100) : params.confidenceLevel;
     const reliabilityFactor = getReliabilityFactor(confidencePct);
-    const size = Math.ceil((populationValue * reliabilityFactor) / params.tolerableMisstatement);
+    // ISA 530 / AICPA: знаменник зменшується на очікувані помилки, зважені
+    // expansion factor (із захистом від нуля/від'ємного значення).
+    const expectedError = params.expectedError || 0;
+    const expansionFactor = getExpansionFactor(confidencePct);
+    const denominator = Math.max(params.tolerableMisstatement - expectedError * expansionFactor, params.tolerableMisstatement * 0.01);
+    const size = Math.ceil((populationValue * reliabilityFactor) / denominator);
     return Math.max(1, Math.min(size, params.population.length));
   }
 

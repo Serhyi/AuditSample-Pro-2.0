@@ -173,7 +173,7 @@ export const ua = {
   mnTrivialItems: "Вочевидь незначні суми:",
   mnCoverage: "Покриття вартості:",
   
-  formMUS: "n = (BV × RF) / PM",
+  formMUS: "n = (BV × RF) / (PM − EM × EF)",
   formRandom: "n = (N × Z² × p × (1-p)) / (E²)",
   formCVS: "n = ((N × Z × σ) / PM)²",
   formAttribute: "n = AICPA_Table(ROR, TDR, EDR)",

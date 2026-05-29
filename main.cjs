@@ -222,6 +222,22 @@ function getZScore(confidenceLevel) {
       return 1.96;
   }
 }
+function getExpansionFactor(confidenceLevel) {
+  switch (confidenceLevel) {
+    case 70:
+      return 1.2;
+    case 80:
+      return 1.3;
+    case 90:
+      return 1.5;
+    case 95:
+      return 1.6;
+    case 99:
+      return 1.9;
+    default:
+      return 1.6;
+  }
+}
 
 // src/main/services/SamplingService.ts
 var SamplingService = class {
@@ -454,7 +470,10 @@ var SamplingService = class {
       if (config.method === "MUS") {
         isMUS = true;
         const pm = config.tolerableMisstatement || 1;
-        sampleSize = Math.ceil(remPopValue * rf / Math.max(pm, 0.01));
+        const expectedMisstatement = config.expectedMisstatement || 0;
+        const expansionFactor = getExpansionFactor(config.confidenceLevel);
+        const denominator = Math.max(pm - expectedMisstatement * expansionFactor, pm * 0.01);
+        sampleSize = Math.ceil(remPopValue * rf / denominator);
       } else if (config.method === "FixedRandom") {
         sampleSize = config.fixedSampleSize || 10;
       } else if (config.method === "StopOrGo") {
@@ -470,7 +489,7 @@ var SamplingService = class {
       if (isMUS) {
         await updateProgress("\u0420\u043E\u0437\u0440\u0430\u0445\u0443\u043D\u043E\u043A \u0456\u043D\u0442\u0435\u0440\u0432\u0430\u043B\u0443 \u0434\u043B\u044F \u041C\u043E\u043D\u0435\u0442\u0430\u0440\u043D\u043E\u0457 \u0432\u0438\u0431\u0456\u0440\u043A\u0438...");
         const pm = config.tolerableMisstatement || 1;
-        const interval2 = Math.max(pm / rf, 1);
+        const interval2 = sampleSize > 0 && remPopValue > 0 ? remPopValue / sampleSize : Math.max(pm / rf, 1);
         await updateProgress(`\u0417\u0430\u0441\u0442\u043E\u0441\u0443\u0432\u0430\u043D\u043D\u044F \u0456\u043D\u0442\u0435\u0440\u0432\u0430\u043B\u0443 (${interval2.toFixed(2)})...`);
         const musQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`;
         const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getMUSPickedRows(musQuery, [upperLimit, ctt], interval2, sampleSize);

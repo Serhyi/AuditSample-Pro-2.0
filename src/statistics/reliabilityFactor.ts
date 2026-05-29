@@ -43,3 +43,24 @@ export function getZScore(confidenceLevel: number): number {
         default: return 1.96; // 95% за замовчуванням
     }
 }
+
+/**
+ * Expansion factor (коефіцієнт розширення) за таблицею AICPA для MUS.
+ *
+ * Коли аудитор очікує ненульові помилки, знаменник формули розміру вибірки
+ * зменшується на Expected Misstatement × Expansion Factor. Цей коефіцієнт
+ * враховує невизначеність прогнозу помилок: чим вища довіра, тим більший
+ * запас закладається.
+ *
+ *   n = (Population Value × RF) / (TM − Expected Misstatement × EF)
+ */
+export function getExpansionFactor(confidenceLevel: number): number {
+    switch (confidenceLevel) {
+        case 70: return 1.20;
+        case 80: return 1.30;
+        case 90: return 1.50;
+        case 95: return 1.60;
+        case 99: return 1.90;
+        default: return 1.60; // 95% за замовчуванням
+    }
+}

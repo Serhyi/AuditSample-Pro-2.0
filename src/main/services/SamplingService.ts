@@ -1,5 +1,5 @@
 import { DatabaseService } from './DatabaseService';
-import { getReliabilityFactor, getZScore } from '../../statistics/reliabilityFactor';
+import { getReliabilityFactor, getZScore, getExpansionFactor } from '../../statistics/reliabilityFactor';
 
 export class SamplingService {
   constructor(private db: DatabaseService) {}
@@ -286,7 +286,12 @@ export class SamplingService {
         if (config.method === 'MUS') {
           isMUS = true;
           const pm = config.tolerableMisstatement || 1;
-          sampleSize = Math.ceil((remPopValue * rf) / Math.max(pm, 0.01));
+          // ISA 530 / AICPA: знаменник зменшується на очікувані помилки,
+          // зважені expansion factor (із захистом від нуля/від'ємного значення).
+          const expectedMisstatement = config.expectedMisstatement || 0;
+          const expansionFactor = getExpansionFactor(config.confidenceLevel);
+          const denominator = Math.max(pm - expectedMisstatement * expansionFactor, pm * 0.01);
+          sampleSize = Math.ceil((remPopValue * rf) / denominator);
         } else if (config.method === 'FixedRandom') {
           sampleSize = config.fixedSampleSize || 10;
         } else if (config.method === 'StopOrGo') {
@@ -304,8 +309,10 @@ export class SamplingService {
         if (isMUS) {
             await updateProgress('Розрахунок інтервалу для Монетарної вибірки...');
             const pm = config.tolerableMisstatement || 1;
-            const interval = Math.max(pm / rf, 1);
-            
+            // Інтервал відбору узгоджуємо з фактичним (обмеженим) розміром вибірки,
+            // щоб MUS-вибірка давала саме sampleSize влучань.
+            const interval = sampleSize > 0 && remPopValue > 0 ? remPopValue / sampleSize : Math.max(pm / rf, 1);
+
             await updateProgress(`Застосування інтервалу (${interval.toFixed(2)})...`);
             const musQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`;
             const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getMUSPickedRows(musQuery, [upperLimit, ctt], interval, sampleSize);
