@@ -71,7 +71,7 @@ export class SamplingService {
       throw new Error('Database not initialized. Please import population data or load a project first.');
     }
     console.log('SamplingService executing SQL-based sampling via SQLite...', config.method);
-    await updateProgress('Підготовка бази даних...');
+    await updateProgress('Preparing database...');
 
     // Attempt to create indices if they don't exist yet (important if loaded from an old file)
     try {
@@ -82,7 +82,7 @@ export class SamplingService {
     }
 
     // 1. Get total population size and value
-    await updateProgress('Обчислення генеральної сукупності...');
+    await updateProgress('Computing population...');
     const popAgg: any[] = await this.db.query(`SELECT COUNT(*) as cnt, SUM(ABS(amount)) as val FROM population`);
     const popSize = popAgg[0]?.cnt || 0;
     const popValue = popAgg[0]?.val || 0;
@@ -108,7 +108,7 @@ export class SamplingService {
     let trivialValue = 0;
     let trivialItems: any[] = [];
     if (ctt > 0) {
-      await updateProgress('Відбір тривіальних елементів...');
+      await updateProgress('Selecting trivial items...');
       const trivAgg: any[] = await this.db.query(`SELECT COUNT(*) as cnt, SUM(amount) as val FROM population WHERE ABS(amount) < ?`, [ctt]);
       trivialCount = trivAgg[0]?.cnt || 0;
       trivialValue = trivAgg[0]?.val || 0;
@@ -122,7 +122,7 @@ export class SamplingService {
     // 3. Key items
     let keyItems: any[] = [];
     if (excludeKeyItems) {
-      await updateProgress('Відбір ключових елементів...');
+      await updateProgress('Selecting key items...');
       keyItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) >= ? LIMIT 5000`, [tm]);
       keyItems = keyItems.map(item => ({
         ...item,
@@ -142,7 +142,7 @@ export class SamplingService {
 
     let sampleItems: any[] = [];
     
-    await updateProgress('Застосування методу відбору...');
+    await updateProgress('Applying sampling method...');
     if (config.method === 'RiskAssessment') {
         const closingDays = config.riskClosingDays ?? 5;
         const includeWeekend = config.riskWeekend !== false;
@@ -200,16 +200,16 @@ export class SamplingService {
         }
         
     } else if (config.method === 'Pareto') {
-        await updateProgress('Аналіз розподілу Парето (визначення 80% вартості)...');
+        await updateProgress('Analyzing Pareto distribution...');
         const targetPercent = (config.paretoCoverage || 80) / 100;
         const targetValue = remPopValue * targetPercent;
         
-        await updateProgress('Вибір найбільших елементів таблиці...');
+        await updateProgress('Selecting largest items...');
         const paretoItemsQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY ABS(amount) DESC`;
         const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getParetoPickedRows(paretoItemsQuery, [upperLimit, ctt], targetValue);
         
         if (pickedRowIds.length > 0) {
-            await updateProgress(`Отримання даних вибраних елементів (${pickedRowIds.length})...`);
+            await updateProgress(`Fetching selected items (${pickedRowIds.length})...`);
             const results: any[] = [];
             const chunkSize = 500;
             for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
@@ -337,18 +337,18 @@ export class SamplingService {
         if (sampleSize > 5000) sampleSize = 5000;
 
         if (isMUS) {
-            await updateProgress('Розрахунок інтервалу для Монетарної вибірки...');
+            await updateProgress('Calculating MUS interval...');
             const pm = config.tolerableMisstatement || 1;
             // Інтервал відбору узгоджуємо з фактичним (обмеженим) розміром вибірки,
             // щоб MUS-вибірка давала саме sampleSize влучань.
             const interval = sampleSize > 0 && remPopValue > 0 ? remPopValue / sampleSize : Math.max(pm / rf, 1);
 
-            await updateProgress(`Застосування інтервалу (${interval.toFixed(2)})...`);
+            await updateProgress(`Applying interval (${interval.toFixed(2)})...`);
             const musQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`;
             const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getMUSPickedRows(musQuery, [upperLimit, ctt], interval, sampleSize);
 
             if (pickedRowIds.length > 0) {
-                await updateProgress(`Отримання даних вибраних елементів (${pickedRowIds.length})...`);
+                await updateProgress(`Fetching selected items (${pickedRowIds.length})...`);
                 const results: any[] = [];
                 const chunkSize = 500;
                 for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
@@ -367,7 +367,7 @@ export class SamplingService {
                 }));
             }
         } else {
-            await updateProgress(`Виконання випадкового вибору (${sampleSize} елементів)...`);
+            await updateProgress(`Performing random selection (${sampleSize} items)...`);
             const whereStr = `ABS(amount) < ? AND ABS(amount) >= ?`;
             const rawSampleItems: any[] = await this.getRandomSample(whereStr, [upperLimit, ctt], sampleSize);
     
@@ -383,7 +383,7 @@ export class SamplingService {
         }
     }
 
-    await updateProgress('Формування результатів...');
+    await updateProgress('Building results...');
 
     sampleItems = sampleItems.map(item => ({
       ...item,

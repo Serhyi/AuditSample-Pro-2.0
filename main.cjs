@@ -292,14 +292,14 @@ var SamplingService = class {
       throw new Error("Database not initialized. Please import population data or load a project first.");
     }
     console.log("SamplingService executing SQL-based sampling via SQLite...", config.method);
-    await updateProgress("\u041F\u0456\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430 \u0431\u0430\u0437\u0438 \u0434\u0430\u043D\u0438\u0445...");
+    await updateProgress("Preparing database...");
     try {
       await this.db.execute("CREATE INDEX IF NOT EXISTS idx_abs_amount ON population(ABS(amount));");
       await this.db.execute("CREATE INDEX IF NOT EXISTS idx_amount ON population(amount);");
     } catch (e) {
       console.error("Failed to create indices during sampling prep:", e);
     }
-    await updateProgress("\u041E\u0431\u0447\u0438\u0441\u043B\u0435\u043D\u043D\u044F \u0433\u0435\u043D\u0435\u0440\u0430\u043B\u044C\u043D\u043E\u0457 \u0441\u0443\u043A\u0443\u043F\u043D\u043E\u0441\u0442\u0456...");
+    await updateProgress("Computing population...");
     const popAgg = await this.db.query(`SELECT COUNT(*) as cnt, SUM(ABS(amount)) as val FROM population`);
     const popSize = popAgg[0]?.cnt || 0;
     const popValue = popAgg[0]?.val || 0;
@@ -317,7 +317,7 @@ var SamplingService = class {
     let trivialValue = 0;
     let trivialItems = [];
     if (ctt > 0) {
-      await updateProgress("\u0412\u0456\u0434\u0431\u0456\u0440 \u0442\u0440\u0438\u0432\u0456\u0430\u043B\u044C\u043D\u0438\u0445 \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432...");
+      await updateProgress("Selecting trivial items...");
       const trivAgg = await this.db.query(`SELECT COUNT(*) as cnt, SUM(amount) as val FROM population WHERE ABS(amount) < ?`, [ctt]);
       trivialCount = trivAgg[0]?.cnt || 0;
       trivialValue = trivAgg[0]?.val || 0;
@@ -329,7 +329,7 @@ var SamplingService = class {
     }
     let keyItems = [];
     if (excludeKeyItems) {
-      await updateProgress("\u0412\u0456\u0434\u0431\u0456\u0440 \u043A\u043B\u044E\u0447\u043E\u0432\u0438\u0445 \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432...");
+      await updateProgress("Selecting key items...");
       keyItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) >= ? LIMIT 5000`, [tm]);
       keyItems = keyItems.map((item) => ({
         ...item,
@@ -345,7 +345,7 @@ var SamplingService = class {
     const remPopValue = popValue - keyItemsValue - Math.abs(trivialValue);
     const rf = getReliabilityFactor(config.confidenceLevel);
     let sampleItems = [];
-    await updateProgress("\u0417\u0430\u0441\u0442\u043E\u0441\u0443\u0432\u0430\u043D\u043D\u044F \u043C\u0435\u0442\u043E\u0434\u0443 \u0432\u0456\u0434\u0431\u043E\u0440\u0443...");
+    await updateProgress("Applying sampling method...");
     if (config.method === "RiskAssessment") {
       const closingDays = config.riskClosingDays ?? 5;
       const includeWeekend = config.riskWeekend !== false;
@@ -393,14 +393,14 @@ var SamplingService = class {
         });
       }
     } else if (config.method === "Pareto") {
-      await updateProgress("\u0410\u043D\u0430\u043B\u0456\u0437 \u0440\u043E\u0437\u043F\u043E\u0434\u0456\u043B\u0443 \u041F\u0430\u0440\u0435\u0442\u043E (\u0432\u0438\u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F 80% \u0432\u0430\u0440\u0442\u043E\u0441\u0442\u0456)...");
+      await updateProgress("Analyzing Pareto distribution...");
       const targetPercent = (config.paretoCoverage || 80) / 100;
       const targetValue = remPopValue * targetPercent;
-      await updateProgress("\u0412\u0438\u0431\u0456\u0440 \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0438\u0445 \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432 \u0442\u0430\u0431\u043B\u0438\u0446\u0456...");
+      await updateProgress("Selecting largest items...");
       const paretoItemsQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY ABS(amount) DESC`;
       const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getParetoPickedRows(paretoItemsQuery, [upperLimit, ctt], targetValue);
       if (pickedRowIds.length > 0) {
-        await updateProgress(`\u041E\u0442\u0440\u0438\u043C\u0430\u043D\u043D\u044F \u0434\u0430\u043D\u0438\u0445 \u0432\u0438\u0431\u0440\u0430\u043D\u0438\u0445 \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432 (${pickedRowIds.length})...`);
+        await updateProgress(`Fetching selected items (${pickedRowIds.length})...`);
         const results = [];
         const chunkSize = 500;
         for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
@@ -512,14 +512,14 @@ var SamplingService = class {
       if (sampleSize > remPopSize) sampleSize = remPopSize;
       if (sampleSize > 5e3) sampleSize = 5e3;
       if (isMUS) {
-        await updateProgress("\u0420\u043E\u0437\u0440\u0430\u0445\u0443\u043D\u043E\u043A \u0456\u043D\u0442\u0435\u0440\u0432\u0430\u043B\u0443 \u0434\u043B\u044F \u041C\u043E\u043D\u0435\u0442\u0430\u0440\u043D\u043E\u0457 \u0432\u0438\u0431\u0456\u0440\u043A\u0438...");
+        await updateProgress("Calculating MUS interval...");
         const pm = config.tolerableMisstatement || 1;
         const interval2 = sampleSize > 0 && remPopValue > 0 ? remPopValue / sampleSize : Math.max(pm / rf, 1);
-        await updateProgress(`\u0417\u0430\u0441\u0442\u043E\u0441\u0443\u0432\u0430\u043D\u043D\u044F \u0456\u043D\u0442\u0435\u0440\u0432\u0430\u043B\u0443 (${interval2.toFixed(2)})...`);
+        await updateProgress(`Applying interval (${interval2.toFixed(2)})...`);
         const musQuery = `SELECT rowid, ABS(amount) as absAmt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`;
         const pickedRowIds = await this.db.MUS_and_Pareto_Helpers.getMUSPickedRows(musQuery, [upperLimit, ctt], interval2, sampleSize);
         if (pickedRowIds.length > 0) {
-          await updateProgress(`\u041E\u0442\u0440\u0438\u043C\u0430\u043D\u043D\u044F \u0434\u0430\u043D\u0438\u0445 \u0432\u0438\u0431\u0440\u0430\u043D\u0438\u0445 \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432 (${pickedRowIds.length})...`);
+          await updateProgress(`Fetching selected items (${pickedRowIds.length})...`);
           const results = [];
           const chunkSize = 500;
           for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
@@ -538,7 +538,7 @@ var SamplingService = class {
           }));
         }
       } else {
-        await updateProgress(`\u0412\u0438\u043A\u043E\u043D\u0430\u043D\u043D\u044F \u0432\u0438\u043F\u0430\u0434\u043A\u043E\u0432\u043E\u0433\u043E \u0432\u0438\u0431\u043E\u0440\u0443 (${sampleSize} \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0456\u0432)...`);
+        await updateProgress(`Performing random selection (${sampleSize} items)...`);
         const whereStr = `ABS(amount) < ? AND ABS(amount) >= ?`;
         const rawSampleItems = await this.getRandomSample(whereStr, [upperLimit, ctt], sampleSize);
         sampleItems = rawSampleItems.map((item, idx) => ({
@@ -552,7 +552,7 @@ var SamplingService = class {
         }));
       }
     }
-    await updateProgress("\u0424\u043E\u0440\u043C\u0443\u0432\u0430\u043D\u043D\u044F \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u0456\u0432...");
+    await updateProgress("Building results...");
     sampleItems = sampleItems.map((item) => ({
       ...item,
       originalRow: typeof item.originalRow === "string" ? JSON.parse(item.originalRow) : item.originalRow || []

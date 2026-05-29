@@ -56,6 +56,19 @@ const translateStage = (stage: string, l: Language): string => {
         .replace('Loading JSON/CSV...', 'Завантаження...')
         .replace(/Parsing (\d+) rows\.\.\./, 'Обробка $1 рядків...')
         .replace(/Creating indices \((.*?)\)\.\.\./, 'Створення індексів ($1)...')
+        // Sampling progress (emitted by SamplingService in canonical English)
+        .replace('Preparing database...', 'Підготовка бази даних...')
+        .replace('Computing population...', 'Обчислення генеральної сукупності...')
+        .replace('Selecting trivial items...', 'Відбір тривіальних елементів...')
+        .replace('Selecting key items...', 'Відбір ключових елементів...')
+        .replace('Applying sampling method...', 'Застосування методу відбору...')
+        .replace('Analyzing Pareto distribution...', 'Аналіз розподілу Парето (визначення 80% вартості)...')
+        .replace('Selecting largest items...', 'Вибір найбільших елементів таблиці...')
+        .replace(/Fetching selected items \((\d+)\)\.\.\./, 'Отримання даних вибраних елементів ($1)...')
+        .replace('Calculating MUS interval...', 'Розрахунок інтервалу для Монетарної вибірки...')
+        .replace(/Applying interval \((.*?)\)\.\.\./, 'Застосування інтервалу ($1)...')
+        .replace(/Performing random selection \((\d+) items\)\.\.\./, 'Виконання випадкового вибору ($1 елементів)...')
+        .replace('Building results...', 'Формування результатів...')
         .replace('Complete', 'Готово')
         .replace('Parsing...', 'Обробка...');
 };
@@ -568,7 +581,7 @@ const App: React.FC = () => {
                       {isProcessing ? (
                           <>
                               <Loader2 className="w-5 h-5 animate-spin" />
-                              {samplingProgressStage ? samplingProgressStage : t('processing', lang)}
+                              {samplingProgressStage ? translateStage(samplingProgressStage, lang) : t('processing', lang)}
                           </>
                       ) : t('run', lang)}
                     </button>
