@@ -1,6 +1,6 @@
 
 // ResultsStep component
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
 import { isElectron } from '../utils/isElectron';
 
 const SyncedScrollContainer = ({ children, setRefs }: any) => {
@@ -143,7 +143,7 @@ const MoneyInput: React.FC<{
 
 
 
-const TablePagination: React.FC<{ items: SampledItem[], title?: string, isKey?: boolean, renderTable: (items: SampledItem[], title?: string, isKey?: boolean) => React.ReactNode }> = ({ items, title, isKey, renderTable }) => {
+const TablePagination = memo<{ items: SampledItem[], title?: string, isKey?: boolean, renderTable: (items: SampledItem[], title?: string, isKey?: boolean) => React.ReactNode }>(({ items, title, isKey, renderTable }) => {
    const [page, setPage] = useState(0);
    const PAGE_SIZE = 50;
    
@@ -163,15 +163,15 @@ const TablePagination: React.FC<{ items: SampledItem[], title?: string, isKey?: 
                       Page {page + 1} of {totalPages} <span className="mx-2">|</span> {items.length} items total
                   </span>
                   <div className="flex items-center gap-2">
-                      <button 
-                         disabled={page === 0} 
+                      <button
+                         disabled={page === 0}
                          onClick={() => setPage(p => p - 1)}
                          className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 text-[11px] font-bold hover:bg-slate-50 disabled:opacity-50 transition-colors"
                       >
                          &larr; Prev
                       </button>
-                      <button 
-                         disabled={page >= totalPages - 1} 
+                      <button
+                         disabled={page >= totalPages - 1}
                          onClick={() => setPage(p => p + 1)}
                          className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 text-[11px] font-bold hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200 disabled:opacity-50 transition-colors"
                       >
@@ -182,7 +182,7 @@ const TablePagination: React.FC<{ items: SampledItem[], title?: string, isKey?: 
           )}
        </div>
    );
-};
+});
 
 const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onResultsUpdate, config, lang, currency, sourceHeaders, colIndices, getFullPopulation, settings }) => {
   const [activeTab, setActiveTab] = useState<'sample' | 'key'>('sample');
@@ -212,7 +212,12 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
   const stage2Audited = useMemo(() => stage2Items.filter(i => i.auditedValue !== ''), [stage2Items]);
   const stage2Errors = useMemo(() => stage2Audited.filter(i => Math.abs(i.difference) > 0.001).length, [stage2Audited]);
 
-  const handleAuditValueChange = (id: string | number, isKey: boolean, rawValue: string | number) => {
+  // Keep a ref to currentResults so stable callbacks can always read the latest value
+  const currentResultsRef = useRef(currentResults);
+  useEffect(() => { currentResultsRef.current = currentResults; }, [currentResults]);
+
+  const handleAuditValueChange = useCallback((id: string | number, isKey: boolean, rawValue: string | number) => {
+    const curr = currentResultsRef.current;
     const listKey = isKey ? 'keyItems' : 'samplingItems';
     let clean = String(rawValue).replace(/[\s\u00A0]/g, '');
     const lastComma = clean.lastIndexOf(','), lastDot = clean.lastIndexOf('.');
@@ -221,30 +226,31 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
     else if (lastComma !== -1) clean = clean.replace(',', '.');
     const parsedVal = parseFloat(clean);
     const finalVal: number | '' = isNaN(parsedVal) ? '' : parsedVal;
-    
-    const list = [...(currentResults[listKey] || [])];
+
+    const list = [...(curr[listKey] || [])];
     const index = list.findIndex(i => String(i.id) === String(id));
     if (index === -1) return;
-    
+
     const item: SampledItem = { ...list[index], auditedValue: finalVal };
     const auditActual = (item.auditedValue === '' || item.auditedValue === undefined) ? 0 : Number(item.auditedValue);
     item.difference = Math.round((item.bookValue - auditActual) * 100) / 100;
     item.tainting = item.bookValue !== 0 ? item.difference / item.bookValue : 0;
     list[index] = item;
-    
-    onResultsUpdate({ ...currentResults, [listKey]: [...list] });
-  };
 
-  const fillAllVisible = (isKey: boolean) => {
+    onResultsUpdate({ ...curr, [listKey]: [...list] });
+  }, [onResultsUpdate]);
+
+  const fillAllVisible = useCallback((isKey: boolean) => {
+    const curr = currentResultsRef.current;
     const listKey = isKey ? 'keyItems' : 'samplingItems';
-    const newList = [...(currentResults[listKey] || [])];
+    const newList = [...(curr[listKey] || [])];
     let changed = false;
-    
+
     newList.forEach((it, index) => {
         if (it.auditedValue === '') {
             const finalVal = it.bookValue;
             const item: SampledItem = { ...it, auditedValue: finalVal };
-            const auditActual = Number(finalVal) || 0; // if finalVal is empty string, this will be 0
+            const auditActual = Number(finalVal) || 0;
             item.difference = Math.round((item.bookValue - auditActual) * 100) / 100;
             item.tainting = item.bookValue !== 0 ? item.difference / item.bookValue : 0;
             newList[index] = item;
@@ -253,18 +259,34 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
     });
 
     if (changed) {
-        onResultsUpdate({ ...currentResults, [listKey]: newList });
+        onResultsUpdate({ ...curr, [listKey]: newList });
     }
-  };
+  }, [onResultsUpdate]);
 
-  const handleGridKeyDown = (e: React.KeyboardEvent, list: SampledItem[], index: number, isKey: boolean) => {
+  const handleCommentChange = useCallback((id: string | number, isKey: boolean, value: string) => {
+    const curr = currentResultsRef.current;
+    const listKey = isKey ? 'keyItems' : 'samplingItems';
+    const list = [...(curr[listKey] || [])];
+    const index = list.findIndex(i => String(i.id) === String(id));
+    if (index === -1) return;
+    list[index] = { ...list[index], comments: value };
+    onResultsUpdate({ ...curr, [listKey]: list });
+  }, [onResultsUpdate]);
+
+  const handleGridKeyDown = useCallback((e: React.KeyboardEvent, list: SampledItem[], index: number, isKey: boolean) => {
     if (e.key === 'Enter') {
-      e.preventDefault(); handleAuditValueChange(list[index].id, isKey, list[index].bookValue);
+      e.preventDefault();
+      handleAuditValueChange(list[index].id, isKey, list[index].bookValue);
       const nextId = list[index + 1]?.id;
       if (nextId) document.getElementById(`audit-input-${nextId}`)?.focus();
-    } else if (e.key === 'ArrowDown' && list[index+1]) { e.preventDefault(); document.getElementById(`audit-input-${list[index+1].id}`)?.focus(); }
-    else if (e.key === 'ArrowUp' && list[index-1]) { e.preventDefault(); document.getElementById(`audit-input-${list[index-1].id}`)?.focus(); }
-  };
+    } else if (e.key === 'ArrowDown' && list[index+1]) {
+      e.preventDefault();
+      document.getElementById(`audit-input-${list[index+1].id}`)?.focus();
+    } else if (e.key === 'ArrowUp' && list[index-1]) {
+      e.preventDefault();
+      document.getElementById(`audit-input-${list[index-1].id}`)?.focus();
+    }
+  }, [handleAuditValueChange]);
 
   const handleExport = async () => {
     const pop = getFullPopulation();
@@ -456,41 +478,28 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
     );
   };
 
-  const tableContainerRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const tableContainerRefs = useRef<Set<HTMLDivElement>>(new Set());
 
   const samplingItemsLength = (currentResults.samplingItems || []).length;
   const keyItemsLength = (currentResults.keyItems || []).length;
 
   useEffect(() => {
-    // Scroll all table containers to the right when component mounts or updates
-    tableContainerRefs.current.forEach(container => {
-      if (container) {
-        container.scrollLeft = container.scrollWidth;
-      }
-    });
-    
-    // Add another try after a short delay to account for rendering tab switch
+    tableContainerRefs.current.forEach(c => { c.scrollLeft = c.scrollWidth; });
     const timer = setTimeout(() => {
-      tableContainerRefs.current.forEach(container => {
-        if (container) {
-          container.scrollLeft = container.scrollWidth;
-        }
-      });
+      tableContainerRefs.current.forEach(c => { c.scrollLeft = c.scrollWidth; });
     }, 50);
     return () => clearTimeout(timer);
   }, [samplingItemsLength, keyItemsLength, activeTab]);
 
-  const renderTable = (items: SampledItem[], title?: string, isKey: boolean = false) => (
+  const renderTable = useCallback((items: SampledItem[], title?: string, isKey: boolean = false) => (
     <div className="mb-10">
       {title && <div className="px-7 py-4 bg-slate-50 border-y border-slate-200 text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] flex items-center gap-3 sticky left-0 shadow-sm z-10">
         <div className={`w-2 h-2 rounded-full ${isKey ? 'bg-brand-600' : 'bg-brand-300'}`} />
         {title}
       </div>}
-      <SyncedScrollContainer 
-        setRefs={(el: any) => {
-            if (el && !tableContainerRefs.current.includes(el)) {
-                tableContainerRefs.current.push(el);
-            }
+      <SyncedScrollContainer
+        setRefs={(el: HTMLDivElement | null) => {
+            if (el) tableContainerRefs.current.add(el);
         }}
       >
         <table className="min-w-max w-full text-[12px] border-collapse table-auto">
@@ -542,13 +551,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                             {formatMoney(item.difference, settings)}
                         </td>
                         <td className="px-6 py-4">
-                            <input type="text" value={item.comments || ''} onChange={(e) => {
-                                const listKey = isKey ? 'keyItems' : 'samplingItems';
-                                const list = [...currentResults[listKey]];
-                                const index = list.findIndex(i => String(i.id) === String(item.id));
-                                list[index] = { ...list[index], comments: e.target.value };
-                                onResultsUpdate({ ...currentResults, [listKey]: list });
-                            }} className="w-full bg-transparent border-b border-transparent focus:border-brand-400 focus:outline-none text-[12px] text-slate-600 placeholder:text-slate-200 transition-colors" placeholder="..." />
+                            <input type="text" value={item.comments || ''} onChange={(e) => handleCommentChange(item.id, isKey, e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-brand-400 focus:outline-none text-[12px] text-slate-600 placeholder:text-slate-200 transition-colors" placeholder="..." />
                         </td>
                     </tr>
                 );
@@ -557,7 +560,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         </table>
       </SyncedScrollContainer>
     </div>
-  );
+  ), [sourceHeaders, colIndices, settings, lang, handleAuditValueChange, handleGridKeyDown, fillAllVisible, handleCommentChange]);
 
   return (
     <div className="space-y-8 animate-fade-in pb-12">

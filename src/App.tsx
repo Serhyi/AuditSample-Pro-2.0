@@ -4,7 +4,7 @@ import { ChevronRight, Check, Globe, Info, X, Settings as SettingsIcon, Loader2,
 import ImportStep from './components/ImportStep';
 import ConfigStep from './components/ConfigStep';
 import ResultsStep from './components/ResultsStep';
-import { TransactionItem, SamplingConfig, SamplingResult, Currency, ColumnIndices, GlobalSettings } from './types';
+import { TransactionItem, SamplingConfig, SamplingResult, Currency, ColumnIndices, GlobalSettings, Language } from './types';
 import { runSampling } from './utils/samplingEngine';
 import { t } from './utils/translations';
 import { useAppStorage } from './contexts/StorageContext';
@@ -37,6 +37,28 @@ const LogoFull = ({ height = 40 }: { height?: number }) => {
 const LogoMark = ({ size = 32 }: { size?: number }) => (
   <LogoFull height={size} />
 );
+
+const translateStage = (stage: string, l: Language): string => {
+    if (l === 'en') return stage;
+    return stage
+        .replace('Reading project file...', 'Зчитування файлу...')
+        .replace('Opening project DB...', 'Відкриття БД проєкту...')
+        .replace('Parsing project JSON...', 'Обробка проєкту...')
+        .replace('Loading project data...', 'Завантаження даних...')
+        .replace('Loading population...', 'Завантаження вибірки...')
+        .replace('Reading file...', 'Зчитування файлу...')
+        .replace('Validating data...', 'Валідація даних...')
+        .replace('Opening file...', 'Відкриття файлу...')
+        .replace('Importing Excel...', 'Імпортування Excel...')
+        .replace('Reading exported project...', 'Зчитування експортованого проєкту...')
+        .replace('Importing...', 'Імпорт...')
+        .replace('Creating schema...', 'Створення структури...')
+        .replace('Loading JSON/CSV...', 'Завантаження...')
+        .replace(/Parsing (\d+) rows\.\.\./, 'Обробка $1 рядків...')
+        .replace(/Creating indices \((.*?)\)\.\.\./, 'Створення індексів ($1)...')
+        .replace('Complete', 'Готово')
+        .replace('Parsing...', 'Обробка...');
+};
 
 const App: React.FC = () => {
   const { settings, updateSettings, isReady } = useAppStorage();
@@ -411,28 +433,6 @@ const App: React.FC = () => {
       </div>
     );
   }
-
-  const translateStage = (stage: string, l: Language) => {
-      if (l === 'en') return stage;
-      return stage
-          .replace('Reading project file...', 'Зчитування файлу...')
-          .replace('Opening project DB...', 'Відкриття БД проєкту...')
-          .replace('Parsing project JSON...', 'Обробка проєкту...')
-          .replace('Loading project data...', 'Завантаження даних...')
-          .replace('Loading population...', 'Завантаження вибірки...')
-          .replace('Reading file...', 'Зчитування файлу...')
-          .replace('Validating data...', 'Валідація даних...')
-          .replace('Opening file...', 'Відкриття файлу...')
-          .replace('Importing Excel...', 'Імпортування Excel...')
-          .replace('Reading exported project...', 'Зчитування експортованого проєкту...')
-          .replace('Importing...', 'Імпорт...')
-          .replace('Creating schema...', 'Створення структури...')
-          .replace('Loading JSON/CSV...', 'Завантаження...')
-          .replace(/Parsing (\d+) rows\.\.\./, 'Обробка $1 рядків...')
-          .replace(/Creating indices \((.*?)\)\.\.\./, 'Створення індексів ($1)...')
-          .replace('Complete', 'Готово')
-          .replace('Parsing...', 'Обробка...');
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-neutral-900 flex flex-col selection:bg-brand-100">

@@ -1,4 +1,5 @@
 import { TransactionItem, SamplingConfig, SamplingResult, SampledItem, GlobalSettings } from '../types';
+import { Mulberry32 } from '../statistics/prng';
 
 export const methodsSupportingAnomalies = ['MUS', 'CVS', 'Random', 'FixedRandom'];
 
@@ -100,7 +101,7 @@ export function calculateExtrapolation(results: SamplingResult, config: Sampling
     } else if (config.method === 'Random' || config.method === 'CVS' || config.method === 'Cluster') {
         const sampleErrors = (results.samplingItems || []).reduce((acc, item) => acc + (item.difference || 0), 0);
         const n = results.samplingItems?.length || 1;
-        const N_rem = results.populationSize - (results.keyItems?.length || 0) - (results.trivialCount || 0);
+        const N_rem = Math.max(0, results.populationSize - (results.keyItems?.length || 0) - (results.trivialCount || 0));
         const meanDiff = sampleErrors / n;
         
         pm = keyMisstatements + (meanDiff * N_rem);
@@ -169,9 +170,11 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
     else if (config.confidenceLevel === 95) rf = 3.00;
     else if (config.confidenceLevel === 99) rf = 4.61;
 
+    const rng = new Mulberry32(config.seed ?? Math.floor(Math.random() * 100000));
+
     let sampleSize = 10;
     const remPopValue = popValue - keyItems.reduce((acc, curr) => acc + Math.abs(curr.amount), 0) - Math.abs(trivialValue);
-    
+
     let sampleItems: SampledItem[] = [];
 
     const getRandomSamples = <T>(array: T[], count: number): T[] => {
@@ -179,11 +182,11 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
         const n = array.length;
         count = Math.min(count, n);
         if (count === 0) return result;
-        
+
         if (n > 10000 && count < 1000) {
             const picked = new Set<number>();
             while(picked.size < count) {
-                picked.add(Math.floor(Math.random() * n));
+                picked.add(Math.floor(rng.next() * n));
             }
             for (const idx of picked) {
                 result.push(array[idx]);
@@ -191,7 +194,7 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
         } else {
             const copy = array.slice();
             for(let i=0; i<count; i++) {
-                const r = i + Math.floor(Math.random() * (n - i));
+                const r = i + Math.floor(rng.next() * (n - i));
                 const temp = copy[i];
                 copy[i] = copy[r];
                 copy[r] = temp;
@@ -280,7 +283,7 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
             if (sampleSize > 5000) sampleSize = 5000;
 
             let runningTotal = 0;
-            let nextHit = Math.random() * interval;
+            let nextHit = rng.next() * interval;
             const picked = new Set<number>();
             
             for (let i = 0; i < regularItems.length; i++) {
@@ -334,10 +337,6 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
     }
 
     const interval = sampleItems.length > 0 ? (remPopValue / sampleItems.length) : 1;
-    
-    // rf already defined
-
-    // rf already defined
 
     const preResult: SamplingResult = {
         populationSize: population.length,
