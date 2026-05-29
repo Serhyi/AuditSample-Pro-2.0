@@ -189,6 +189,40 @@ var ImportService = class {
   }
 };
 
+// src/statistics/reliabilityFactor.ts
+function getReliabilityFactor(confidenceLevel) {
+  switch (confidenceLevel) {
+    case 70:
+      return 1.2;
+    case 80:
+      return 1.61;
+    case 90:
+      return 2.31;
+    case 95:
+      return 3;
+    case 99:
+      return 4.61;
+    default:
+      return 3;
+  }
+}
+function getZScore(confidenceLevel) {
+  switch (confidenceLevel) {
+    case 70:
+      return 1.04;
+    case 80:
+      return 1.28;
+    case 90:
+      return 1.64;
+    case 95:
+      return 1.96;
+    case 99:
+      return 2.58;
+    default:
+      return 1.96;
+  }
+}
+
 // src/main/services/SamplingService.ts
 var SamplingService = class {
   constructor(db) {
@@ -292,12 +326,7 @@ var SamplingService = class {
     }
     const keyItemsValue = keyItems.reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
     const remPopValue = popValue - keyItemsValue - Math.abs(trivialValue);
-    let rf = 3;
-    if (config.confidenceLevel === 70) rf = 1.2;
-    else if (config.confidenceLevel === 80) rf = 1.61;
-    else if (config.confidenceLevel === 90) rf = 2.31;
-    else if (config.confidenceLevel === 95) rf = 3;
-    else if (config.confidenceLevel === 99) rf = 4.61;
+    const rf = getReliabilityFactor(config.confidenceLevel);
     let sampleItems = [];
     await updateProgress("\u0417\u0430\u0441\u0442\u043E\u0441\u0443\u0432\u0430\u043D\u043D\u044F \u043C\u0435\u0442\u043E\u0434\u0443 \u0432\u0456\u0434\u0431\u043E\u0440\u0443...");
     if (config.method === "RiskAssessment") {
@@ -532,7 +561,7 @@ var SamplingService = class {
         variance = variance / (n - 1);
       }
       const stdErr = N_rem * Math.sqrt(variance) / Math.sqrt(n);
-      const zScore = config.confidenceLevel === 70 ? 1.04 : config.confidenceLevel === 80 ? 1.28 : config.confidenceLevel === 90 ? 1.64 : config.confidenceLevel === 95 ? 1.96 : config.confidenceLevel === 99 ? 2.58 : 1.96;
+      const zScore = getZScore(config.confidenceLevel);
       ub = pm + Math.abs(zScore * stdErr);
     }
     results.projectedMisstatement = pm;

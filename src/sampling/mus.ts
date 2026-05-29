@@ -1,5 +1,6 @@
 import { SamplingMethod } from './base';
 import { PopulationItem, SamplingParams, SamplingMethodType } from '@types';
+import { getReliabilityFactor } from '../statistics/reliabilityFactor';
 
 export class MUSSampling extends SamplingMethod {
   readonly name = 'Monetary Unit Sampling';
@@ -7,7 +8,11 @@ export class MUSSampling extends SamplingMethod {
 
   calculateSampleSize(params: SamplingParams): number {
     const populationValue = params.population.reduce((sum, item) => sum + Math.max(0, item.bookValue), 0);
-    const reliabilityFactor = 1.96; // Simplified for 95% confidence
+    // MUS моделює помилки розподілом Пуассона, тому коефіцієнт надійності
+    // береться з таблиці Пуассона (≈3.0 для 95%), а не як z-score (1.96).
+    // confidenceLevel у SamplingParams зберігається як дріб (напр. 0.95).
+    const confidencePct = params.confidenceLevel <= 1 ? Math.round(params.confidenceLevel * 100) : params.confidenceLevel;
+    const reliabilityFactor = getReliabilityFactor(confidencePct);
     const size = Math.ceil((populationValue * reliabilityFactor) / params.tolerableMisstatement);
     return Math.max(1, Math.min(size, params.population.length));
   }

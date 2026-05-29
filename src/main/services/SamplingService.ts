@@ -1,4 +1,5 @@
 import { DatabaseService } from './DatabaseService';
+import { getReliabilityFactor, getZScore } from '../../statistics/reliabilityFactor';
 
 export class SamplingService {
   constructor(private db: DatabaseService) {}
@@ -134,12 +135,7 @@ export class SamplingService {
     const keyItemsValue = keyItems.reduce((acc, curr) => acc + Math.abs(curr.amount), 0);
     const remPopValue = popValue - keyItemsValue - Math.abs(trivialValue);
 
-    let rf = 3.0;
-    if (config.confidenceLevel === 70) rf = 1.20;
-    else if (config.confidenceLevel === 80) rf = 1.61;
-    else if (config.confidenceLevel === 90) rf = 2.31;
-    else if (config.confidenceLevel === 95) rf = 3.00;
-    else if (config.confidenceLevel === 99) rf = 4.61;
+    const rf = getReliabilityFactor(config.confidenceLevel);
 
     let sampleItems: any[] = [];
     
@@ -422,7 +418,7 @@ export class SamplingService {
             variance = variance / (n - 1);
         }
         const stdErr = N_rem * Math.sqrt(variance) / Math.sqrt(n);
-        const zScore = config.confidenceLevel === 70 ? 1.04 : (config.confidenceLevel === 80 ? 1.28 : (config.confidenceLevel === 90 ? 1.64 : (config.confidenceLevel === 95 ? 1.96 : (config.confidenceLevel === 99 ? 2.58 : 1.96))));
+        const zScore = getZScore(config.confidenceLevel);
         ub = pm + Math.abs(zScore * stdErr);
     }
 

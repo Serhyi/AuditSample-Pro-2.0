@@ -38,15 +38,11 @@ export function getDynamicMethodDescription(config: SamplingConfig, lang: Langua
 
 
 import { formatMoney } from '../utils/samplingEngine';
+import { getReliabilityFactor } from '../statistics/reliabilityFactor';
 
 export function getCalculationDetails(config: SamplingConfig, results: SamplingResult, settings: GlobalSettings, lang: string): { vars: Record<string, string|number>, subst: string } {
     const isUa = lang === 'ua';
-    let rf = 3.0; // 95%
-    if (config.confidenceLevel === 70) rf = 1.20;
-    else if (config.confidenceLevel === 80) rf = 1.61;
-    else if (config.confidenceLevel === 90) rf = 2.31;
-    else if (config.confidenceLevel === 95) rf = 3.00;
-    else if (config.confidenceLevel === 99) rf = 4.61;
+    const rf = getReliabilityFactor(config.confidenceLevel);
     
     // Remaining population value (Book Value - Key Items - Trivial)
     const bv = results.populationValue - results.keyItems.reduce((acc, curr) => acc + Math.abs(curr.amount), 0) - results.trivialValue;

@@ -1,5 +1,6 @@
 import { TransactionItem, SamplingConfig, SamplingResult, SampledItem, GlobalSettings } from '../types';
 import { Mulberry32 } from '../statistics/prng';
+import { getReliabilityFactor, getZScore } from '../statistics/reliabilityFactor';
 
 export const methodsSupportingAnomalies = ['MUS', 'CVS', 'Random', 'FixedRandom'];
 
@@ -61,12 +62,7 @@ export function calculateExtrapolation(results: SamplingResult, config: Sampling
         return { projected: results.projectedMisstatement, ub: results.upperMisstatementBound };
     }
 
-    let rf = 3.0; // 95% default
-    if (config.confidenceLevel === 70) rf = 1.20;
-    else if (config.confidenceLevel === 80) rf = 1.61;
-    else if (config.confidenceLevel === 90) rf = 2.31;
-    else if (config.confidenceLevel === 95) rf = 3.00;
-    else if (config.confidenceLevel === 99) rf = 4.61;
+    const rf = getReliabilityFactor(config.confidenceLevel);
 
     let pm = 0;
     
@@ -112,7 +108,7 @@ export function calculateExtrapolation(results: SamplingResult, config: Sampling
                 variance = variance / (n - 1);
             }
             const stdErr = N_rem * Math.sqrt(variance) / Math.sqrt(n);
-            const zScore = config.confidenceLevel === 70 ? 1.04 : (config.confidenceLevel === 80 ? 1.28 : (config.confidenceLevel === 90 ? 1.64 : (config.confidenceLevel === 95 ? 1.96 : (config.confidenceLevel === 99 ? 2.58 : 1.96))));
+            const zScore = getZScore(config.confidenceLevel);
             ub = pm + Math.abs(zScore * stdErr);
         } else {
             ub = pm;
@@ -163,12 +159,7 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
         }
     });
 
-    let rf = 3.0; // 95% default
-    if (config.confidenceLevel === 70) rf = 1.20;
-    else if (config.confidenceLevel === 80) rf = 1.61;
-    else if (config.confidenceLevel === 90) rf = 2.31;
-    else if (config.confidenceLevel === 95) rf = 3.00;
-    else if (config.confidenceLevel === 99) rf = 4.61;
+    const rf = getReliabilityFactor(config.confidenceLevel);
 
     const rng = new Mulberry32(config.seed ?? Math.floor(Math.random() * 100000));
 
