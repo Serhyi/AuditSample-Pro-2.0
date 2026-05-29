@@ -351,11 +351,6 @@ const App: React.FC = () => {
   };
 
 
-  useEffect(() => {
-    if (totalPopValue > 0 && config.tolerableMisstatement === 0) {
-        setConfig(prev => ({ ...prev, tolerableMisstatement: Math.floor(totalPopValue * 0.01) }));
-    }
-  }, [totalPopValue, config.tolerableMisstatement]);
 
   const handleRunSampling = async () => {
     setIsProcessing(true);
