@@ -94,10 +94,13 @@ export class SamplingService {
     const tm = Number(config.tolerableMisstatement) || 0;
     const ctt = Number(config.clearlyTrivialThreshold) || 0;
     const isAnomalyDisabled = config.anomalyMethod === 'None';
-    // Only extract key items for these variable/stratified approaches. 
-    // It shouldn't be extracted for MUS, StopOrGo, Attribute, Pareto, etc.
+    // ISA 530: for MUS, items >= PM are individually significant and must be
+    // audited 100%. They are always separated regardless of anomaly settings.
+    // For other variable/stratified methods, key items are extracted only when
+    // anomaly detection is active.
+    const isMUSKeyExtract = config.method === 'MUS' && tm > 0;
     const allowedMethodsForKeyItems = ['Random', 'FixedRandom', 'CVS', 'Cluster', 'RiskAssessment'];
-    const excludeKeyItems = !isAnomalyDisabled && tm > 0 && allowedMethodsForKeyItems.includes(config.method);
+    const excludeKeyItems = isMUSKeyExtract || (!isAnomalyDisabled && tm > 0 && allowedMethodsForKeyItems.includes(config.method));
     const upperLimit = excludeKeyItems ? tm : 999999999999;
 
     // 2. Trivial items
@@ -297,7 +300,34 @@ export class SamplingService {
         } else if (config.method === 'StopOrGo') {
           sampleSize = (config.stopOrGoInitialSize || 25) + (config.stopOrGoExpansionSize || 25);
         } else if (config.method === 'Attribute') {
-          sampleSize = 25;
+          // AICPA attribute table approximation: n ≈ RF_attr / TDR
+          const tdr = (config.tolerableDeviationRate ?? 5) / 100;
+          const edr = (config.expectedDeviationRate ?? 0) / 100;
+          const alphaAttr = 1 - config.confidenceLevel / 100;
+          const rfAttr = -Math.log(alphaAttr);
+          const denominatorAttr = Math.max(tdr - edr, tdr * 0.01);
+          sampleSize = Math.ceil(rfAttr / denominatorAttr);
+        } else if (config.method === 'CVS' || config.method === 'Random') {
+          // Classical Variables / Random: n = (z × σ / E)² with FPC.
+          const z = getZScore(config.confidenceLevel);
+          const N_rem = popSize - keyItems.length - trivialCount;
+          if (N_rem > 1 && remPopValue > 0) {
+            // Variance from DB: use sum of squares approximation via population stats.
+            const stats: any[] = await this.db.query(
+              `SELECT AVG(ABS(amount)) as mean, AVG(ABS(amount)*ABS(amount)) as meanSq FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ?`,
+              [upperLimit, ctt]
+            );
+            const mean = stats[0]?.mean || 0;
+            const meanSq = stats[0]?.meanSq || 0;
+            const variance = Math.max(meanSq - mean * mean, 0);
+            const sigma = Math.sqrt(variance);
+            const pm = config.tolerableMisstatement || remPopValue * 0.01;
+            const E = pm / N_rem;
+            const n0 = E > 0 && sigma > 0 ? Math.pow(z * sigma / E, 2) : 30;
+            sampleSize = Math.ceil(n0 / (1 + n0 / N_rem));
+          } else {
+            sampleSize = N_rem;
+          }
         } else {
           sampleSize = config.fixedSampleSize || 25;
         }

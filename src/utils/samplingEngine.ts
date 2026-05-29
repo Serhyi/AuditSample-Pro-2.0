@@ -141,9 +141,25 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
             trivialCount++;
             trivialValue += item.amount;
         } else if (
-            config.anomalyMethod !== 'None' && 
-            ['Random', 'FixedRandom', 'CVS', 'Cluster', 'RiskAssessment'].includes(config.method) && 
-            config.tolerableMisstatement && 
+            config.method === 'MUS' &&
+            config.tolerableMisstatement &&
+            Math.abs(item.amount) >= config.tolerableMisstatement
+        ) {
+            // ISA 530: items whose individual value ≥ PM must be audited 100%.
+            // They are separated from the probabilistic pool so the interval and
+            // sample size formula operate on the correct residual population.
+            keyItems.push({
+                ...item,
+                bookValue: item.amount,
+                auditedValue: '',
+                difference: item.amount,
+                tainting: 1,
+                isKeyItem: true
+            });
+        } else if (
+            config.anomalyMethod !== 'None' &&
+            ['Random', 'FixedRandom', 'CVS', 'Cluster', 'RiskAssessment'].includes(config.method) &&
+            config.tolerableMisstatement &&
             Math.abs(item.amount) >= config.tolerableMisstatement
         ) {
             keyItems.push({
@@ -316,9 +332,36 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
             } else if (config.method === 'StopOrGo') {
                 sampleSize = (config.stopOrGoInitialSize || 25) + (config.stopOrGoExpansionSize || 25);
             } else if (config.method === 'Attribute') {
-                sampleSize = 25; // simplified
+                // AICPA attribute table approximation: n ≈ -ln(alpha) / TDR
+                // where alpha = 1 − confidence, TDR = tolerable deviation rate.
+                const tdr = (config.tolerableDeviationRate ?? 5) / 100;
+                const edr = (config.expectedDeviationRate ?? 0) / 100;
+                const alphaAttr = 1 - config.confidenceLevel / 100;
+                const rfAttr = -Math.log(alphaAttr); // Poisson RF at zero expected deviations
+                const denominatorAttr = Math.max(tdr - edr, tdr * 0.01);
+                sampleSize = Math.ceil(rfAttr / denominatorAttr);
+            } else if (config.method === 'CVS' || config.method === 'Random') {
+                // Classical Variables / Random: n = (z × σ / E)² with finite-population correction.
+                // σ is the standard deviation of individual item amounts in the residual population.
+                // E (precision) ≈ PM / N_rem (mean-per-unit precision).
+                const z = getZScore(config.confidenceLevel);
+                const N_rem = regularItems.length;
+                if (N_rem > 1) {
+                    const mean = remPopValue / N_rem;
+                    const variance = regularItems.reduce((acc, it) => acc + Math.pow(Math.abs(it.amount) - mean, 2), 0) / (N_rem - 1);
+                    const sigma = Math.sqrt(variance);
+                    const pm = config.tolerableMisstatement || remPopValue * 0.01;
+                    // Desired precision = PM / sqrt(N_rem) gives a per-unit precision;
+                    // alternatively: E = PM / N_rem for total error bound.
+                    const E = pm / N_rem; // tolerable mean error per item
+                    const n0 = Math.pow(z * sigma / E, 2); // infinite-population size
+                    // Finite-population correction (FPC):
+                    sampleSize = Math.ceil(n0 / (1 + n0 / N_rem));
+                } else {
+                    sampleSize = N_rem;
+                }
             } else {
-                sampleSize = config.fixedSampleSize || 25; // fallback for others like CVS, Random
+                sampleSize = config.fixedSampleSize || 25;
             }
             
             if (sampleSize > 5000) sampleSize = 5000;
