@@ -54,7 +54,7 @@ const SyncedScrollContainer = ({ children, setRefs }: any) => {
 
 import { SampledItem, SamplingResult, SamplingConfig, Language, Currency, ColumnIndices, TransactionItem, GlobalSettings } from '../types';
 import { calculateExtrapolation, formatMoney, formatDate, smartFormat, methodsSupportingAnomalies } from '../utils/samplingEngine';
-import { Upload, Download, CheckCircle2, AlertCircle, ShieldCheck, BookOpen, Sigma, PlayCircle, StopCircle, Calculator, Database, Info, Layers, Target } from 'lucide-react';
+import { Upload, CheckCircle2, AlertCircle, ShieldCheck, BookOpen, Sigma, PlayCircle, StopCircle, Calculator, Database, Info, Layers, Target } from 'lucide-react';
 import { t } from '../utils/translations';
 import { exportToExcel } from '../export/excel';
 import { getCalculationDetails, getStaticFormula, METHOD_PREFIX_MAP, getDynamicMethodName, getDynamicMethodDescription } from './resultsUtils';
@@ -340,23 +340,6 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
 
     const dateStr = new Date().toLocaleDateString('uk-UA').replace(/\./g, '_');
     exportToExcel(clientState, `Вибірка_${config.method}_Клієнту_${dateStr}.xlsx`, true, lang);
-  };
-
-  const handleImportClient = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      try {
-          const { mergeExcelResults } = await import('../export/excelMerge');
-          const newResults = await mergeExcelResults(file, currentResults, sourceHeaders.length, colIndices.id);
-          const updatedCount = (newResults as any)._importUpdatedCount || 0;
-          onResultsUpdate(newResults);
-          alert(t('msgImportSuccess', lang).replace('{0}', updatedCount.toString()));
-      } catch (err: any) {
-          console.error(err);
-          alert(t('errImportClient', lang) + err.message);
-      }
-      e.target.value = '';
   };
 
 
@@ -649,11 +632,6 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
               <button onClick={() => setActiveTab('key')} className={`px-6 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'key' ? 'bg-white text-brand-600 shadow-md shadow-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>{t('tabKey', lang)} {(currentResults.keyItems || []).length}</button>
             </div>
             <div className="flex gap-2">
-                <label className="flex items-center gap-3 text-[11px] text-brand-700 font-black uppercase tracking-widest bg-brand-100 border border-brand-300 hover:bg-brand-200 px-7 py-3 rounded-xl transition-all active:scale-95 cursor-pointer">
-                    <Download className="w-4 h-4 stroke-[3px]"/> 
-                    {t('btnImportClient', lang)}
-                    <input type="file" accept=".xlsx" className="hidden" onChange={handleImportClient} />
-                </label>
                 <button onClick={handleExportClient} className="flex items-center gap-3 text-[11px] text-brand-600 font-black uppercase tracking-widest bg-brand-50 border border-brand-200 hover:bg-brand-100 px-7 py-3 rounded-xl transition-all active:scale-95"><Upload className="w-4 h-4 stroke-[3px]"/> {t('btnExportClient', lang)}</button>
                 <button onClick={handleExport} className="flex items-center gap-3 text-[11px] text-white font-black uppercase tracking-widest bg-brand-600 hover:bg-brand-700 px-7 py-3 rounded-xl shadow-[0_4px_12px_rgba(0,133,75,0.25)] transition-all active:scale-95"><Upload className="w-4 h-4 stroke-[3px]"/> {t('exportBtn', lang)}</button>
             </div>
