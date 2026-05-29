@@ -798,24 +798,42 @@ var AppOrchestrator = class {
 // src/main/index.ts
 var orchestrator;
 var splash;
+var mainWindowStarted = false;
 function createWindow() {
   splash = new import_electron2.BrowserWindow({
     width: 600,
     height: 400,
-    transparent: true,
     frame: false,
     alwaysOnTop: true,
+    resizable: false,
+    show: false,
+    // показуємо тільки коли вміст готовий, щоб не блимало порожнє вікно
+    backgroundColor: "#ffffff",
+    // непрозорий фон малюється миттєво (без композитора)
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true
     }
   });
   splash.loadFile(path5.join(__dirname, "splash.html"));
+  splash.once("ready-to-show", () => {
+    splash?.show();
+  });
+  splash.webContents.once("did-finish-load", () => {
+    setupMainWindow();
+  });
+  setTimeout(() => setupMainWindow(), 1500);
+}
+function setupMainWindow() {
+  if (mainWindowStarted) return;
+  mainWindowStarted = true;
   const win = new import_electron2.BrowserWindow({
     width: 1400,
     height: 900,
     show: false,
     // Don't show the main window immediately
+    backgroundColor: "#f8fafc",
+    // уникаємо білого спалаху при показі
     webPreferences: {
       preload: path5.join(__dirname, "preload.cjs"),
       contextIsolation: true,
@@ -833,18 +851,16 @@ function createWindow() {
     win.loadFile(path5.join(__dirname, "dist", "index.html"));
   }
   win.once("ready-to-show", () => {
-    setTimeout(() => {
-      if (splash) {
-        splash.close();
-        splash = null;
-      }
-      try {
-        win.maximize();
-        win.show();
-      } catch (e) {
-        console.error("Failed to maximize or show window", e);
-      }
-    }, 50);
+    try {
+      win.maximize();
+      win.show();
+    } catch (e) {
+      console.error("Failed to maximize or show window", e);
+    }
+    if (splash) {
+      splash.close();
+      splash = null;
+    }
   });
 }
 import_electron2.app.whenReady().then(createWindow);

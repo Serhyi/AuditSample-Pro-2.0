@@ -78,7 +78,11 @@
     "appId": "com.auditpro.app",
     "productName": "AuditSample Pro",
     "copyright": "Copyright © 2025 Serhii Minin",
-    "asar": false,
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/sql.js/**/*",
+      "dist/workers/**/*"
+    ],
     "directories": {
       "output": "release"
     },
