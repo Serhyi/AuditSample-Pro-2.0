@@ -57,6 +57,7 @@ import { calculateExtrapolation, formatMoney, formatDate, smartFormat, methodsSu
 import { Upload, CheckCircle2, AlertCircle, ShieldCheck, BookOpen, Sigma, PlayCircle, StopCircle, Calculator, Database, Info, Layers, Target } from 'lucide-react';
 import { t } from '../utils/translations';
 import { exportToExcel } from '../export/excel';
+import { mergeExcelResults } from '../export/excelMerge';
 import { getCalculationDetails, getStaticFormula, METHOD_PREFIX_MAP, getDynamicMethodName, getDynamicMethodDescription } from './resultsUtils';
 
 interface ResultsStepProps {
@@ -303,25 +304,18 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         settings
     };
 
-    if (isElectron() && window.api) {
-        // Assume virtual if in Electron with API for excel export
-        try {
-            await (window as any).api.export.excel(fullState);
-        } catch (e) {
-            console.error(e);
-        }
-        return;
-    }
-
     const dateStr = new Date().toLocaleDateString('uk-UA').replace(/\./g, '_');
     exportToExcel(fullState, `Вибірка_${config.method}_Робоча_${dateStr}.xlsx`, false, lang);
   };
 
   const handleExportClient = async () => {
+    const pop = getFullPopulation();
+
     const clientState = {
         version: "2.0",
         timestamp: Date.now(),
         currentStep: 2,
+        population: pop,
         sourceHeaders,
         columnIndices: colIndices,
         config,
@@ -329,17 +323,21 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         settings
     };
 
-    if (isElectron() && window.api) {
-        try {
-            await (window as any).api.export.excel(clientState);
-        } catch (e) {
-            console.error(e);
-        }
-        return;
-    }
-
     const dateStr = new Date().toLocaleDateString('uk-UA').replace(/\./g, '_');
     exportToExcel(clientState, `Вибірка_${config.method}_Клієнту_${dateStr}.xlsx`, true, lang);
+  };
+
+  const handleImportClient = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    try {
+      const idColIdx = colIndices.idColumn ?? -1;
+      const merged = await mergeExcelResults(file, currentResultsRef.current, sourceHeaders.length, idColIdx);
+      onResultsUpdate(merged);
+    } catch (err) {
+      console.error('Client Excel import failed', err);
+    }
   };
 
 
@@ -632,6 +630,10 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
               <button onClick={() => setActiveTab('key')} className={`px-6 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'key' ? 'bg-white text-brand-600 shadow-md shadow-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>{t('tabKey', lang)} {(currentResults.keyItems || []).length}</button>
             </div>
             <div className="flex gap-2">
+                <label className="flex items-center gap-3 text-[11px] text-slate-600 font-black uppercase tracking-widest bg-slate-50 border border-slate-200 hover:bg-slate-100 px-7 py-3 rounded-xl transition-all active:scale-95 cursor-pointer">
+                  <input type="file" accept=".xlsx" className="hidden" onChange={handleImportClient} />
+                  <Upload className="w-4 h-4 stroke-[3px]"/> {t('btnImportClient', lang)}
+                </label>
                 <button onClick={handleExportClient} className="flex items-center gap-3 text-[11px] text-brand-600 font-black uppercase tracking-widest bg-brand-50 border border-brand-200 hover:bg-brand-100 px-7 py-3 rounded-xl transition-all active:scale-95"><Upload className="w-4 h-4 stroke-[3px]"/> {t('btnExportClient', lang)}</button>
                 <button onClick={handleExport} className="flex items-center gap-3 text-[11px] text-white font-black uppercase tracking-widest bg-brand-600 hover:bg-brand-700 px-7 py-3 rounded-xl shadow-[0_4px_12px_rgba(0,133,75,0.25)] transition-all active:scale-95"><Upload className="w-4 h-4 stroke-[3px]"/> {t('exportBtn', lang)}</button>
             </div>
