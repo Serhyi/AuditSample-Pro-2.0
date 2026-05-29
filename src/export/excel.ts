@@ -1,4 +1,4 @@
-import ExcelJS from 'exceljs';
+import type ExcelJSType from 'exceljs';
 import { Language, TransactionItem } from '../types';
 import { t } from '../utils/translations';
 import { formatMoney, methodsSupportingAnomalies, calculateExtrapolation } from '../utils/samplingEngine';
@@ -10,6 +10,9 @@ export async function exportToExcel(
   isClientVersion: boolean,
   lang: Language
 ): Promise<void> {
+  // Lazily load ExcelJS so it is split into its own chunk and only fetched
+  // when the user actually exports, keeping the main bundle small.
+  const ExcelJS = (await import('exceljs')).default as typeof ExcelJSType;
   const workbook = new ExcelJS.Workbook();
   const { results, sourceHeaders, config, settings, population } = fullState;
   
