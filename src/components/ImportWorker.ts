@@ -243,10 +243,10 @@ self.onmessage = async (e) => {
                 
                 const extractSummaryInfo = (sheet: any): any => {
                     let populationSize = 0, populationValue = 0, projectedMisstatement = 0, upperMisstatementBound = 0;
-                    let sampleSize = 0, trivialCount = 0;
+                    let sampleSize = 0, trivialCount = 0, tolerableMisstatement = 0, confidenceLevel = 0;
                     let methodStr = 'MUS';
-                    
-                    if (!sheet) return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount, method: methodStr };
+
+                    if (!sheet) return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount, tolerableMisstatement, confidenceLevel, method: methodStr };
                     
                     for (let r = 1; r <= sheet.rowCount; r++) {
                         const row = sheet.getRow(r);
@@ -281,8 +281,16 @@ self.onmessage = async (e) => {
                         if (lbl.includes('Верхня межа викривлення') || lbl.includes('Upper Misstatement Bound') || lbl.includes('Максимальна помилка')) {
                             upperMisstatementBound = parseAmount(val);
                         }
+                        if (lbl.includes('Допустиме викривлення') || lbl.includes('Tolerable Misstatement') || lbl.includes('Допустимий ступінь відхилення') || lbl.includes('Tolerable Deviation Rate')) {
+                            const pm = parseAmount(val);
+                            if (!isNaN(pm)) tolerableMisstatement = pm;
+                        }
+                        if (lbl.includes('Рівень впевненості') || lbl.includes('Confidence Level')) {
+                            const cl = parseInt(String(val).replace(/[^\d]/g, '')) || 0;
+                            if (cl > 0) confidenceLevel = cl;
+                        }
                     }
-                    return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount, method: methodStr };
+                    return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount, tolerableMisstatement, confidenceLevel, method: methodStr };
                 };
                 
                 const sampleSheet = workbook.getWorksheet('Вибірка') || workbook.getWorksheet('Sample');

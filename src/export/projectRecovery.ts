@@ -8,8 +8,8 @@ export function reconstructProjectState(payload: any, settings: GlobalSettings):
     const config: SamplingConfig = {
         method: summaryData?.method || 'MUS', // Extracted from Excel or fallback
         anomalyMethod: 'None',
-        confidenceLevel: 95,
-        tolerableMisstatement: 0,
+        confidenceLevel: summaryData?.confidenceLevel || 95,
+        tolerableMisstatement: summaryData?.tolerableMisstatement || 0,
         expectedMisstatement: 0,
         clearlyTrivialThreshold: 0,
         riskFactor: 'Moderate'
