@@ -31,22 +31,22 @@ const SyncedScrollContainer = ({ children, setRefs }: any) => {
 
     return (
         <div className="flex flex-col w-full relative">
-            <div 
-                ref={topScrollRef} 
-                onScroll={onTopScroll} 
-                className="overflow-x-auto top-scrollbar-sync w-full sticky top-0 z-50 bg-slate-50 border-b border-slate-200"
-                style={{ marginBottom: '-1px' }}
-            >
-                <div style={{ width, height: '1px' }} />
-            </div>
-            <div 
-                ref={tableScrollRef} 
-                onScroll={onTableScroll} 
+            <div
+                ref={tableScrollRef}
+                onScroll={onTableScroll}
                 className="overflow-x-auto custom-scrollbar w-full"
             >
                 <div ref={contentRef} className="min-w-max w-full">
                     {children}
                 </div>
+            </div>
+            <div
+                ref={topScrollRef}
+                onScroll={onTopScroll}
+                className="overflow-x-auto top-scrollbar-sync w-full sticky bottom-0 z-50 bg-slate-50 border-t border-slate-200"
+                style={{ marginTop: '-1px' }}
+            >
+                <div style={{ width, height: '1px' }} />
             </div>
         </div>
     );
@@ -340,8 +340,8 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                 <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">{t('methodNote', lang)}</h3>
             </div>
 
-            {/* Ряд 1: Метод+Ціль(1) | Опис(1) | Аналіз покриття+Графік(1) */}
-            <div className="grid grid-cols-3 gap-4">
+            {/* Ряд 1: Метод+Ціль(1) | Опис(1) | Аналіз покриття(1) | Графік(1) */}
+            <div className="grid grid-cols-4 gap-4">
                 {/* Метод + Ціль застосування */}
                 <div className="bg-white p-5 rounded-[1.5rem] border border-brand-200 bg-brand-50/30 shadow-sm hover:shadow-md transition-all flex flex-col gap-4">
                     <div>
@@ -369,20 +369,35 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                     <div className="text-[11px] text-slate-700 leading-snug">{getDynamicMethodDescription(config, lang)}</div>
                 </div>
 
-                {/* Аналіз покриття + Графік */}
+                {/* Аналіз покриття */}
                 <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
                     <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
                         <Sigma className="w-3.5 h-3.5" />
                         {t('coverageAnalysis', lang)}
                     </div>
                     <div className="text-[28px] font-mono font-black text-brand-600 text-right">{coveragePercent.toFixed(1)}%</div>
-                    <div className="w-full bg-slate-200 rounded-full h-2.5overflow-hidden">
+                    <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
                         <div className="bg-brand-500 h-full rounded-full shadow-[0_0_8px_rgba(0,133,75,0.3)] transition-all duration-1000" style={{ width: `${Math.min(100, coveragePercent)}%` }} />
                     </div>
-                    <p className="text-[10px] text-slate-500 leading-snug">{t('coverageDesc', lang)}</p>
-                    <div className="border-t border-slate-100 pt-3 mt-auto">
+                    <p className="text-[10px] text-slate-500 leading-snug mt-auto">{t('coverageDesc', lang)}</p>
+                </div>
+
+                {/* Графік розподілу */}
+                <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
+                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Layers className="w-3.5 h-3.5" />
+                        {lang === 'ua' ? 'Розподіл вибірки' : 'Sample Distribution'}
+                    </div>
+                    <div className="flex-1 flex flex-col justify-center">
                         <DistributionGraphic items={currentResults.samplingItems || []} keys={currentResults.keyItems || []} />
-                        <p className="text-[9px] text-slate-400 text-center mt-2 uppercase tracking-widest font-bold">{t('tabSample', lang)} / {t('tabKey', lang)}</p>
+                    </div>
+                    <div className="flex items-center justify-center gap-4 pt-2 border-t border-slate-100">
+                        <span className="flex items-center gap-1.5 text-[9px] text-slate-500 font-bold uppercase tracking-widest">
+                            <span className="w-2.5 h-2.5 rounded-sm bg-brand-300 inline-block" />{t('tabSample', lang)}
+                        </span>
+                        <span className="flex items-center gap-1.5 text-[9px] text-slate-500 font-bold uppercase tracking-widest">
+                            <span className="w-2.5 h-2.5 rounded-sm bg-brand-600 inline-block" />{t('tabKey', lang)}
+                        </span>
                     </div>
                 </div>
             </div>
