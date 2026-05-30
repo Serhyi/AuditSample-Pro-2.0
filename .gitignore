@@ -5,3 +5,4 @@ release/
 .env.local
 coverage/
 *.log
+.claude/
