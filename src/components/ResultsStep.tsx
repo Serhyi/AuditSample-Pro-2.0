@@ -32,6 +32,14 @@ const SyncedScrollContainer = ({ children, setRefs }: any) => {
     return (
         <div className="flex flex-col w-full relative">
             <div
+                ref={topScrollRef}
+                onScroll={onTopScroll}
+                className="overflow-x-auto top-scrollbar-sync w-full sticky top-0 z-50 bg-slate-50 border-b border-slate-200"
+                style={{ marginBottom: '-1px' }}
+            >
+                <div style={{ width, height: '1px' }} />
+            </div>
+            <div
                 ref={tableScrollRef}
                 onScroll={onTableScroll}
                 className="overflow-x-auto custom-scrollbar w-full"
@@ -39,14 +47,6 @@ const SyncedScrollContainer = ({ children, setRefs }: any) => {
                 <div ref={contentRef} className="min-w-max w-full">
                     {children}
                 </div>
-            </div>
-            <div
-                ref={topScrollRef}
-                onScroll={onTopScroll}
-                className="overflow-x-auto top-scrollbar-sync w-full sticky bottom-0 z-50 bg-slate-50 border-t border-slate-200"
-                style={{ marginTop: '-1px' }}
-            >
-                <div style={{ width, height: '1px' }} />
             </div>
         </div>
     );
@@ -127,42 +127,9 @@ const MoneyInput: React.FC<{
 
 
 const TablePagination = memo<{ items: SampledItem[], title?: string, isKey?: boolean, renderTable: (items: SampledItem[], title?: string, isKey?: boolean) => React.ReactNode }>(({ items, title, isKey, renderTable }) => {
-   const [page, setPage] = useState(0);
-   const PAGE_SIZE = 50;
-   
-   React.useEffect(() => { setPage(0); }, [items.length, title]);
-
-   const paginated = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-   const totalPages = Math.ceil(items.length / PAGE_SIZE);
-
    return (
-       <div className="flex flex-col h-full relative space-y-4 pb-4">
-          <div className="flex-1">
-              {renderTable(paginated, title, isKey)}
-          </div>
-          {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 bg-white border border-slate-200 shadow-sm rounded-xl mx-6 mt-4">
-                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                      Page {page + 1} of {totalPages} <span className="mx-2">|</span> {items.length} items total
-                  </span>
-                  <div className="flex items-center gap-2">
-                      <button
-                         disabled={page === 0}
-                         onClick={() => setPage(p => p - 1)}
-                         className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 text-[11px] font-bold hover:bg-slate-50 disabled:opacity-50 transition-colors"
-                      >
-                         &larr; Prev
-                      </button>
-                      <button
-                         disabled={page >= totalPages - 1}
-                         onClick={() => setPage(p => p + 1)}
-                         className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 text-[11px] font-bold hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200 disabled:opacity-50 transition-colors"
-                      >
-                         Next &rarr;
-                      </button>
-                  </div>
-              </div>
-          )}
+       <div className="flex flex-col h-full relative pb-4">
+           {renderTable(items, title, isKey)}
        </div>
    );
 });
