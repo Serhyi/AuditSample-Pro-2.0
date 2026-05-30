@@ -274,6 +274,7 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onProjectRecovere
                     onLoadingStateChange(true, msgEvent.data.payload);
                 }
             } else if (msgEvent.data.type === 'PARSE_RECOVERED_PROJECT') {
+                setRawData([]); // prevent validation effect from firing with stale data
                 setIsLoadingFile(false);
                 if (onLoadingStateChange) onLoadingStateChange(false, null);
                 if (onProjectRecovered) onProjectRecovered(msgEvent.data.payload);
