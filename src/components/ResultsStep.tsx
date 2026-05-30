@@ -3,50 +3,29 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
 import { isElectron } from '../utils/isElectron';
 
-const SyncedScrollContainer = ({ children, setRefs }: any) => {
-    const topScrollRef = React.useRef<HTMLDivElement>(null);
+const SyncedScrollContainer = ({ children, setRefs, syncScrollRef }: any) => {
     const tableScrollRef = React.useRef<HTMLDivElement>(null);
-    const contentRef = React.useRef<HTMLDivElement>(null);
-    const [width, setWidth] = React.useState(0);
 
     React.useEffect(() => {
         if (setRefs && tableScrollRef.current) {
             setRefs(tableScrollRef.current);
         }
-        
-        if (!contentRef.current) return;
-        const ro = new ResizeObserver((entries) => {
-            setWidth(entries[0].target.scrollWidth);
-        });
-        ro.observe(contentRef.current);
-        return () => ro.disconnect();
     }, [setRefs]);
 
-    const onTopScroll = () => {
-        if (tableScrollRef.current && topScrollRef.current) tableScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
-    };
-    const onTableScroll = () => {
-        if (tableScrollRef.current && topScrollRef.current) topScrollRef.current.scrollLeft = tableScrollRef.current.scrollLeft;
+    const onScroll = () => {
+        if (syncScrollRef?.current && tableScrollRef.current) {
+            syncScrollRef.current.scrollLeft = tableScrollRef.current.scrollLeft;
+        }
     };
 
     return (
-        <div className="flex flex-col w-full relative">
-            <div
-                ref={topScrollRef}
-                onScroll={onTopScroll}
-                className="overflow-x-auto top-scrollbar-sync w-full sticky top-0 z-50 bg-slate-50 border-b border-slate-200"
-                style={{ marginBottom: '-1px' }}
-            >
-                <div style={{ width, height: '1px' }} />
-            </div>
-            <div
-                ref={tableScrollRef}
-                onScroll={onTableScroll}
-                className="overflow-x-auto custom-scrollbar w-full"
-            >
-                <div ref={contentRef} className="min-w-max w-full">
-                    {children}
-                </div>
+        <div
+            ref={tableScrollRef}
+            onScroll={onScroll}
+            className="overflow-x-auto custom-scrollbar w-full"
+        >
+            <div className="min-w-max w-full">
+                {children}
             </div>
         </div>
     );
@@ -447,6 +426,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
   };
 
   const tableContainerRefs = useRef<Set<HTMLDivElement>>(new Set());
+  const cardSyncScrollRef = useRef<HTMLDivElement>(null);
 
   const samplingItemsLength = (currentResults.samplingItems || []).length;
   const keyItemsLength = (currentResults.keyItems || []).length;
@@ -469,6 +449,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         setRefs={(el: HTMLDivElement | null) => {
             if (el) tableContainerRefs.current.add(el);
         }}
+        syncScrollRef={cardSyncScrollRef}
       >
         <table className="min-w-max w-full text-[12px] border-collapse table-auto">
             <thead className="bg-white sticky top-0 z-20 border-b border-slate-200 shadow-sm text-slate-400 font-black">
@@ -610,28 +591,76 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
       </div>
 
       <div className="flex flex-col gap-8">
-        <div className="w-full bg-white rounded-[2rem] shadow-sm border border-slate-200 flex flex-col h-[1050px] overflow-hidden transition-all hover:shadow-md">
-          <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
-            <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
-              <button onClick={() => setActiveTab('sample')} className={`px-6 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'sample' ? 'bg-white text-brand-600 shadow-md shadow-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>{t('tabSample', lang)} {(currentResults.samplingItems || []).length}</button>
-              <button onClick={() => setActiveTab('key')} className={`px-6 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'key' ? 'bg-white text-brand-600 shadow-md shadow-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>{t('tabKey', lang)} {(currentResults.keyItems || []).length}</button>
-            </div>
-            <div className="flex gap-2">
-                <button onClick={handleExportClient} className="flex items-center gap-3 text-[11px] text-brand-600 font-black uppercase tracking-widest bg-brand-50 border border-brand-200 hover:bg-brand-100 px-7 py-3 rounded-xl transition-all active:scale-95"><Upload className="w-4 h-4 stroke-[3px]"/> {t('btnExportClient', lang)}</button>
-                <button onClick={handleExport} className="flex items-center gap-3 text-[11px] text-white font-black uppercase tracking-widest bg-brand-600 hover:bg-brand-700 px-7 py-3 rounded-xl shadow-[0_4px_12px_rgba(0,133,75,0.25)] transition-all active:scale-95"><Upload className="w-4 h-4 stroke-[3px]"/> {t('exportBtn', lang)}</button>
-            </div>
-          </div>
-          <div className="flex-1 overflow-auto custom-scrollbar">
-            {activeTab === 'key' ?
-                <TablePagination items={currentResults.keyItems || []} title={t('tabKey', lang)} isKey={true} renderTable={renderTable} /> :
-                (config.method === 'StopOrGo' ? <StopOrGoView currentResults={currentResults} lang={lang} renderTable={renderTable} /> : <TablePagination items={currentResults.samplingItems || []} renderTable={renderTable} />)
-            }
-          </div>
-        </div>
+        <TableCard
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          currentResults={currentResults}
+          lang={lang}
+          renderTable={renderTable}
+          tableContainerRefs={tableContainerRefs}
+          syncScrollRef={cardSyncScrollRef}
+          handleExportClient={handleExportClient}
+          handleExport={handleExport}
+          samplingItemsLength={samplingItemsLength}
+          keyItemsLength={keyItemsLength}
+          fillAllVisible={fillAllVisible}
+          config={config}
+        />
         <div className="w-full">{renderMethodologyNote()}</div>
       </div>
     </div>
   );
+};
+
+const TableCard = ({ activeTab, setActiveTab, currentResults, lang, renderTable, tableContainerRefs, syncScrollRef, handleExportClient, handleExport, samplingItemsLength, config }: any) => {
+    const [contentWidth, setContentWidth] = React.useState(0);
+
+    const onSyncScroll = () => {
+        tableContainerRefs.current.forEach((c: HTMLDivElement) => {
+            if (syncScrollRef.current) c.scrollLeft = syncScrollRef.current.scrollLeft;
+        });
+    };
+
+    React.useEffect(() => {
+        const update = () => {
+            const first = [...tableContainerRefs.current][0] as HTMLDivElement | undefined;
+            if (first) setContentWidth(first.scrollWidth);
+        };
+        update();
+        const id = setInterval(update, 300);
+        return () => clearInterval(id);
+    }, [tableContainerRefs, samplingItemsLength, activeTab]);
+
+    return (
+        <div className="w-full bg-white rounded-[2rem] shadow-sm border border-slate-200 flex flex-col h-[1050px] overflow-hidden transition-all hover:shadow-md">
+            {/* Header: tabs + export buttons */}
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0">
+                <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+                    <button onClick={() => setActiveTab('sample')} className={`px-6 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'sample' ? 'bg-white text-brand-600 shadow-md shadow-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>{lang === 'ua' ? 'Відібрані елементи' : 'Sample'} {samplingItemsLength}</button>
+                    <button onClick={() => setActiveTab('key')} className={`px-6 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'key' ? 'bg-white text-brand-600 shadow-md shadow-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>{lang === 'ua' ? 'Ключові елементи' : 'Key Items'} {(currentResults.keyItems || []).length}</button>
+                </div>
+                <div className="flex gap-2">
+                    <button onClick={handleExportClient} className="flex items-center gap-3 text-[11px] text-brand-600 font-black uppercase tracking-widest bg-brand-50 border border-brand-200 hover:bg-brand-100 px-7 py-3 rounded-xl transition-all active:scale-95"><Upload className="w-4 h-4 stroke-[3px]"/> {lang === 'ua' ? 'Експорт для клієнта' : 'Export for Client'}</button>
+                    <button onClick={handleExport} className="flex items-center gap-3 text-[11px] text-white font-black uppercase tracking-widest bg-brand-600 hover:bg-brand-700 px-7 py-3 rounded-xl shadow-[0_4px_12px_rgba(0,133,75,0.25)] transition-all active:scale-95"><Upload className="w-4 h-4 stroke-[3px]"/> {lang === 'ua' ? 'Експорт XLSX' : 'Export XLSX'}</button>
+                </div>
+            </div>
+            {/* Sync scrollbar — full card width, outside vertical scroll area */}
+            <div
+                ref={syncScrollRef}
+                onScroll={onSyncScroll}
+                className="overflow-x-auto flex-shrink-0 bg-slate-50 border-b border-slate-200 top-scrollbar-sync"
+            >
+                <div style={{ width: contentWidth, height: '1px' }} />
+            </div>
+            {/* Vertical scroll area only */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+                {activeTab === 'key' ?
+                    <TablePagination items={currentResults.keyItems || []} title={lang === 'ua' ? 'Ключові елементи' : 'Key Items'} isKey={true} renderTable={renderTable} /> :
+                    (config.method === 'StopOrGo' ? <StopOrGoView currentResults={currentResults} lang={lang} renderTable={renderTable} /> : <TablePagination items={currentResults.samplingItems || []} renderTable={renderTable} />)
+                }
+            </div>
+        </div>
+    );
 };
 
 const StatCard = ({ label, value, subValue, icon, currency }: { label: string, value: string | number, subValue: string, icon: React.ReactNode, currency?: string }) => (
