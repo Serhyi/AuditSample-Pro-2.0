@@ -71,23 +71,6 @@ interface ResultsStepProps {
   settings: GlobalSettings;
 }
 
-interface SectionProps {
-    title: string;
-    children?: React.ReactNode;
-    icon?: any;
-}
-
-const Section = ({ title, children, icon: Icon }: SectionProps) => (
-    <div className="space-y-2 border-b border-slate-100 pb-5 last:border-0">
-        <h4 className="text-[10px] font-black text-brand-600 uppercase tracking-widest flex items-center gap-2">
-            {Icon && <Icon className="w-3.5 h-3.5" />}
-            {title}
-        </h4>
-        <div className="text-[12px] text-slate-700 leading-relaxed font-medium">
-            {children}
-        </div>
-    </div>
-);
 
 const DistributionGraphic: React.FC<{ items: SampledItem[], keys: SampledItem[] }> = ({ items, keys }) => {
     const all = [...items, ...keys];
@@ -350,62 +333,103 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         trivialActionDesc = t('noneLabel', lang);
     }
 
+    const NoteCard = ({ icon: Icon, title, children, accent }: { icon?: React.ElementType, title: string, children: React.ReactNode, accent?: boolean }) => (
+        <div className={`bg-white p-5 rounded-[1.5rem] border shadow-sm flex flex-col gap-3 hover:shadow-md transition-all ${accent ? 'border-brand-200 bg-brand-50/30' : 'border-slate-200'}`}>
+            <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                {Icon && <Icon className="w-3.5 h-3.5" />}
+                {title}
+            </div>
+            <div className="text-[11px] text-slate-700 leading-snug">{children}</div>
+        </div>
+    );
+
     return (
-        <div className="bg-white p-7 rounded-[2rem] border border-slate-200 shadow-sm space-y-8 animate-fade-in">
-            <h3 className="text-lg font-display text-neutral-900 flex items-center gap-3 border-b border-slate-100 pb-5">
-              <BookOpen className="w-5 h-5 text-brand-600" />
-              {t('methodNote', lang)}
-            </h3>
+        <div className="animate-fade-in space-y-4">
+            <div className="flex items-center gap-3 px-1 pb-1">
+                <BookOpen className="w-4 h-4 text-brand-600" />
+                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">{t('methodNote', lang)}</h3>
+            </div>
 
-            <Section title={t('methodUsed', lang)}>
-                <div className="text-brand-900 font-bold text-[14px] mb-2">{getDynamicMethodName(config, lang)}</div>
-                <DistributionGraphic items={currentResults.samplingItems || []} keys={currentResults.keyItems || []} />
-            </Section>
+            {/* Row 1: метод + охоплення */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2 bg-white p-5 rounded-[1.5rem] border border-brand-200 bg-brand-50/30 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
+                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <BookOpen className="w-3.5 h-3.5" />
+                        {t('methodUsed', lang)}
+                    </div>
+                    <div className="text-brand-900 font-bold text-[15px]">{getDynamicMethodName(config, lang)}</div>
+                    <DistributionGraphic items={currentResults.samplingItems || []} keys={currentResults.keyItems || []} />
+                </div>
+                <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
+                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Sigma className="w-3.5 h-3.5" />
+                        {t('coverageAnalysis', lang)}
+                    </div>
+                    <div className="text-[28px] font-mono font-black text-brand-600 text-right">{coveragePercent.toFixed(1)}%</div>
+                    <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                        <div className="bg-brand-500 h-full shadow-[0_0_8px_rgba(0,133,75,0.3)] transition-all duration-1000" style={{ width: `${Math.min(100, coveragePercent)}%` }} />
+                    </div>
+                    <p className="text-[10px] text-slate-500 leading-snug">{t('coverageDesc', lang)}</p>
+                </div>
+            </div>
 
-            <Section title={t('mnPurpose', lang)} icon={Target}>
-                {t(mPrefix + 'PurposeText', lang)}
-            </Section>
+            {/* Row 2: мета + опис */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <NoteCard icon={Target} title={t('mnPurpose', lang)}>
+                    {t(mPrefix + 'PurposeText', lang)}
+                </NoteCard>
+                <NoteCard icon={Info} title={t('mnDescription', lang)}>
+                    {getDynamicMethodDescription(config, lang)}
+                </NoteCard>
+            </div>
 
-            <Section title={t('mnDescription', lang)} icon={Info}>
-                {getDynamicMethodDescription(config, lang)}
-            </Section>
-
-            <Section title={t('tabKey', lang)} icon={Layers}>
-                <div className="space-y-3">
-                    <p className="italic text-slate-500 text-[11px] leading-snug">
-                        {t('keyItemsNote', lang)}
-                    </p>
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-2">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                            <span className="text-[10px] text-slate-400 font-bold uppercase">{t('anomalyDetection', lang)}</span>
-                            <span className="text-neutral-900 font-bold text-[11px]">{anomalyAlg}</span>
+            {/* Row 3: ключові елементи + незначні суми */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
+                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Layers className="w-3.5 h-3.5" />
+                        {t('tabKey', lang)}
+                    </div>
+                    <p className="italic text-slate-500 text-[10px] leading-snug">{t('keyItemsNote', lang)}</p>
+                    <div className="mt-auto space-y-1.5">
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-1.5">
+                            <span className="text-[9px] text-slate-400 font-bold uppercase">{t('anomalyDetection', lang)}</span>
+                            <span className="text-neutral-900 font-bold text-[10px]">{anomalyAlg}</span>
                         </div>
-                        <div className="text-[11px] text-slate-600 leading-snug">{anomalyDesc}</div>
+                        <div className="text-[10px] text-slate-600 leading-snug">{anomalyDesc}</div>
                         <div className="flex justify-between items-center pt-1">
-                            <span className="text-[10px] text-slate-400 font-bold uppercase">{t('keyItemsCount', lang)}</span>
+                            <span className="text-[9px] text-slate-400 font-bold uppercase">{t('keyItemsCount', lang)}</span>
                             <span className="text-brand-600 font-mono font-bold">{(currentResults.keyItems || []).length} {t('items', lang)}</span>
                         </div>
                     </div>
                 </div>
-            </Section>
-
-            <Section title={t('trivialLabel', lang)} icon={Database}>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-2">
-                    <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase">{t('cttThreshold', lang)}</span>
-                        <span className="text-neutral-900 font-bold">{formatMoney(config.clearlyTrivialThreshold, settings)}</span>
+                <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
+                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Database className="w-3.5 h-3.5" />
+                        {t('trivialLabel', lang)}
                     </div>
-                    <div className="text-[11px] text-slate-600 leading-snug">{trivialActionDesc}</div>
-                    <div className="flex justify-between items-center pt-1">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase">{t('trivialCount', lang)}</span>
-                        <span className="text-slate-600 font-mono font-bold">{currentResults.trivialCount} {t('items', lang)}</span>
+                    <div className="mt-auto space-y-1.5">
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-1.5">
+                            <span className="text-[9px] text-slate-400 font-bold uppercase">{t('cttThreshold', lang)}</span>
+                            <span className="text-neutral-900 font-bold text-[11px]">{formatMoney(config.clearlyTrivialThreshold, settings)}</span>
+                        </div>
+                        <div className="text-[10px] text-slate-600 leading-snug">{trivialActionDesc}</div>
+                        <div className="flex justify-between items-center pt-1">
+                            <span className="text-[9px] text-slate-400 font-bold uppercase">{t('trivialCount', lang)}</span>
+                            <span className="text-slate-600 font-mono font-bold">{currentResults.trivialCount} {t('items', lang)}</span>
+                        </div>
                     </div>
                 </div>
-            </Section>
+            </div>
 
-            <Section title={t('calcTitle', lang)} icon={Calculator}>
-                <div className="space-y-4">
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-2">
+            {/* Row 4: розрахунок — на повну ширину */}
+            <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-4">
+                <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                    <Calculator className="w-3.5 h-3.5" />
+                    {t('calcTitle', lang)}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="sm:col-span-1 bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-2">
                         {Object.entries(calcDetails.vars).map(([key, val]) => (
                             <div key={key} className="flex justify-between items-baseline border-b border-slate-100 last:border-0 pb-1.5 last:pb-0">
                                 <span className="text-slate-500 text-[9px] font-bold uppercase tracking-tighter">{key}</span>
@@ -413,34 +437,22 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                             </div>
                         ))}
                     </div>
-                    <div className="space-y-1">
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('mnFormula', lang)}</div>
-                        <div className="font-mono text-[11px] text-brand-700 bg-brand-50/50 p-3 rounded-xl border border-brand-100/50 text-center shadow-inner italic">
-                          {getStaticFormula(config.method, lang)}
+                    <div className="sm:col-span-2 flex flex-col gap-3">
+                        <div className="space-y-1">
+                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('mnFormula', lang)}</div>
+                            <div className="font-mono text-[11px] text-brand-700 bg-brand-50/50 p-3 rounded-xl border border-brand-100/50 text-center shadow-inner italic">
+                                {getStaticFormula(config.method, lang)}
+                            </div>
                         </div>
-                    </div>
-                    <div className="space-y-1">
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('mnSubstitution', lang)}</div>
-                        <div className="font-mono text-[11px] text-neutral-900 bg-white p-3 rounded-xl border border-slate-200 text-center whitespace-pre-wrap shadow-sm">
-                          {calcDetails.subst}
+                        <div className="space-y-1">
+                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('mnSubstitution', lang)}</div>
+                            <div className="font-mono text-[11px] text-neutral-900 bg-white p-3 rounded-xl border border-slate-200 text-center whitespace-pre-wrap shadow-sm">
+                                {calcDetails.subst}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </Section>
-
-            <Section title={t('coverageAnalysis', lang)} icon={Sigma}>
-                <div className="space-y-3">
-                   <p className="text-[11px] text-slate-600 leading-snug">
-                       {t('coverageDesc', lang)}
-                   </p>
-                   <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-inner">
-                      <div className="w-3/4 bg-slate-200 rounded-full h-2.5 overflow-hidden">
-                        <div className="bg-brand-500 h-full shadow-[0_0_8px_rgba(0,133,75,0.3)] transition-all duration-1000" style={{ width: `${Math.min(100, coveragePercent)}%` }}></div>
-                      </div>
-                      <span className="text-[16px] font-mono font-black text-brand-600">{coveragePercent.toFixed(1)}%</span>
-                   </div>
-                </div>
-            </Section>
+            </div>
         </div>
     );
   };
