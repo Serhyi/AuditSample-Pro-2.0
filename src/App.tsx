@@ -571,7 +571,7 @@ const App: React.FC = () => {
                     settings={settings}
                 />
                 <div className="flex justify-between">
-                     <button onClick={() => setCurrentStep(0)} className="text-brand-600 bg-white border border-brand-200 hover:bg-brand-50 px-10 py-3.5 rounded-xl text-sm font-bold transition-all shadow-sm">{t('back', lang)}</button>
+                     <button onClick={() => { setConfig(prev => ({ ...prev, tolerableMisstatement: 0, clearlyTrivialThreshold: 0 })); setCurrentStep(0); }} className="text-brand-600 bg-white border border-brand-200 hover:bg-brand-50 px-10 py-3.5 rounded-xl text-sm font-bold transition-all shadow-sm">{t('back', lang)}</button>
                     <button onClick={handleRunSampling} disabled={isProcessing} className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-12 py-3.5 rounded-xl text-sm font-bold transition-all shadow-[0_4px_12px_rgba(0,133,75,0.25)] disabled:opacity-70">
                       {isProcessing ? (
                           <>

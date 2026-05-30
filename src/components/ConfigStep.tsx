@@ -44,8 +44,17 @@ const NumberInput: React.FC<NumberInputProps> = ({ value, onChange, placeholder,
         if (str === '') onChange(0); 
         else { const num = parseFloat(str); if (!isNaN(num)) onChange(num); }
     };
+    const isEmpty = localVal === '0' && value === 0 && placeholder;
     return (
-        <input type="number" className={`${className} font-mono text-[13px]`} placeholder={placeholder} value={localVal === '0' && value === 0 && placeholder ? '' : localVal} onChange={handleChange} min={min} max={max} />
+        <input
+            type="number"
+            className={`${className} font-mono text-[13px] ${isEmpty ? 'text-slate-400' : ''}`}
+            placeholder={placeholder}
+            value={isEmpty ? '' : localVal}
+            onChange={handleChange}
+            min={min}
+            max={max}
+        />
     );
 };
 

@@ -7,6 +7,9 @@
   body {
     @apply bg-slate-50 text-neutral-900 font-sans antialiased;
   }
+  input::placeholder {
+    @apply text-slate-400 font-normal;
+  }
 }
 
 @keyframes fadeIn { 
