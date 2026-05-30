@@ -231,9 +231,23 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onProjectRecovere
 
     if (isElectron && window.api && filePathStr) {
         try {
-            if (onLoadingStateChange) onLoadingStateChange(true, { pct: 50, stage: 'Importing...' });
+            if (onLoadingStateChange) onLoadingStateChange(true, { pct: 30, stage: 'Importing...' });
             const filePath = filePathStr;
             setCurrentFile(filePath);
+
+            // Check if this xlsx is an exported AuditSample project
+            if (filePath.toLowerCase().endsWith('.xlsx') && window.api.import.detectXlsxProject) {
+                const projectPayload = await window.api.import.detectXlsxProject(filePath);
+                if (projectPayload) {
+                    setRawData([]);
+                    setIsLoadingFile(false);
+                    if (onLoadingStateChange) onLoadingStateChange(false, null);
+                    if (onProjectRecovered) onProjectRecovered(projectPayload);
+                    return;
+                }
+            }
+
+            if (onLoadingStateChange) onLoadingStateChange(true, { pct: 50, stage: 'Importing...' });
             const { data } = await window.api.import.preview(filePath);
             
             if (!data || data.length === 0) throw new Error(t('errFileEmpty', lang));

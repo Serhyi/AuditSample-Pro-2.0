@@ -44,6 +44,118 @@ export class AppOrchestrator {
       return await this.importService.previewFile(filePath);
     });
 
+    ipcMain.handle('import:detect-xlsx-project', async (_event, filePath) => {
+      // Returns project payload if this xlsx is an exported AuditSample project, otherwise null
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const ExcelJS = require('exceljs');
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.readFile(filePath);
+
+        const sampleSheet = workbook.getWorksheet('Вибірка') || workbook.getWorksheet('Sample');
+        if (!sampleSheet) return null;
+
+        const summarySheet = workbook.getWorksheet('Опис та результат') || workbook.getWorksheet('Description and Result');
+
+        const getCellValue = (v: any): any => {
+          if (v === null || v === undefined) return null;
+          if (typeof v === 'object' && 'result' in v) return v.result;
+          if (typeof v === 'object' && 'text' in v) return v.text;
+          if (typeof v === 'object' && 'richText' in v) return v.richText.map((r: any) => r.text).join('');
+          return v;
+        };
+        const parseAmount = (v: any): number => {
+          if (v === null || v === undefined || v === '') return 0;
+          const s = String(v).replace(/[^\d.,-]/g, '').replace(',', '.');
+          return parseFloat(s) || 0;
+        };
+
+        // Extract summary info
+        const extractSummaryInfo = (sheet: any) => {
+          if (!sheet) return null;
+          let populationSize = 0, populationValue = 0, projectedMisstatement = 0,
+              upperMisstatementBound = 0, sampleSize = 0, trivialCount = 0,
+              tolerableMisstatement = 0, confidenceLevel = 95, methodStr = 'MUS';
+          let configJson: any = null;
+          sheet.eachRow((row: any) => {
+            const lbl = String(getCellValue(row.getCell(1).value) || '').trim();
+            const val = getCellValue(row.getCell(2).value);
+            if (lbl === '__AUDITSAMPLE_CONFIG__' && val) {
+              try { configJson = JSON.parse(String(val)); } catch { configJson = null; }
+            }
+            if (lbl.includes('Метод')) methodStr = String(val || 'MUS');
+            if (lbl.includes('Розмір') || lbl.includes('Population Size')) populationSize = parseAmount(val);
+            if (lbl.includes('Обсяг') || lbl.includes('Population Value')) populationValue = parseAmount(val);
+            if (lbl.includes('PM') || lbl.includes('Допустиме')) tolerableMisstatement = parseAmount(val);
+            if (lbl.includes('Рівень впевненості') || lbl.includes('Confidence')) confidenceLevel = parseAmount(val);
+            if (lbl.includes('Розмір вибірки') || lbl.includes('Sample Size')) sampleSize = parseAmount(val);
+            if (lbl.includes('Тривіальних') || lbl.includes('Trivial')) trivialCount = parseAmount(val);
+            if (lbl.includes('Прогнозоване') || lbl.includes('Projected')) projectedMisstatement = parseAmount(val);
+            if (lbl.includes('Верхня межа') || lbl.includes('Upper')) upperMisstatementBound = parseAmount(val);
+          });
+          return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound,
+                   sampleSize, trivialCount, tolerableMisstatement, confidenceLevel,
+                   method: methodStr, config: configJson };
+        };
+
+        const extractSheet = (sheet: any) => {
+          if (!sheet) return { items: [], headers: [] };
+          const items: any[] = [];
+          const sourceHeaders: string[] = [];
+          const headerRow = sheet.getRow(1);
+          let docCol = -1, audCol = -1, diffCol = -1, commentCol = -1;
+          for (let c = 1; c <= sheet.columnCount; c++) {
+            const v = String(getCellValue(headerRow.getCell(c).value) || '');
+            if (v.includes('Облікова сума') || v.includes('Book Value')) docCol = c;
+            if (v.includes('Аудиторська сума') || v.includes('Audit Value')) audCol = c;
+            if (v.includes('Різниця') || v.includes('Difference')) diffCol = c;
+            if (v.includes('Коментарі') || v.includes('Comments')) commentCol = c;
+          }
+          if (diffCol === -1) diffCol = audCol !== -1 ? audCol + 1 : -1;
+          if (commentCol === -1) commentCol = audCol !== -1 ? audCol + 2 : -1;
+          const baseN = docCol !== -1 ? docCol - 1 : Math.max(0, sheet.columnCount - 4);
+          for (let c = 1; c <= baseN; c++) sourceHeaders.push(String(getCellValue(headerRow.getCell(c).value) || ''));
+          for (let r = 2; r <= sheet.rowCount; r++) {
+            const row = sheet.getRow(r);
+            const originalRow = [];
+            for (let c = 1; c <= baseN; c++) originalRow.push(getCellValue(row.getCell(c).value));
+            const bookVal = docCol !== -1 ? parseAmount(getCellValue(row.getCell(docCol).value)) : 0;
+            const auditValRaw = audCol !== -1 ? getCellValue(row.getCell(audCol).value) : null;
+            const diffValRaw = diffCol !== -1 ? getCellValue(row.getCell(diffCol).value) : null;
+            const commentsVal = commentCol !== -1 ? String(getCellValue(row.getCell(commentCol).value) || '') : '';
+            const auditVal = auditValRaw !== null && auditValRaw !== '' ? parseAmount(auditValRaw) : '';
+            let diffVal = 0;
+            if (diffValRaw !== null && diffValRaw !== '') {
+              const p = parseAmount(diffValRaw);
+              if (!isNaN(p)) diffVal = p; else if (auditVal !== '') diffVal = (auditVal as number) - bookVal;
+            }
+            if (bookVal === 0 && originalRow.every(v => v === null || v === '')) continue;
+            items.push({ id: `row-${r - 1}`, amount: bookVal, bookValue: bookVal,
+                         originalRow, auditedValue: auditVal, difference: diffVal, comments: commentsVal });
+          }
+          return { items, headers: sourceHeaders };
+        };
+
+        const summaryData = extractSummaryInfo(summarySheet);
+        const sampleData = extractSheet(sampleSheet);
+        const keySheet = workbook.getWorksheet('Ключові') || workbook.getWorksheet('Key');
+        const keyData = extractSheet(keySheet);
+        const popSheet = workbook.getWorksheet('Генеральна сукупність') || workbook.getWorksheet('Population');
+        const popData = extractSheet(popSheet);
+
+        return {
+          samplingItems: sampleData.items,
+          keyItems: keyData.items,
+          population: popData.items.map((i: any) => ({ ...i, amount: i.bookValue })),
+          sourceHeaders: sampleData.headers.length > 0 ? sampleData.headers : (popData.headers || []),
+          summaryData
+        };
+      } catch (e: any) {
+        console.error('detect-xlsx-project error', e);
+        return null;
+      }
+    });
+
     ipcMain.handle('import:project', async (event, filePath) => {
       console.log('IPC import:project received', filePath);
       
