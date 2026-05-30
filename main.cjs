@@ -824,6 +824,8 @@ var AppOrchestrator = class {
 var orchestrator;
 var splash;
 var mainWindowStarted = false;
+var SPLASH_MIN_MS = 3e3;
+var splashShownAt = 0;
 function createWindow() {
   splash = new import_electron2.BrowserWindow({
     width: 600,
@@ -843,6 +845,7 @@ function createWindow() {
   splash.loadFile(path5.join(__dirname, "splash.html"));
   splash.once("ready-to-show", () => {
     splash?.show();
+    splashShownAt = Date.now();
   });
   splash.webContents.once("did-finish-load", () => {
     setupMainWindow();
@@ -883,8 +886,14 @@ function setupMainWindow() {
       console.error("Failed to maximize or show window", e);
     }
     if (splash) {
-      splash.close();
-      splash = null;
+      const elapsed = Date.now() - (splashShownAt || Date.now());
+      const remaining = Math.max(0, SPLASH_MIN_MS - elapsed);
+      setTimeout(() => {
+        if (splash) {
+          splash.close();
+          splash = null;
+        }
+      }, remaining);
     }
   });
 }
