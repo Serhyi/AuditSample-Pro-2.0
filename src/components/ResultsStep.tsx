@@ -340,31 +340,18 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                 <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">{t('methodNote', lang)}</h3>
             </div>
 
-            {/* Ряд 1: Метод (2) | Охоплення | Ціль+Опис */}
+            {/* Ряд 1: Метод(1) | Ціль+Опис(2) | Охоплення(1) */}
             <div className="grid grid-cols-4 gap-4">
-                {/* Метод — 2 колонки */}
-                <div className="col-span-2 bg-white p-5 rounded-[1.5rem] border border-brand-200 bg-brand-50/30 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
+                {/* Метод */}
+                <div className="col-span-1 bg-white p-5 rounded-[1.5rem] border border-brand-200 bg-brand-50/30 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
                     <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
                         <BookOpen className="w-3.5 h-3.5" />
                         {t('methodUsed', lang)}
                     </div>
-                    <div className="text-brand-900 font-bold text-[15px]">{getDynamicMethodName(config, lang)}</div>
-                    <DistributionGraphic items={currentResults.samplingItems || []} keys={currentResults.keyItems || []} />
+                    <div className="text-brand-900 font-bold text-[15px] mt-auto">{getDynamicMethodName(config, lang)}</div>
                 </div>
-                {/* Охоплення */}
-                <div className="col-span-1 bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
-                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
-                        <Sigma className="w-3.5 h-3.5" />
-                        {t('coverageAnalysis', lang)}
-                    </div>
-                    <div className="text-[28px] font-mono font-black text-brand-600 text-right">{coveragePercent.toFixed(1)}%</div>
-                    <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
-                        <div className="bg-brand-500 h-full shadow-[0_0_8px_rgba(0,133,75,0.3)] transition-all duration-1000" style={{ width: `${Math.min(100, coveragePercent)}%` }} />
-                    </div>
-                    <p className="text-[10px] text-slate-500 leading-snug mt-auto">{t('coverageDesc', lang)}</p>
-                </div>
-                {/* Ціль + Опис — об'єднані */}
-                <div className="col-span-1 bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-4">
+                {/* Ціль + Опис — 2 колонки */}
+                <div className="col-span-2 bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-4">
                     <div>
                         <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2 mb-2">
                             <Target className="w-3.5 h-3.5" />
@@ -380,10 +367,30 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                         <div className="text-[11px] text-slate-700 leading-snug">{getDynamicMethodDescription(config, lang)}</div>
                     </div>
                 </div>
+                {/* Охоплення */}
+                <div className="col-span-1 bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
+                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Sigma className="w-3.5 h-3.5" />
+                        {t('coverageAnalysis', lang)}
+                    </div>
+                    <div className="text-[28px] font-mono font-black text-brand-600 text-right">{coveragePercent.toFixed(1)}%</div>
+                    <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                        <div className="bg-brand-500 h-full shadow-[0_0_8px_rgba(0,133,75,0.3)] transition-all duration-1000" style={{ width: `${Math.min(100, coveragePercent)}%` }} />
+                    </div>
+                    <p className="text-[10px] text-slate-500 leading-snug mt-auto">{t('coverageDesc', lang)}</p>
+                </div>
             </div>
 
-            {/* Ряд 2: Ключові елементи | Незначні суми | Розрахунок (2) */}
+            {/* Ряд 2: Графік(1) | Ключові(1) | Незначні(1) | Розрахунок(1) */}
             <div className="grid grid-cols-4 gap-4">
+                {/* Графік розподілу */}
+                <div className="col-span-1 bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
+                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Sigma className="w-3.5 h-3.5" />
+                        {t('methodUsed', lang)}
+                    </div>
+                    <DistributionGraphic items={currentResults.samplingItems || []} keys={currentResults.keyItems || []} />
+                </div>
                 {/* Ключові елементи */}
                 <div className="col-span-1 bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
                     <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
@@ -421,34 +428,30 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                         </div>
                     </div>
                 </div>
-                {/* Розрахунок — 2 колонки */}
-                <div className="col-span-2 bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-4">
+                {/* Розрахунок */}
+                <div className="col-span-1 bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
                     <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
                         <Calculator className="w-3.5 h-3.5" />
                         {t('calcTitle', lang)}
                     </div>
-                    <div className="grid grid-cols-3 gap-4 flex-1">
-                        <div className="col-span-1 bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-2">
-                            {Object.entries(calcDetails.vars).map(([key, val]) => (
-                                <div key={key} className="flex justify-between items-baseline border-b border-slate-100 last:border-0 pb-1.5 last:pb-0">
-                                    <span className="text-slate-500 text-[9px] font-bold uppercase tracking-tighter">{key}</span>
-                                    <span className="font-mono text-neutral-900 font-bold text-[10px]">{val}</span>
-                                </div>
-                            ))}
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-1.5">
+                        {Object.entries(calcDetails.vars).map(([key, val]) => (
+                            <div key={key} className="flex justify-between items-baseline border-b border-slate-100 last:border-0 pb-1 last:pb-0">
+                                <span className="text-slate-500 text-[9px] font-bold uppercase tracking-tighter">{key}</span>
+                                <span className="font-mono text-neutral-900 font-bold text-[10px]">{val}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="space-y-1">
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('mnFormula', lang)}</div>
+                        <div className="font-mono text-[10px] text-brand-700 bg-brand-50/50 p-2 rounded-xl border border-brand-100/50 text-center shadow-inner italic">
+                            {getStaticFormula(config.method, lang)}
                         </div>
-                        <div className="col-span-2 flex flex-col gap-3">
-                            <div className="space-y-1">
-                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('mnFormula', lang)}</div>
-                                <div className="font-mono text-[11px] text-brand-700 bg-brand-50/50 p-3 rounded-xl border border-brand-100/50 text-center shadow-inner italic">
-                                    {getStaticFormula(config.method, lang)}
-                                </div>
-                            </div>
-                            <div className="space-y-1">
-                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('mnSubstitution', lang)}</div>
-                                <div className="font-mono text-[11px] text-neutral-900 bg-white p-3 rounded-xl border border-slate-200 text-center whitespace-pre-wrap shadow-sm">
-                                    {calcDetails.subst}
-                                </div>
-                            </div>
+                    </div>
+                    <div className="space-y-1">
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('mnSubstitution', lang)}</div>
+                        <div className="font-mono text-[10px] text-neutral-900 bg-white p-2 rounded-xl border border-slate-200 text-center whitespace-pre-wrap shadow-sm">
+                            {calcDetails.subst}
                         </div>
                     </div>
                 </div>
