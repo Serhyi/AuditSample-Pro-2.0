@@ -124,15 +124,10 @@ export class AppOrchestrator {
             const diffValRaw = diffCol !== -1 ? getCellValue(row.getCell(diffCol).value) : null;
             const commentsVal = commentCol !== -1 ? String(getCellValue(row.getCell(commentCol).value) || '') : '';
             const auditVal = auditValRaw !== null && auditValRaw !== '' ? parseAmount(auditValRaw) : '';
-            let diffVal = 0;
-            if (diffValRaw !== null && diffValRaw !== '') {
-              const p = parseAmount(diffValRaw);
-              if (!isNaN(p)) diffVal = p;
-            }
-            // If formula cell had no cached result but audit value exists, recalculate
-            if (diffVal === 0 && auditVal !== '' && auditVal !== null) {
-              diffVal = bookVal - (auditVal as number);
-            }
+            // Always recalculate: exported formula is BookValue-AuditValue, ExcelJS writes without cached result
+            const diffVal = typeof auditVal === 'number'
+              ? Math.round((bookVal - auditVal) * 100) / 100
+              : 0;
             if (bookVal === 0 && originalRow.every(v => v === null || v === '')) continue;
             items.push({ id: `row-${r - 1}`, amount: bookVal, bookValue: bookVal,
                          originalRow, auditedValue: auditVal, difference: diffVal, comments: commentsVal });

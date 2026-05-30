@@ -336,20 +336,12 @@ self.onmessage = async (e) => {
                             const commentsVal = (commentCol !== -1) ? String(getCellValue(row.getCell(commentCol).value) || '') : '';
                             
                             const auditVal = auditValRaw !== null && auditValRaw !== '' ? parseAmount(auditValRaw) : '';
-                            
-                            let diffVal = 0;
-                            let parsedDiff = NaN;
-                            
-                            if (diffValRaw !== null && diffValRaw !== '') {
-                                parsedDiff = parseAmount(diffValRaw);
-                            }
-                            
-                            if (!isNaN(parsedDiff)) {
-                                diffVal = parsedDiff;
-                            } else {
-                                const auditNum = typeof auditVal === 'number' ? auditVal : 0;
-                                diffVal = bookVal - auditNum;
-                            }
+
+                            // Always recalculate: the exported formula is always BookValue-AuditValue,
+                            // and ExcelJS writes formulas without a cached result so reading back gives 0.
+                            const diffVal = typeof auditVal === 'number'
+                                ? Math.round((bookVal - auditVal) * 100) / 100
+                                : 0;
 
                             items.push({
                                 id: `row-${r-1}`,
