@@ -497,7 +497,7 @@ const App: React.FC = () => {
                   }`}>
                     {currentStep > idx ? <Check className="w-4 h-4 stroke-[3px]" /> : <span className="text-xs font-black">{idx + 1}</span>}
                   </div>
-                  <span className={`ml-3 text-[13px] font-bold tracking-tight ${currentStep === idx ? 'text-neutral-900' : 'text-slate-400'}`}>
+                  <span className={`ml-3 font-bold tracking-tight transition-all duration-300 ${currentStep === idx ? 'text-neutral-900 text-[16px]' : 'text-slate-400 text-[13px]'}`}>
                     {step}
                   </span>
                 </div>

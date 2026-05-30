@@ -291,14 +291,14 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                 {/* Метод + Ціль застосування */}
                 <div className="bg-white p-4 rounded-[1.5rem] border border-brand-200 bg-brand-50/30 shadow-sm hover:shadow-md transition-all flex flex-col gap-3 overflow-hidden">
                     <div>
-                        <div className="text-slate-400 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2 mb-1">
+                        <div className="text-brand-600 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2 mb-1">
                             <BookOpen className="w-3 h-3" />
                             {t('methodUsed', lang)}
                         </div>
                         <div className="text-brand-900 font-bold text-[13px] leading-tight">{getDynamicMethodName(config, lang)}</div>
                     </div>
                     <div className="border-t border-brand-100 pt-3">
-                        <div className="text-slate-400 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2 mb-1">
+                        <div className="text-brand-600 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2 mb-1">
                             <Target className="w-3 h-3" />
                             {t('mnPurpose', lang)}
                         </div>
@@ -308,7 +308,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
 
                 {/* Опис методу */}
                 <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
-                    <div className="text-slate-400 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                    <div className="text-brand-600 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
                         <Info className="w-3 h-3" />
                         {t('mnDescription', lang)}
                     </div>
@@ -317,7 +317,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
 
                 {/* Аналіз покриття */}
                 <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
-                    <div className="text-slate-400 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                    <div className="text-brand-600 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
                         <Sigma className="w-3 h-3" />
                         {t('coverageAnalysis', lang)}
                     </div>
@@ -330,7 +330,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
 
                 {/* Графік розподілу */}
                 <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
-                    <div className="text-slate-400 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                    <div className="text-brand-600 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
                         <Layers className="w-3 h-3" />
                         {lang === 'ua' ? 'Розподіл вибірки' : 'Sample Distribution'}
                     </div>
@@ -352,7 +352,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
             <div className="grid grid-cols-4 gap-3 auto-rows-[200px]">
                 {/* Ключові елементи */}
                 <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
-                    <div className="text-slate-400 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                    <div className="text-brand-600 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
                         <Layers className="w-3 h-3" />
                         {t('tabKey', lang)}
                     </div>
@@ -372,7 +372,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
 
                 {/* Вочевидь незначні суми (ВНС) */}
                 <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
-                    <div className="text-slate-400 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                    <div className="text-brand-600 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
                         <Database className="w-3 h-3" />
                         {t('trivialLabel', lang)}
                     </div>
@@ -391,7 +391,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
 
                 {/* Розрахунок вибірки — змінні */}
                 <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
-                    <div className="text-slate-400 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                    <div className="text-brand-600 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
                         <Calculator className="w-3 h-3" />
                         {t('calcTitle', lang)}
                     </div>
@@ -408,13 +408,13 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                 {/* Формула + Підстановка */}
                 <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
                     <div className="space-y-1">
-                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('mnFormula', lang)}</div>
+                        <div className="text-[9px] font-black text-brand-600 uppercase tracking-widest">{t('mnFormula', lang)}</div>
                         <div className="font-mono text-[9px] text-brand-700 bg-brand-50/50 p-2 rounded-xl border border-brand-100/50 text-center shadow-inner italic">
                             {getStaticFormula(config.method, lang)}
                         </div>
                     </div>
                     <div className="space-y-1 mt-auto">
-                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('mnSubstitution', lang)}</div>
+                        <div className="text-[9px] font-black text-brand-600 uppercase tracking-widest">{t('mnSubstitution', lang)}</div>
                         <div className="font-mono text-[9px] text-neutral-900 bg-white p-2 rounded-xl border border-slate-200 text-center whitespace-pre-wrap shadow-sm">
                             {calcDetails.subst}
                         </div>
@@ -517,7 +517,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         <StatCard label={t('totalPop', lang)} value={`${currentResults.populationSize} ${t('items', lang)}`} subValue={`${formatMoney(currentResults.populationValue, settings)} ${currency}`} icon={<Database className="w-4 h-4" />} />
         
         <div className="bg-white p-6 rounded-[1.5rem] border border-slate-200 shadow-sm flex flex-col relative overflow-hidden group hover:shadow-md transition-all">
-          <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
+          <div className="text-brand-600 text-[10px] font-black uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-brand-600" />
             {t('sampleSize', lang)}
           </div>
@@ -665,7 +665,7 @@ const TableCard = ({ activeTab, setActiveTab, currentResults, lang, renderTable,
 
 const StatCard = ({ label, value, subValue, icon, currency }: { label: string, value: string | number, subValue: string, icon: React.ReactNode, currency?: string }) => (
     <div className="bg-white p-6 rounded-[1.5rem] border border-slate-200 shadow-sm flex flex-col relative overflow-hidden group hover:shadow-md transition-all">
-      <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
+      <div className="text-brand-600 text-[10px] font-black uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
         {icon}
         {label}
       </div>
