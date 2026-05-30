@@ -84,14 +84,14 @@ export class AppOrchestrator {
               try { configJson = JSON.parse(String(val)); } catch { configJson = null; }
             }
             if (lbl.includes('Метод')) methodStr = String(val || 'MUS');
-            if (lbl.includes('Розмір') || lbl.includes('Population Size')) populationSize = parseAmount(val);
-            if (lbl.includes('Обсяг') || lbl.includes('Population Value')) populationValue = parseAmount(val);
+            if (lbl.includes('Обсяг ген. сукупності') || lbl.includes('Population Size')) populationSize = parseInt(String(val || '0').replace(/\D/g, '')) || 0;
+            if (lbl.includes('ГЕНЕРАЛЬНА СУКУПНІСТЬ') || lbl.includes('TOTAL POPULATION') || lbl.includes('Population Value') || lbl.includes('Сума (Сукупність)')) populationValue = parseAmount(val);
             if (lbl.includes('PM') || lbl.includes('Допустиме')) tolerableMisstatement = parseAmount(val);
             if (lbl.includes('Рівень впевненості') || lbl.includes('Confidence')) confidenceLevel = parseAmount(val);
-            if (lbl.includes('Розмір вибірки') || lbl.includes('Sample Size')) sampleSize = parseAmount(val);
-            if (lbl.includes('Тривіальних') || lbl.includes('Trivial')) trivialCount = parseAmount(val);
-            if (lbl.includes('Прогнозоване') || lbl.includes('Projected')) projectedMisstatement = parseAmount(val);
-            if (lbl.includes('Верхня межа') || lbl.includes('Upper')) upperMisstatementBound = parseAmount(val);
+            if (lbl.includes('ОБСЯГ ВИБІРКИ') || lbl.includes('SAMPLE SIZE')) sampleSize = parseInt(String(val || '0').replace(/\D/g, '')) || 0;
+            if (lbl.includes('Кількість ВНС') || lbl.includes('CTT Items Count') || lbl.includes('Тривіальних') || lbl.includes('Trivial')) trivialCount = parseAmount(val);
+            if (lbl.includes('Прогнозоване викривлення') || lbl.includes('Projected Misstatement')) projectedMisstatement = parseAmount(val);
+            if (lbl.includes('Верхня межа викривлення') || lbl.includes('Upper Misstatement Bound') || lbl.includes('Максимальна помилка')) upperMisstatementBound = parseAmount(val);
           });
           return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound,
                    sampleSize, trivialCount, tolerableMisstatement, confidenceLevel,
@@ -127,7 +127,11 @@ export class AppOrchestrator {
             let diffVal = 0;
             if (diffValRaw !== null && diffValRaw !== '') {
               const p = parseAmount(diffValRaw);
-              if (!isNaN(p)) diffVal = p; else if (auditVal !== '') diffVal = (auditVal as number) - bookVal;
+              if (!isNaN(p)) diffVal = p;
+            }
+            // If formula cell had no cached result but audit value exists, recalculate
+            if (diffVal === 0 && auditVal !== '' && auditVal !== null) {
+              diffVal = bookVal - (auditVal as number);
             }
             if (bookVal === 0 && originalRow.every(v => v === null || v === '')) continue;
             items.push({ id: `row-${r - 1}`, amount: bookVal, bookValue: bookVal,
