@@ -287,135 +287,135 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
             </div>
 
             {/* Ряд 1: Метод+Ціль(1) | Опис(1) | Аналіз покриття(1) | Графік(1) */}
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-4 gap-3 auto-rows-[200px]">
                 {/* Метод + Ціль застосування */}
-                <div className="bg-white p-5 rounded-[1.5rem] border border-brand-200 bg-brand-50/30 shadow-sm hover:shadow-md transition-all flex flex-col gap-4">
+                <div className="bg-white p-4 rounded-[1.5rem] border border-brand-200 bg-brand-50/30 shadow-sm hover:shadow-md transition-all flex flex-col gap-3 overflow-hidden">
                     <div>
-                        <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2 mb-2">
-                            <BookOpen className="w-3.5 h-3.5" />
+                        <div className="text-slate-400 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2 mb-1">
+                            <BookOpen className="w-3 h-3" />
                             {t('methodUsed', lang)}
                         </div>
-                        <div className="text-brand-900 font-bold text-[15px]">{getDynamicMethodName(config, lang)}</div>
+                        <div className="text-brand-900 font-bold text-[13px] leading-tight">{getDynamicMethodName(config, lang)}</div>
                     </div>
-                    <div className="border-t border-brand-100 pt-4">
-                        <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2 mb-2">
-                            <Target className="w-3.5 h-3.5" />
+                    <div className="border-t border-brand-100 pt-3">
+                        <div className="text-slate-400 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2 mb-1">
+                            <Target className="w-3 h-3" />
                             {t('mnPurpose', lang)}
                         </div>
-                        <div className="text-[11px] text-slate-700 leading-snug">{t(mPrefix + 'PurposeText', lang)}</div>
+                        <div className="text-[10px] text-slate-700 leading-snug line-clamp-4">{t(mPrefix + 'PurposeText', lang)}</div>
                     </div>
                 </div>
 
                 {/* Опис методу */}
-                <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
-                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
-                        <Info className="w-3.5 h-3.5" />
+                <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
+                    <div className="text-slate-400 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Info className="w-3 h-3" />
                         {t('mnDescription', lang)}
                     </div>
-                    <div className="text-[11px] text-slate-700 leading-snug">{getDynamicMethodDescription(config, lang)}</div>
+                    <div className="text-[10px] text-slate-700 leading-snug line-clamp-6">{getDynamicMethodDescription(config, lang)}</div>
                 </div>
 
                 {/* Аналіз покриття */}
-                <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
-                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
-                        <Sigma className="w-3.5 h-3.5" />
+                <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
+                    <div className="text-slate-400 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Sigma className="w-3 h-3" />
                         {t('coverageAnalysis', lang)}
                     </div>
-                    <div className="text-[28px] font-mono font-black text-brand-600 text-right">{coveragePercent.toFixed(1)}%</div>
-                    <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                    <div className="text-[24px] font-mono font-black text-brand-600 text-right">{coveragePercent.toFixed(1)}%</div>
+                    <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                         <div className="bg-brand-500 h-full rounded-full shadow-[0_0_8px_rgba(0,133,75,0.3)] transition-all duration-1000" style={{ width: `${Math.min(100, coveragePercent)}%` }} />
                     </div>
-                    <p className="text-[10px] text-slate-500 leading-snug mt-auto">{t('coverageDesc', lang)}</p>
+                    <p className="text-[9px] text-slate-500 leading-snug mt-auto line-clamp-3">{t('coverageDesc', lang)}</p>
                 </div>
 
                 {/* Графік розподілу */}
-                <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
-                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
-                        <Layers className="w-3.5 h-3.5" />
+                <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
+                    <div className="text-slate-400 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Layers className="w-3 h-3" />
                         {lang === 'ua' ? 'Розподіл вибірки' : 'Sample Distribution'}
                     </div>
                     <div className="flex-1 flex flex-col justify-center">
                         <DistributionGraphic items={currentResults.samplingItems || []} keys={currentResults.keyItems || []} />
                     </div>
-                    <div className="flex items-center justify-center gap-4 pt-2 border-t border-slate-100">
-                        <span className="flex items-center gap-1.5 text-[9px] text-slate-500 font-bold uppercase tracking-widest">
-                            <span className="w-2.5 h-2.5 rounded-sm bg-brand-300 inline-block" />{t('tabSample', lang)}
+                    <div className="flex items-center justify-center gap-4 pt-1 border-t border-slate-100">
+                        <span className="flex items-center gap-1 text-[9px] text-slate-500 font-bold uppercase tracking-widest">
+                            <span className="w-2 h-2 rounded-sm bg-brand-300 inline-block" />{t('tabSample', lang)}
                         </span>
-                        <span className="flex items-center gap-1.5 text-[9px] text-slate-500 font-bold uppercase tracking-widest">
-                            <span className="w-2.5 h-2.5 rounded-sm bg-brand-600 inline-block" />{t('tabKey', lang)}
+                        <span className="flex items-center gap-1 text-[9px] text-slate-500 font-bold uppercase tracking-widest">
+                            <span className="w-2 h-2 rounded-sm bg-brand-600 inline-block" />{t('tabKey', lang)}
                         </span>
                     </div>
                 </div>
             </div>
 
             {/* Ряд 2: Ключові(1) | ВНС(1) | Розрахунок вибірки(1) | Формула+Підстановка(1) */}
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-4 gap-3 auto-rows-[200px]">
                 {/* Ключові елементи */}
-                <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
-                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
-                        <Layers className="w-3.5 h-3.5" />
+                <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
+                    <div className="text-slate-400 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Layers className="w-3 h-3" />
                         {t('tabKey', lang)}
                     </div>
-                    <p className="italic text-slate-500 text-[10px] leading-snug">{t('keyItemsNote', lang)}</p>
-                    <div className="mt-auto space-y-1.5">
-                        <div className="flex justify-between items-center border-b border-slate-100 pb-1.5">
+                    <p className="italic text-slate-500 text-[9px] leading-snug line-clamp-2">{t('keyItemsNote', lang)}</p>
+                    <div className="mt-auto space-y-1">
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-1">
                             <span className="text-[9px] text-slate-400 font-bold uppercase">{t('anomalyDetection', lang)}</span>
-                            <span className="text-neutral-900 font-bold text-[10px]">{anomalyAlg}</span>
+                            <span className="text-neutral-900 font-bold text-[9px]">{anomalyAlg}</span>
                         </div>
-                        <div className="text-[10px] text-slate-600 leading-snug">{anomalyDesc}</div>
-                        <div className="flex justify-between items-center pt-1">
+                        <div className="text-[9px] text-slate-600 leading-snug line-clamp-2">{anomalyDesc}</div>
+                        <div className="flex justify-between items-center pt-0.5">
                             <span className="text-[9px] text-slate-400 font-bold uppercase">{t('keyItemsCount', lang)}</span>
-                            <span className="text-brand-600 font-mono font-bold">{(currentResults.keyItems || []).length} {t('items', lang)}</span>
+                            <span className="text-brand-600 font-mono font-bold text-[10px]">{(currentResults.keyItems || []).length} {t('items', lang)}</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Вочевидь незначні суми (ВНС) */}
-                <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
-                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
-                        <Database className="w-3.5 h-3.5" />
+                <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
+                    <div className="text-slate-400 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Database className="w-3 h-3" />
                         {t('trivialLabel', lang)}
                     </div>
-                    <div className="mt-auto space-y-1.5">
-                        <div className="flex justify-between items-center border-b border-slate-100 pb-1.5">
+                    <div className="mt-auto space-y-1">
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-1">
                             <span className="text-[9px] text-slate-400 font-bold uppercase">{t('cttThreshold', lang)}</span>
-                            <span className="text-neutral-900 font-bold text-[11px]">{formatMoney(config.clearlyTrivialThreshold, settings)}</span>
+                            <span className="text-neutral-900 font-bold text-[10px]">{formatMoney(config.clearlyTrivialThreshold, settings)}</span>
                         </div>
-                        <div className="text-[10px] text-slate-600 leading-snug">{trivialActionDesc}</div>
-                        <div className="flex justify-between items-center pt-1">
+                        <div className="text-[9px] text-slate-600 leading-snug line-clamp-2">{trivialActionDesc}</div>
+                        <div className="flex justify-between items-center pt-0.5">
                             <span className="text-[9px] text-slate-400 font-bold uppercase">{t('trivialCount', lang)}</span>
-                            <span className="text-slate-600 font-mono font-bold">{currentResults.trivialCount} {t('items', lang)}</span>
+                            <span className="text-slate-600 font-mono font-bold text-[10px]">{currentResults.trivialCount} {t('items', lang)}</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Розрахунок вибірки — змінні */}
-                <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
-                    <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
-                        <Calculator className="w-3.5 h-3.5" />
+                <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
+                    <div className="text-slate-400 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Calculator className="w-3 h-3" />
                         {t('calcTitle', lang)}
                     </div>
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-1.5 flex-1">
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-2 space-y-1 flex-1 overflow-hidden">
                         {Object.entries(calcDetails.vars).map(([key, val]) => (
-                            <div key={key} className="flex justify-between items-baseline border-b border-slate-100 last:border-0 pb-1 last:pb-0">
+                            <div key={key} className="flex justify-between items-baseline border-b border-slate-100 last:border-0 pb-0.5 last:pb-0">
                                 <span className="text-slate-500 text-[9px] font-bold uppercase tracking-tighter">{key}</span>
-                                <span className="font-mono text-neutral-900 font-bold text-[10px]">{val}</span>
+                                <span className="font-mono text-neutral-900 font-bold text-[9px]">{val}</span>
                             </div>
                         ))}
                     </div>
                 </div>
 
                 {/* Формула + Підстановка */}
-                <div className="bg-white p-5 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-3">
+                <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
                     <div className="space-y-1">
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('mnFormula', lang)}</div>
-                        <div className="font-mono text-[10px] text-brand-700 bg-brand-50/50 p-2 rounded-xl border border-brand-100/50 text-center shadow-inner italic">
+                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('mnFormula', lang)}</div>
+                        <div className="font-mono text-[9px] text-brand-700 bg-brand-50/50 p-2 rounded-xl border border-brand-100/50 text-center shadow-inner italic">
                             {getStaticFormula(config.method, lang)}
                         </div>
                     </div>
                     <div className="space-y-1 mt-auto">
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('mnSubstitution', lang)}</div>
-                        <div className="font-mono text-[10px] text-neutral-900 bg-white p-2 rounded-xl border border-slate-200 text-center whitespace-pre-wrap shadow-sm">
+                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('mnSubstitution', lang)}</div>
+                        <div className="font-mono text-[9px] text-neutral-900 bg-white p-2 rounded-xl border border-slate-200 text-center whitespace-pre-wrap shadow-sm">
                             {calcDetails.subst}
                         </div>
                     </div>
