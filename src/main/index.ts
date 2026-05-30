@@ -5,6 +5,8 @@ import { AppOrchestrator } from './core/AppOrchestrator';
 let orchestrator: AppOrchestrator;
 let splash: BrowserWindow | null;
 let mainWindowStarted = false;
+const SPLASH_MIN_MS = 3000; // мінімальний час показу splash
+let splashShownAt = 0;
 
 function createWindow() {
   splash = new BrowserWindow({
@@ -26,6 +28,7 @@ function createWindow() {
   // Показуємо splash одразу, щойно його HTML готовий до показу.
   splash.once('ready-to-show', () => {
     splash?.show();
+    splashShownAt = Date.now();
   });
 
   // Важку роботу (створення головного вікна, завантаження великого бандла та
@@ -78,8 +81,14 @@ function setupMainWindow() {
       console.error('Failed to maximize or show window', e);
     }
     if (splash) {
-      splash.close();
-      splash = null;
+      const elapsed = Date.now() - (splashShownAt || Date.now());
+      const remaining = Math.max(0, SPLASH_MIN_MS - elapsed);
+      setTimeout(() => {
+        if (splash) {
+          splash.close();
+          splash = null;
+        }
+      }, remaining);
     }
   });
 }
