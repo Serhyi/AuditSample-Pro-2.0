@@ -1,15 +1,17 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { ChevronRight, Check, Globe, Info, X, Settings as SettingsIcon, Loader2, Award, BookOpen, AlertCircle, Save, FolderOpen } from 'lucide-react';
+import { ChevronRight, Check, Globe, Info, X, Settings as SettingsIcon, Loader2, Award, BookOpen, AlertCircle, Save, FolderOpen, KeyRound } from 'lucide-react';
 import ImportStep from './components/ImportStep';
 import ConfigStep from './components/ConfigStep';
 import ResultsStep from './components/ResultsStep';
+import { LicenseActivationModal } from './components/LicenseActivationModal';
 import { TransactionItem, SamplingConfig, SamplingResult, Currency, ColumnIndices, GlobalSettings } from './types';
 import { runSampling } from './utils/samplingEngine';
 import { t } from './utils/translations';
 import { useAppStorage } from './contexts/StorageContext';
 import { usePopulationAdapter } from './adapters/usePopulationAdapter';
 import { isElectron } from './utils/isElectron';
+import { useLicense } from './licensing/useLicense';
 
 const LogoFull = ({ height = 40 }: { height?: number }) => {
   return (
@@ -40,9 +42,12 @@ const LogoMark = ({ size = 32 }: { size?: number }) => (
 
 const App: React.FC = () => {
   const { settings, updateSettings, isReady } = useAppStorage();
-  
+
   const lang = settings.language;
   const currency = settings.currency;
+
+  const { licenseState, activateLicense } = useLicense();
+  const [showLicenseModal, setShowLicenseModal] = useState(false);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -463,6 +468,11 @@ const App: React.FC = () => {
 
              <button onClick={() => setShowSettingsModal(true)} title={t('settingsTitle', lang)} className="p-2 text-slate-500 hover:text-brand-600 hover:bg-slate-50 rounded-full transition-all"><SettingsIcon className="w-5 h-5" /></button>
              <button onClick={() => setShowInfoModal(true)} title={t('aboutBtn', lang)} className="p-2 text-slate-500 hover:text-brand-600 hover:bg-slate-50 rounded-full transition-all"><Info className="w-5 h-5" /></button>
+             <button onClick={() => setShowLicenseModal(true)} title="Ліцензія" className="flex items-center gap-2 text-[11px] font-black border px-3 py-1.5 rounded-full uppercase tracking-tighter shadow-sm transition-all bg-white hover:border-brand-300 hover:text-brand-600 text-slate-600 border-slate-200">
+               <KeyRound className="w-3.5 h-3.5 text-brand-500" />
+               {licenseState.tier === 'paid' ? 'PRO' : 'FREE'}
+               <span className={`w-2 h-2 rounded-full ${licenseState.tier === 'paid' ? 'bg-brand-500' : 'bg-slate-300'}`} />
+             </button>
              <button onClick={toggleLanguage} className="flex items-center gap-2 text-[11px] font-black text-slate-600 hover:text-brand-600 transition-all bg-white border border-slate-200 hover:border-brand-300 px-4 py-1.5 rounded-full uppercase tracking-tighter shadow-sm"><Globe className="w-3.5 h-3.5 text-brand-500" />{lang === 'en' ? 'UA' : 'EN'}</button>
           </div>
         </div>
@@ -555,12 +565,13 @@ const App: React.FC = () => {
 
           {currentStep === 1 && (
             <div className="space-y-8">
-                <ConfigStep 
-                    config={config} 
-                    setConfig={setConfig} 
+                <ConfigStep
+                    config={config}
+                    setConfig={setConfig}
                     totalPopulationValue={totalPopValue}
                     lang={lang}
                     settings={settings}
+                    licenseState={licenseState}
                 />
                 <div className="flex justify-between">
                      <button onClick={() => setCurrentStep(0)} className="text-brand-600 bg-white border border-brand-200 hover:bg-brand-50 px-10 py-3.5 rounded-xl text-sm font-bold transition-all shadow-sm">{t('back', lang)}</button>
@@ -742,6 +753,13 @@ const App: React.FC = () => {
                   </div>
               </div>
           </div>
+      )}
+
+      {showLicenseModal && (
+        <LicenseActivationModal
+          onActivate={activateLicense}
+          onClose={() => setShowLicenseModal(false)}
+        />
       )}
 
       {/* Global Processing Overlay */}
