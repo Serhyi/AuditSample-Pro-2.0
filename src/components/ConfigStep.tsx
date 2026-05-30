@@ -5,6 +5,7 @@ import { Settings, Info, Dices, Zap, Check } from 'lucide-react';
 import { t } from '../utils/translations';
 import { formatMoney } from '../utils/samplingEngine';
 import { MethodSelector } from './config/MethodSelector';
+import { LicenseState } from '../licensing/LicenseTypes';
 
 interface ConfigStepProps {
   config: SamplingConfig;
@@ -12,6 +13,7 @@ interface ConfigStepProps {
   totalPopulationValue: number;
   lang: Language;
   settings: GlobalSettings;
+  licenseState?: LicenseState;
 }
 
 interface NumberInputProps {
@@ -58,7 +60,7 @@ const NumberInput: React.FC<NumberInputProps> = ({ value, onChange, placeholder,
     );
 };
 
-const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulationValue, lang, settings }) => {
+const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulationValue, lang, settings, licenseState }) => {
   const handleChange = (key: keyof SamplingConfig, value: any) => { setConfig({ ...config, [key]: value }); };
   const suggestedPM = Math.floor(totalPopulationValue * 0.01);
   const suggestedTrivial = Math.floor(suggestedPM * 0.05); 
@@ -96,7 +98,7 @@ const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulat
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-stretch">
         <div className="lg:col-span-5 bg-white rounded-[2.5rem] pt-8 pb-8 px-4 lg:pt-10 lg:pb-10 lg:px-6 border border-slate-200 shadow-sm flex flex-col lg:h-[887px] overflow-hidden">
-            <MethodSelector currentMethod={config.method} onSelect={(id) => handleChange('method', id)} lang={lang} />
+            <MethodSelector currentMethod={config.method} onSelect={(id) => handleChange('method', id)} lang={lang} licenseTier={licenseState?.tier} />
         </div>
 
         <div className="lg:col-span-7 bg-white rounded-[2.5rem] p-8 lg:p-10 border border-slate-200 shadow-sm flex flex-col pt-8 lg:pt-10 lg:h-[887px] overflow-y-auto custom-scrollbar">
