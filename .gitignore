@@ -6,3 +6,6 @@ release/
 coverage/
 *.log
 .claude/
+
+# License files
+*.asp
