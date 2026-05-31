@@ -201,7 +201,6 @@ const App: React.FC = () => {
             
             setImportProgress({ pct: 100, stage: t('msgComplete', lang) });
             setTimeout(() => {
-                alert(t('msgProjectOpened', lang));
                 setIsProcessing(false);
                 setImportProgress(null);
             }, 300);
@@ -239,7 +238,6 @@ const App: React.FC = () => {
                 
                 setImportProgress({ pct: 100, stage: t('msgComplete', lang) });
                 setTimeout(() => {
-                    alert(t('msgProjectOpened', lang));
                     setIsProcessing(false);
                     setImportProgress(null);
                 }, 300);
