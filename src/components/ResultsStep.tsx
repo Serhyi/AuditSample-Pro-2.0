@@ -475,7 +475,15 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
             {items.map((item, idx) => {
-                const hasDiff = Math.abs(item.difference) > 0.001;
+                // Always recompute the difference live from Book - Audit so it is
+                // never a stale value (e.g. 0 after an import). Empty audit = no diff.
+                const auditNum = (item.auditedValue === '' || item.auditedValue === undefined || item.auditedValue === null)
+                    ? null
+                    : Number(item.auditedValue);
+                const liveDiff = auditNum === null
+                    ? 0
+                    : Math.round((item.bookValue - auditNum) * 100) / 100;
+                const liveHasDiff = Math.abs(liveDiff) > 0.001;
                 return (
                     <tr key={item.id} className="hover:bg-brand-50/10 group transition-all data-table-row">
                         {sourceHeaders.map((_, i) => {
@@ -500,8 +508,8 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                         <td className="px-6 py-4 bg-brand-50/30 group-hover:bg-brand-50/50 border-x border-brand-100/50 transition-colors">
                             <MoneyInput id={item.id} value={item.auditedValue} settings={settings} onChange={v => handleAuditValueChange(item.id, isKey, v)} onQuickFill={() => handleAuditValueChange(item.id, isKey, item.bookValue)} onKeyDown={e => handleGridKeyDown(e, items, idx, isKey)} />
                         </td>
-                        <td className={`px-6 py-4 text-right font-mono font-bold whitespace-nowrap border-r border-slate-50 transition-colors ${hasDiff ? 'text-red-600' : 'text-slate-300 opacity-60'}`}>
-                            {formatMoney(item.difference, settings)}
+                        <td className={`px-6 py-4 text-right font-mono font-bold whitespace-nowrap border-r border-slate-50 transition-colors ${liveHasDiff ? 'text-red-600' : 'text-slate-300 opacity-60'}`}>
+                            {formatMoney(liveDiff, settings)}
                         </td>
                         <td className="px-6 py-4">
                             <input type="text" value={item.comments || ''} onChange={(e) => handleCommentChange(item.id, isKey, e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-brand-400 focus:outline-none text-[12px] text-slate-600 placeholder:text-slate-200 transition-colors" placeholder="..." />
