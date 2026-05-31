@@ -123,10 +123,12 @@ export class AppOrchestrator {
             const auditValRaw = audCol !== -1 ? getCellValue(row.getCell(audCol).value) : null;
             const commentsVal = commentCol !== -1 ? String(getCellValue(row.getCell(commentCol).value) || '') : '';
             const auditVal = auditValRaw !== null && auditValRaw !== '' ? parseAmount(auditValRaw) : '';
-            // Always recalculate: exported formula is BookValue-AuditValue, ExcelJS writes without cached result
+            // Always recalculate: exported formula is BookValue-AuditValue, ExcelJS writes without cached result.
+            // Empty audit = treat as 0 (unaudited), so difference = full book value —
+            // consistent with how newly-generated projects initialize their items.
             const diffVal = typeof auditVal === 'number'
               ? Math.round((bookVal - auditVal) * 100) / 100
-              : 0;
+              : bookVal;
             if (bookVal === 0 && originalRow.every(v => v === null || v === '')) continue;
             items.push({ id: `row-${r - 1}`, amount: bookVal, bookValue: bookVal,
                          originalRow, auditedValue: auditVal, difference: diffVal, comments: commentsVal });
