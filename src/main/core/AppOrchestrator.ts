@@ -273,7 +273,7 @@ export class AppOrchestrator {
         const searchDir = app.isPackaged
           ? path.dirname(process.execPath)
           : path.resolve(__dirname, '../../..');
-        const files = fs.readdirSync(searchDir).filter(f => f.endsWith('.asp'));
+        const files = fs.readdirSync(searchDir).filter(f => f.startsWith('license-ASP') && f.endsWith('.asp'));
         if (files.length === 0) return null;
         // Use first found .asp file
         const content = fs.readFileSync(path.join(searchDir, files[0]), 'utf-8');
