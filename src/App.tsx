@@ -145,7 +145,6 @@ const App: React.FC = () => {
     if (isElectron() && window.api && isVirtual) {
         try {
             await window.api.export.project(projectData);
-            alert(t('msgProjectSaved', lang));
         } catch (e: any) {
             console.error(e);
             alert(t('errSaveError', lang) + e.message);
