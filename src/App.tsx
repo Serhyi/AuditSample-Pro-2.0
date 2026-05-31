@@ -5,6 +5,7 @@ import ImportStep from './components/ImportStep';
 import ConfigStep from './components/ConfigStep';
 import ResultsStep from './components/ResultsStep';
 import { LicenseActivationModal } from './components/LicenseActivationModal';
+import { UpgradeModal } from './components/UpgradeModal';
 import { TransactionItem, SamplingConfig, SamplingResult, Currency, ColumnIndices, GlobalSettings, Language } from './types';
 import { runSampling } from './utils/samplingEngine';
 import { t } from './utils/translations';
@@ -12,6 +13,7 @@ import { useAppStorage } from './contexts/StorageContext';
 import { usePopulationAdapter } from './adapters/usePopulationAdapter';
 import { isElectron } from './utils/isElectron';
 import { useLicense } from './licensing/useLicense';
+import { FREE_METHODS } from './components/config/MethodSelector';
 
 const LogoFull = ({ height = 40 }: { height?: number }) => {
   return (
@@ -83,6 +85,7 @@ const App: React.FC = () => {
 
   const { licenseState, activateLicense } = useLicense();
   const [showLicenseModal, setShowLicenseModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -94,7 +97,7 @@ const App: React.FC = () => {
   const [columnIndices, setColumnIndices] = useState<ColumnIndices>({id: -1, date: -1, amount: -1});
 
   const [config, setConfig] = useState<SamplingConfig>({
-    method: 'MUS',
+    method: 'StopOrGo',
     confidenceLevel: 90,
     tolerableMisstatement: 0,
     expectedMisstatement: 0,
@@ -112,10 +115,10 @@ const App: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [samplingError, setSamplingError] = useState<string | null>(null);
 
-  // Reset method to StopOrGo if free tier has a paid method saved in config
+  // Reset method to StopOrGo if free tier has a locked method saved in config
   useEffect(() => {
     if (licenseState.tier === 'free') {
-      setConfig(prev => prev.method !== 'StopOrGo' ? { ...prev, method: 'StopOrGo' } : prev);
+      setConfig(prev => !FREE_METHODS.includes(prev.method) ? { ...prev, method: 'StopOrGo' } : prev);
     }
   }, [licenseState.tier]);
 
@@ -381,7 +384,7 @@ const App: React.FC = () => {
     
     const finalConfig = { ...config };
     // Enforce free-tier restriction at execution level, not just UI
-    if (licenseState.tier === 'free' && finalConfig.method !== 'StopOrGo') {
+    if (licenseState.tier === 'free' && !FREE_METHODS.includes(finalConfig.method)) {
         finalConfig.method = 'StopOrGo';
     }
     if (!finalConfig.tolerableMisstatement) {
@@ -591,6 +594,7 @@ const App: React.FC = () => {
                     lang={lang}
                     settings={settings}
                     licenseState={licenseState}
+                    onLockedMethodClick={() => setShowUpgradeModal(true)}
                 />
                 <div className="flex justify-between">
                      <button onClick={() => { setConfig(prev => ({ ...prev, tolerableMisstatement: 0, clearlyTrivialThreshold: 0 })); setCurrentStep(0); }} className="text-brand-600 bg-white border border-brand-200 hover:bg-brand-50 px-10 py-3.5 rounded-xl text-sm font-bold transition-all shadow-sm">{t('back', lang)}</button>
@@ -829,6 +833,13 @@ const App: React.FC = () => {
         <LicenseActivationModal
           onActivate={activateLicense}
           onClose={() => setShowLicenseModal(false)}
+        />
+      )}
+
+      {showUpgradeModal && (
+        <UpgradeModal
+          onActivate={() => setShowLicenseModal(true)}
+          onClose={() => setShowUpgradeModal(false)}
         />
       )}
 

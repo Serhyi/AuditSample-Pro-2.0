@@ -5,11 +5,14 @@ import { METHOD_PREFIX_MAP } from '../resultsUtils';
 import { Calculator, Target, PlayCircle, Network, BarChart3, PieChart, ArrowDownUp, AlertTriangle, Siren, ListChecks, ListFilter, Sigma, Lock } from 'lucide-react';
 import { LicenseTier } from '../../licensing/LicenseTypes';
 
+export const FREE_METHODS = ['StopOrGo', 'Benford', 'Grubbs', 'Pareto', 'Percentile'];
+
 interface MethodSelectorProps {
   currentMethod: string;
   onSelect: (id: string) => void;
   lang: Language;
   licenseTier?: LicenseTier;
+  onLockedClick?: () => void;
 }
 
 const METHODS = Object.keys(METHOD_PREFIX_MAP);
@@ -29,7 +32,7 @@ const METHOD_STYLES: Record<string, { icon: React.ReactNode; colorClass: string;
   Grubbs: { icon: <AlertTriangle className="w-[22px] h-[22px]" strokeWidth={2} />, colorClass: 'text-red-500', bgClass: 'bg-white border border-slate-100', activeBgClass: 'bg-red-50 border-red-50' }
 };
 
-export const MethodSelector: React.FC<MethodSelectorProps> = ({ currentMethod, onSelect, lang, licenseTier }) => {
+export const MethodSelector: React.FC<MethodSelectorProps> = ({ currentMethod, onSelect, lang, licenseTier, onLockedClick }) => {
   return (
     <div className="flex flex-col h-full flex-1 w-full relative z-10 animate-fade-in lg:min-h-0">
       <div className="flex items-center gap-3 mb-0 border-b border-slate-200 pb-5 pt-2 shrink-0 px-4">
@@ -40,14 +43,14 @@ export const MethodSelector: React.FC<MethodSelectorProps> = ({ currentMethod, o
       <div className="flex-1 overflow-y-auto px-4 pt-5 pb-6 space-y-4 custom-scrollbar lg:min-h-0">
         {METHODS.map(m => {
           const isSelected = currentMethod === m;
-          const isLocked = licenseTier === 'free' && m !== 'StopOrGo';
+          const isLocked = licenseTier === 'free' && !FREE_METHODS.includes(m);
           const styling = METHOD_STYLES[m] || { icon: <Target className="w-[22px] h-[22px]" strokeWidth={2.5}/>, colorClass: 'text-slate-600', bgClass: 'bg-slate-100' };
           return (
             <button
               key={m}
               onClick={() => {
                 if (isLocked) {
-                  alert('Доступно в повній версії');
+                  onLockedClick?.();
                   return;
                 }
                 onSelect(m);
