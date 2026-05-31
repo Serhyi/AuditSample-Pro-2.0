@@ -282,8 +282,17 @@ export async function exportToExcel(
       } else {
           auditValNum = null; // Blank cell if not audited yet
       }
-      
-      diffValObj = { formula: `${bookColName}${targetRowIdx}-${auditColName}${targetRowIdx}` };
+
+      // Always use a formula so Excel can recalculate live.
+      // Use IF so that rows without an audit value stay blank rather than showing BookValue.
+      // Cache `result` so Excel shows the correct value immediately (without needing to recalculate).
+      const diffResult = typeof auditValNum === 'number'
+          ? Math.round((item.bookValue - auditValNum) * 100) / 100
+          : null;
+      diffValObj = {
+          formula: `IF(${auditColName}${targetRowIdx}="","",${bookColName}${targetRowIdx}-${auditColName}${targetRowIdx})`,
+          result: diffResult ?? '',
+      };
 
       rowData.push(
         item.bookValue,
