@@ -657,6 +657,7 @@ const App: React.FC = () => {
 
             <div className="flex-1 overflow-y-auto p-9 custom-scrollbar bg-white">
                {activeTab === 'about' ? (
+
                  <div className="space-y-12 animate-fade-in">
                     <section>
                       <div className="flex items-center gap-3 mb-6">
@@ -690,12 +691,62 @@ const App: React.FC = () => {
                     </div>
                  </div>
                ) : (
-                 <div className="animate-fade-in space-y-8">
-                    <div className="bg-brand-50/50 border border-brand-100 p-8 rounded-2xl text-brand-900 shadow-sm">
-                       <h3 className="font-bold text-brand-800 uppercase text-[11px] tracking-widest mb-6 border-b border-brand-100 pb-3">{t('licenseTermsLabel', lang)}</h3>
-                       <p className="text-[13px] font-medium whitespace-pre-wrap leading-relaxed opacity-80">{t('licenseContent', lang)}</p>
-                    </div>
-                    <p className="text-[11px] text-slate-400 text-center font-bold uppercase tracking-[0.2em] pt-4">{t('copyright', lang)}</p>
+                 <div className="animate-fade-in space-y-6">
+                   {/* Status badge */}
+                   <div className={`flex items-center justify-between p-5 rounded-2xl border ${licenseState.tier === 'paid' ? 'bg-brand-50 border-brand-200' : 'bg-amber-50 border-amber-200'}`}>
+                     <div className="flex items-center gap-3">
+                       <div className={`w-3 h-3 rounded-full ${licenseState.tier === 'paid' ? 'bg-brand-500' : 'bg-amber-400'}`} />
+                       <span className={`text-[12px] font-black uppercase tracking-widest ${licenseState.tier === 'paid' ? 'text-brand-700' : 'text-amber-700'}`}>
+                         {licenseState.tier === 'paid' ? t('licenseProBadge', lang) : t('licenseFreeBadge', lang)}
+                       </span>
+                     </div>
+                     <button
+                       onClick={() => { setShowInfoModal(false); setShowLicenseModal(true); }}
+                       className={`text-[11px] font-bold px-4 py-2 rounded-xl transition-all ${licenseState.tier === 'paid' ? 'bg-white border border-brand-200 text-brand-600 hover:bg-brand-50' : 'bg-brand-600 text-white hover:bg-brand-700 shadow-sm'}`}
+                     >
+                       {licenseState.tier === 'paid' ? t('licenseReplace', lang) : t('licenseActivate', lang)}
+                     </button>
+                   </div>
+
+                   {/* FREE notice */}
+                   {licenseState.tier === 'free' && (
+                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-[12px] text-amber-800 font-medium">
+                       ⚠ {t('licenseFreeNotice', lang)}
+                     </div>
+                   )}
+
+                   {/* PRO license holder info */}
+                   {licenseState.tier === 'paid' && licenseState.license && (
+                     <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                       <h4 className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-4">{t('licensedTo', lang)}</h4>
+                       <div className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">
+                         {[
+                           [t('licensedTo', lang), licenseState.license.entityName],
+                           ['ЄДРПОУ / ІПН', licenseState.license.entityCode],
+                           ['Email', licenseState.license.email],
+                           [t('licenseIssued', lang), new Date(licenseState.license.issuedAt).toLocaleDateString('uk-UA')],
+                           [t('licenseExpires', lang), new Date(licenseState.license.expiresAt).toLocaleDateString('uk-UA')],
+                           [t('licenseId', lang), licenseState.license.licenseId],
+                           [t('licenseMethods', lang), licenseState.license.methods.join(', ')],
+                         ].map(([label, value]) => (
+                           <React.Fragment key={label}>
+                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide whitespace-nowrap">{label}</span>
+                             <span className="text-[12px] font-semibold text-slate-800 font-mono break-all">{value}</span>
+                           </React.Fragment>
+                         ))}
+                       </div>
+                     </div>
+                   )}
+
+                   {/* License text */}
+                   <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6">
+                     <h3 className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mb-4 border-b border-slate-200 pb-3">{t('licenseTermsLabel', lang)}</h3>
+                     <p className="text-[12px] font-medium whitespace-pre-wrap leading-relaxed text-slate-600">
+                       {licenseState.tier === 'paid' ? t('licenseContentPro', lang) : t('licenseContentFree', lang)}
+                     </p>
+                   </div>
+
+                   <p className="text-[11px] text-slate-400 text-center font-bold uppercase tracking-[0.2em] pt-2">{t('copyright', lang)}</p>
                  </div>
                )}
             </div>

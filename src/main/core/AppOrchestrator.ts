@@ -121,7 +121,6 @@ export class AppOrchestrator {
             for (let c = 1; c <= baseN; c++) originalRow.push(getCellValue(row.getCell(c).value));
             const bookVal = docCol !== -1 ? parseAmount(getCellValue(row.getCell(docCol).value)) : 0;
             const auditValRaw = audCol !== -1 ? getCellValue(row.getCell(audCol).value) : null;
-            const diffValRaw = diffCol !== -1 ? getCellValue(row.getCell(diffCol).value) : null;
             const commentsVal = commentCol !== -1 ? String(getCellValue(row.getCell(commentCol).value) || '') : '';
             const auditVal = auditValRaw !== null && auditValRaw !== '' ? parseAmount(auditValRaw) : '';
             // Always recalculate: exported formula is BookValue-AuditValue, ExcelJS writes without cached result
