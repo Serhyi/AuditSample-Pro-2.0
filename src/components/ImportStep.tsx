@@ -545,8 +545,8 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onProjectRecovere
               {t('liveDataPreview', lang)} {startRow})
             </h4>
           </div>
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden max-h-[450px] overflow-y-auto custom-scrollbar">
-            <table className="w-full text-left border-collapse">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-auto max-h-[450px] custom-scrollbar">
+            <table className="min-w-max text-left border-collapse">
               <thead className="bg-slate-50/90 backdrop-blur sticky top-0 border-b z-10 shadow-sm">
                 <tr>
                   <th className="px-4 py-4 text-[9px] font-black uppercase text-slate-400 w-10">#</th>
