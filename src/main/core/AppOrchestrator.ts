@@ -267,24 +267,35 @@ export class AppOrchestrator {
     });
 
     ipcMain.handle('license:loadFromDisk', async () => {
-      // app.getPath('exe') is more reliable than process.execPath for portable builds
-      const exeDir = app.isPackaged
-        ? path.dirname(app.getPath('exe'))
-        : path.resolve(__dirname, '../../..');
-      const searchDir = exeDir;
-      console.log('[license] exe:', app.getPath('exe'), '| execPath:', process.execPath);
-      console.log('[license] searching in:', searchDir, '| isPackaged:', app.isPackaged);
-      try {
-        const files = fs.readdirSync(searchDir).filter(f => f.startsWith('license-ASP') && f.endsWith('.asp'));
-        console.log('[license] found files:', files);
-        if (files.length === 0) return null;
-        const content = fs.readFileSync(path.join(searchDir, files[0]), 'utf-8');
-        console.log('[license] loaded:', files[0]);
-        return content;
-      } catch (e) {
-        console.error('[license] loadFromDisk error:', e);
-        return null;
+      // Search several candidate directories so the .asp file is found in
+      // every distribution form:
+      //  - PORTABLE_EXECUTABLE_DIR: folder of the portable .exe (electron-builder
+      //    extracts the portable app to a temp dir, so app.getPath('exe') is wrong)
+      //  - dir of the installed/unpacked exe (NSIS install, win-unpacked)
+      //  - current working directory (fallback)
+      //  - project root (dev)
+      const candidates = [
+        process.env.PORTABLE_EXECUTABLE_DIR,
+        app.isPackaged ? path.dirname(app.getPath('exe')) : null,
+        process.cwd(),
+        app.isPackaged ? null : __dirname,
+      ].filter((d): d is string => !!d);
+
+      console.log('[license] candidates:', candidates, '| isPackaged:', app.isPackaged);
+
+      for (const dir of candidates) {
+        try {
+          const files = fs.readdirSync(dir).filter(f => f.startsWith('license-ASP') && f.endsWith('.asp'));
+          if (files.length === 0) continue;
+          const content = fs.readFileSync(path.join(dir, files[0]), 'utf-8');
+          console.log('[license] loaded:', files[0], 'from', dir);
+          return content;
+        } catch (e) {
+          console.warn('[license] cannot read dir', dir, e);
+        }
       }
+      console.log('[license] no license-ASP*.asp file found');
+      return null;
     });
 
     ipcMain.handle('export:excel', async (event, state) => {

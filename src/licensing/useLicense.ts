@@ -21,17 +21,22 @@ export function useLicense() {
       if (isElectronWithLicense()) {
         try {
           const raw = await window.api.license.loadFromDisk();
+          console.log('[license] disk file present:', !!raw);
           if (raw) {
             const state = await validateLicenseFile(raw);
+            console.log('[license] disk validation:', state.isValid ? 'OK' : 'FAILED', state.errorMessage || '');
             if (state.isValid) {
               setLicenseState(state);
               setLoading(false);
               return; // file-based license wins, no need to check localStorage
             }
           }
-        } catch {
+        } catch (e) {
+          console.warn('[license] disk load failed:', e);
           // IPC failed — fall through to localStorage
         }
+      } else {
+        console.log('[license] disk loading unavailable (web version or no preload)');
       }
 
       // 2. Fall back to manually activated license in localStorage
