@@ -160,11 +160,11 @@
       <div style="margin-bottom:16px;" class="field">
         <label>Секретний ключ підпису (VITE_LICENSE_SECRET)</label>
         <div class="secret-row">
-          <input type="password" id="gen-secret" placeholder="ASP-DEV-KEY-2024" />
+          <input type="password" id="gen-secret" placeholder="Вкажіть VITE_LICENSE_SECRET з файлу .env" required />
           <button class="btn btn-outline btn-sm" onclick="toggleSecret('gen-secret')">Показати</button>
         </div>
-        <small style="color:var(--slate-400);font-size:11px;margin-top:4px;">
-          Залиш порожнім для dev-ключа. Для prod обов'язково вкажи VITE_LICENSE_SECRET.
+        <small style="color:var(--danger);font-size:11px;margin-top:4px;">
+          ⚠ Обов'язкове поле. Візьми значення VITE_LICENSE_SECRET з файлу <code>.env</code> проєкту.
         </small>
       </div>
 
@@ -232,7 +232,7 @@
       <div class="field" style="margin-bottom:16px;">
         <label>Секретний ключ підпису (VITE_LICENSE_SECRET)</label>
         <div class="secret-row">
-          <input type="password" id="val-secret" placeholder="ASP-DEV-KEY-2024" />
+          <input type="password" id="val-secret" placeholder="Вкажіть VITE_LICENSE_SECRET з файлу .env" required />
           <button class="btn btn-outline btn-sm" onclick="toggleSecret('val-secret')">Показати</button>
         </div>
       </div>
@@ -264,7 +264,6 @@
 
 <script>
 // ─── State ───────────────────────────────────────────────
-const DEV_KEY = 'ASP-DEV-KEY-2024';
 
 // ─── Tabs ────────────────────────────────────────────────
 function switchTab(t) {
@@ -301,7 +300,19 @@ function toggleSecret(id) {
 }
 
 function getSecret(inputId) {
-  return document.getElementById(inputId).value.trim() || DEV_KEY;
+  return document.getElementById(inputId).value.trim();
+}
+
+function requireSecret(inputId) {
+  const s = getSecret(inputId);
+  if (!s) {
+    const el = document.getElementById(inputId);
+    el.style.borderColor = 'var(--danger)';
+    el.focus();
+    el.addEventListener('input', () => el.style.borderColor = '', { once: true });
+    return null;
+  }
+  return s;
 }
 
 async function hmacHex(secret, data) {
@@ -331,8 +342,12 @@ async function generate() {
   const tier = document.getElementById('gen-tier').value;
   const start = document.getElementById('gen-start').value;
   const end = document.getElementById('gen-end').value;
-  const secret = getSecret('gen-secret');
+  const secret = requireSecret('gen-secret');
 
+  if (!secret) {
+    showGenResult(`<div class="result-box err"><b style="color:var(--danger)">⚠ Вкажіть секретний ключ підпису (VITE_LICENSE_SECRET).</b></div>`);
+    return;
+  }
   if (!name || !code || !email) {
     showGenResult(`<div class="result-box err"><b style="color:var(--danger)">⚠ Заповніть усі обов'язкові поля:</b> назва, код, email.</div>`);
     return;
@@ -363,17 +378,12 @@ async function generate() {
   const json = JSON.stringify(licenseFile, null, 2);
 
   const isPaid = tier === 'paid';
-  const usingDev = secret === DEV_KEY;
-
   showGenResult(`
     <div class="result-box ok">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
         <span style="font-size:20px;">✅</span>
         <div>
           <div style="font-weight:800;font-size:15px;color:var(--ok);">Ліцензію згенеровано</div>
-          <div style="font-size:12px;color:var(--slate-400);margin-top:2px;">
-            ${usingDev ? '<span style="color:var(--warn)">⚠ Dev-ключ (ASP-DEV-KEY-2024) — лише для розробки!</span>' : '✓ Продакшн-ключ'}
-          </div>
         </div>
         <span class="badge ${isPaid ? 'badge-pro' : 'badge-free'}" style="margin-left:auto;">${isPaid ? 'PRO' : 'FREE'}</span>
       </div>
@@ -459,6 +469,17 @@ async function validatePasted() {
   const raw = document.getElementById('val-json').value.trim();
   if (!raw) { document.getElementById('val-result').classList.add('hidden'); return; }
   const secret = getSecret('val-secret');
+  if (!secret) {
+    document.getElementById('val-result').innerHTML = `<div class="result-box err"><b style="color:var(--danger)">⚠ Вкажіть секретний ключ підпису (VITE_LICENSE_SECRET).</b></div>`;
+    document.getElementById('val-result').classList.remove('hidden');
+    document.getElementById('val-secret').style.borderColor = 'var(--danger)';
+    document.getElementById('val-secret').focus();
+    document.getElementById('val-secret').addEventListener('input', () => {
+      document.getElementById('val-secret').style.borderColor = '';
+      validatePasted();
+    }, { once: true });
+    return;
+  }
   await validate(raw, secret);
 }
 
@@ -487,8 +508,6 @@ async function validate(raw, secret) {
   const daysLeft = Math.ceil((expires - now) / 86400000);
 
   const isPaid = (p.methods || []).includes('All') || (p.methods || []).length > 1;
-  const usingDev = secret === DEV_KEY;
-
   if (!sigOk) {
     out.innerHTML = `
       <div class="result-box err">
@@ -497,8 +516,7 @@ async function validate(raw, secret) {
           <div style="font-weight:800;font-size:15px;color:var(--danger);">Підпис недійсний</div>
         </div>
         <p style="font-size:13px;color:var(--slate-600);">
-          Файл ліцензії пошкоджений або підписаний іншим ключем.
-          ${usingDev ? '<br><b>Перевір: можливо, ліцензія підписана продакшн-ключем?</b>' : ''}
+          Файл ліцензії пошкоджений або підписаний іншим ключем. Перевір правильність VITE_LICENSE_SECRET.
         </p>
         <div class="sep"></div>
         <div class="info-grid">
@@ -520,9 +538,7 @@ async function validate(raw, secret) {
         <span style="font-size:20px;">${statusIcon}</span>
         <div>
           <div style="font-weight:800;font-size:15px;color:${statusColor};">${statusText}</div>
-          <div style="font-size:12px;color:var(--slate-400);margin-top:2px;">
-            Підпис ✓ &nbsp;|&nbsp; ${usingDev ? '<span style="color:var(--warn)">Dev-ключ</span>' : 'Продакшн-ключ'}
-          </div>
+          <div style="font-size:12px;color:var(--slate-400);margin-top:2px;">Підпис ✓</div>
         </div>
         <span class="badge ${isPaid ? 'badge-pro' : 'badge-free'}" style="margin-left:auto;">${isPaid ? 'PRO' : 'FREE'}</span>
       </div>

@@ -1,8 +1,9 @@
 import { LicenseFile, LicenseState } from './LicenseTypes';
 
-const SECRET = import.meta.env.VITE_LICENSE_SECRET || 'ASP-DEV-KEY-2024';
+const SECRET: string | undefined = import.meta.env.VITE_LICENSE_SECRET;
 
 async function hmacSign(data: string): Promise<string> {
+  if (!SECRET) throw new Error('VITE_LICENSE_SECRET не налаштовано');
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
     'raw', enc.encode(SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
