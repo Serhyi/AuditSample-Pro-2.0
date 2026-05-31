@@ -65081,17 +65081,9 @@ var AppOrchestrator = class {
             for (let c = 1; c <= baseN; c++) originalRow.push(getCellValue(row.getCell(c).value));
             const bookVal = docCol !== -1 ? parseAmount(getCellValue(row.getCell(docCol).value)) : 0;
             const auditValRaw = audCol !== -1 ? getCellValue(row.getCell(audCol).value) : null;
-            const diffValRaw = diffCol !== -1 ? getCellValue(row.getCell(diffCol).value) : null;
             const commentsVal = commentCol !== -1 ? String(getCellValue(row.getCell(commentCol).value) || "") : "";
             const auditVal = auditValRaw !== null && auditValRaw !== "" ? parseAmount(auditValRaw) : "";
-            let diffVal = 0;
-            if (diffValRaw !== null && diffValRaw !== "") {
-              const p = parseAmount(diffValRaw);
-              if (!isNaN(p)) diffVal = p;
-            }
-            if (diffVal === 0 && auditVal !== "" && auditVal !== null) {
-              diffVal = bookVal - auditVal;
-            }
+            const diffVal = typeof auditVal === "number" ? Math.round((bookVal - auditVal) * 100) / 100 : 0;
             if (bookVal === 0 && originalRow.every((v) => v === null || v === "")) continue;
             items.push({
               id: `row-${r - 1}`,
