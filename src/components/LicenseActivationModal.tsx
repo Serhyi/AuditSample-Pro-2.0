@@ -72,13 +72,19 @@ export const LicenseActivationModal: React.FC<Props> = ({ onActivate, onClose })
             <textarea
               value={jsonText}
               onChange={e => setJsonText(e.target.value)}
+              onPaste={e => {
+                // ensure state updates on paste
+                const pasted = e.clipboardData.getData('text');
+                setTimeout(() => setJsonText(pasted || e.currentTarget.value), 0);
+              }}
               placeholder={'{\n  "payload": {...},\n  "signature": "..."\n}'}
-              rows={6}
+              rows={7}
               className="w-full border border-slate-200 rounded-xl p-3 text-[11px] font-mono text-slate-700 resize-none focus:outline-none focus:border-brand-400 mb-3"
+              style={{ minHeight: 130 }}
             />
             <button
               onClick={() => activate(jsonText)}
-              disabled={loading || !jsonText.trim()}
+              disabled={loading}
               className="w-full py-3 rounded-xl bg-brand-600 text-white font-semibold hover:bg-brand-700 transition disabled:opacity-50 mb-4"
             >
               {loading ? 'Перевірка...' : 'Активувати'}

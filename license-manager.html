@@ -166,6 +166,7 @@
         <small style="color:var(--danger);font-size:11px;margin-top:4px;">
           ⚠ Обов'язкове поле. Візьми значення VITE_LICENSE_SECRET з файлу <code>.env</code> проєкту.
         </small>
+        <span id="gen-fp" style="font-size:11px;font-family:monospace;color:var(--brand);font-weight:700;margin-top:2px;"></span>
       </div>
 
       <div class="sep"></div>
@@ -235,6 +236,7 @@
           <input type="password" id="val-secret" placeholder="Вкажіть VITE_LICENSE_SECRET з файлу .env" required />
           <button class="btn btn-outline btn-sm" onclick="toggleSecret('val-secret')">Показати</button>
         </div>
+        <span id="val-fp" style="font-size:11px;font-family:monospace;color:var(--brand);font-weight:700;margin-top:4px;display:block;"></span>
       </div>
 
       <div class="sep"></div>
@@ -556,8 +558,19 @@ async function validate(raw, secret) {
     </div>`;
 }
 
-// ─── Val secret change ────────────────────────────────────
+// ─── Key fingerprint ─────────────────────────────────────
+async function showFingerprint(secretInputId, displayId) {
+  const secret = document.getElementById(secretInputId).value.trim();
+  const el = document.getElementById(displayId);
+  if (!el) return;
+  if (!secret) { el.textContent = ''; return; }
+  const fp = (await hmacHex(secret, 'asp-fingerprint-v1')).slice(0, 8);
+  el.textContent = `Відбиток ключа: [${fp}]`;
+}
+
+document.getElementById('gen-secret').addEventListener('input', () => showFingerprint('gen-secret', 'gen-fp'));
 document.getElementById('val-secret').addEventListener('input', () => {
+  showFingerprint('val-secret', 'val-fp');
   const raw = document.getElementById('val-json').value.trim();
   if (raw) validatePasted();
 });

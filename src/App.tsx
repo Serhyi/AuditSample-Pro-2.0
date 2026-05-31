@@ -83,6 +83,10 @@ const App: React.FC = () => {
 
   const { licenseState, activateLicense } = useLicense();
   const [showLicenseModal, setShowLicenseModal] = useState(false);
+  const [keyFingerprint, setKeyFingerprint] = useState<string | null>(null);
+  React.useEffect(() => {
+    import('./licensing/LicenseValidator').then(m => m.getLicenseKeyFingerprint()).then(fp => setKeyFingerprint(fp));
+  }, []);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -706,6 +710,15 @@ const App: React.FC = () => {
                      >
                        {licenseState.tier === 'paid' ? t('licenseReplace', lang) : t('licenseActivate', lang)}
                      </button>
+                   </div>
+
+                   {/* Key fingerprint — for debugging key mismatch */}
+                   <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl">
+                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Відбиток ключа додатку:</span>
+                     <span className="font-mono text-[12px] font-bold text-slate-700">
+                       {keyFingerprint ? `[${keyFingerprint}]` : '⚠ ключ не налаштовано'}
+                     </span>
+                     <span className="text-[10px] text-slate-400 ml-1">— має збігатись із генератором</span>
                    </div>
 
                    {/* FREE notice */}
