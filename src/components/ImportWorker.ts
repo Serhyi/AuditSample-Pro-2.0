@@ -338,9 +338,11 @@ self.onmessage = async (e) => {
 
                             // Always recalculate: the exported formula is always BookValue-AuditValue,
                             // and ExcelJS writes formulas without a cached result so reading back gives 0.
+                            // Empty audit = treat as 0 (unaudited), so difference = full book value —
+                            // consistent with how newly-generated projects initialize their items.
                             const diffVal = typeof auditVal === 'number'
                                 ? Math.round((bookVal - auditVal) * 100) / 100
-                                : 0;
+                                : bookVal;
 
                             items.push({
                                 id: `row-${r-1}`,
