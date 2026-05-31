@@ -3,7 +3,7 @@ import { LicenseFile, LicenseState } from './LicenseTypes';
 const SECRET: string | undefined = import.meta.env.VITE_LICENSE_SECRET;
 
 async function hmacSign(data: string): Promise<string> {
-  if (!SECRET) throw new Error('VITE_LICENSE_SECRET не налаштовано');
+  if (!SECRET) throw new Error('VITE_LICENSE_SECRET не налаштовано — перезапустіть dev-сервер після створення .env');
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
     'raw', enc.encode(SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
@@ -15,11 +15,14 @@ async function hmacSign(data: string): Promise<string> {
 export async function validateLicenseFile(raw: string): Promise<LicenseState> {
   try {
     const file: LicenseFile = JSON.parse(raw);
-    if (!file.payload || !file.signature) throw new Error('Invalid format');
+    if (!file.payload || !file.signature) throw new Error('Невірна структура файлу ліцензії');
 
     const expected = await hmacSign(JSON.stringify(file.payload));
     if (expected !== file.signature) {
-      return { tier: 'free', license: null, isValid: false, errorMessage: 'Підпис ліцензії недійсний' };
+      const hint = SECRET
+        ? `Ліцензія підписана іншим ключем. Перегенеруй файл у license-manager.html з ключем з .env`
+        : 'VITE_LICENSE_SECRET не налаштовано';
+      return { tier: 'free', license: null, isValid: false, errorMessage: hint };
     }
 
     const now = new Date();
