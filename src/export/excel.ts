@@ -14,7 +14,7 @@ export async function exportToExcel(
   // when the user actually exports, keeping the main bundle small.
   const ExcelJS = (await import('exceljs')).default as typeof ExcelJSType;
   const workbook = new ExcelJS.Workbook();
-  const { results, sourceHeaders, config, settings, population } = fullState;
+  const { results, sourceHeaders, config, settings, population, license } = fullState;
   
   const isUa = lang === 'ua';
 
@@ -51,6 +51,16 @@ export async function exportToExcel(
 
     // Main header
     addSectionHeader(isUa ? 'Опис та результат' : 'Description and Result', colorGreen);
+
+    // Licensee
+    if (license && license.entityName) {
+      addSectionHeader(isUa ? 'Власник ліцензії (Аудитор)' : 'Licensee (Auditor)', colorDarkBlue);
+      addDetailRow(isUa ? 'Ліцензовано для' : 'Licensed to', license.entityName);
+      if (license.entityCode) addDetailRow(isUa ? 'ЄДРПОУ / ІПН' : 'Reg. Code', license.entityCode);
+      if (license.email) addDetailRow('Email', license.email);
+      if (license.licenseId) addDetailRow(isUa ? 'Номер ліцензії' : 'License ID', license.licenseId);
+      sheet.addRow([]);
+    }
 
     // Method
     addSectionHeader(isUa ? 'Метод відбору' : 'Sampling Method', colorDarkBlue);

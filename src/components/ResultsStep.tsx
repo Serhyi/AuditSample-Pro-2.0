@@ -32,6 +32,7 @@ const SyncedScrollContainer = ({ children, setRefs, syncScrollRef }: any) => {
 };
 
 import { SampledItem, SamplingResult, SamplingConfig, Language, Currency, ColumnIndices, TransactionItem, GlobalSettings } from '../types';
+import { LicensePayload } from '../licensing/LicenseTypes';
 import { calculateExtrapolation, formatMoney, formatDate, smartFormat, methodsSupportingAnomalies } from '../utils/samplingEngine';
 import { Upload, CheckCircle2, AlertCircle, ShieldCheck, BookOpen, Sigma, PlayCircle, StopCircle, Calculator, Database, Info, Layers, Target } from 'lucide-react';
 import { t } from '../utils/translations';
@@ -48,6 +49,7 @@ interface ResultsStepProps {
   colIndices: ColumnIndices;
   getFullPopulation: () => TransactionItem[];
   settings: GlobalSettings;
+  license?: LicensePayload | null;
 }
 
 
@@ -113,7 +115,7 @@ const TablePagination = memo<{ items: SampledItem[], title?: string, isKey?: boo
    );
 });
 
-const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onResultsUpdate, config, lang, currency, sourceHeaders, colIndices, getFullPopulation, settings }) => {
+const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onResultsUpdate, config, lang, currency, sourceHeaders, colIndices, getFullPopulation, settings, license }) => {
   const [activeTab, setActiveTab] = useState<'sample' | 'key'>('sample');
 
   const extrapolation = useMemo(() => calculateExtrapolation(currentResults, config), [currentResults, config]);
@@ -229,7 +231,8 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         columnIndices: colIndices,
         config,
         results: currentResults,
-        settings
+        settings,
+        license
     };
 
     const dateStr = new Date().toLocaleDateString('uk-UA').replace(/\./g, '_');
@@ -248,7 +251,8 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         columnIndices: colIndices,
         config,
         results: currentResults,
-        settings
+        settings,
+        license
     };
 
     const dateStr = new Date().toLocaleDateString('uk-UA').replace(/\./g, '_');

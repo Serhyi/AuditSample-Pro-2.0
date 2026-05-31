@@ -138,9 +138,10 @@ const App: React.FC = () => {
       columnIndices,
       config,
       results,
-      settings
+      settings,
+      license: licenseState.license
     };
-    
+
     if (isElectron() && window.api && isVirtual) {
         try {
             await window.api.export.project(projectData);
@@ -622,6 +623,7 @@ const App: React.FC = () => {
                   colIndices={columnIndices}
                   getFullPopulation={getFullPopulation}
                   settings={settings}
+                  license={licenseState.license}
                 />
                 <div className="flex justify-start">
                      <button onClick={() => setCurrentStep(1)} className="text-white bg-brand-600 hover:bg-brand-700 px-10 py-3.5 rounded-xl text-sm font-bold transition-all shadow-[0_4px_12px_rgba(0,133,75,0.25)]">{t('restart', lang)}</button>
