@@ -22,6 +22,9 @@ contextBridge.exposeInMainWorld('api', {
     project: (state) => ipcRenderer.invoke('export:project', state),
     excel: (state) => ipcRenderer.invoke('export:excel', state)
   },
+  license: {
+    loadFromDisk: () => ipcRenderer.invoke('license:loadFromDisk')
+  },
   on: (channel, callback) => {
     // Whitelist channels to prevent security leaks
     const validChannels = ['import:progress', 'export:progress', 'sampling:progress'];

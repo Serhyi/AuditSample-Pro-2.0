@@ -266,6 +266,23 @@ export class AppOrchestrator {
       }
     });
 
+    ipcMain.handle('license:loadFromDisk', async () => {
+      try {
+        // In packaged app, look next to the exe. In dev, look in project root.
+        const { app } = await import('electron');
+        const searchDir = app.isPackaged
+          ? path.dirname(process.execPath)
+          : path.resolve(__dirname, '../../..');
+        const files = fs.readdirSync(searchDir).filter(f => f.endsWith('.asp'));
+        if (files.length === 0) return null;
+        // Use first found .asp file
+        const content = fs.readFileSync(path.join(searchDir, files[0]), 'utf-8');
+        return content;
+      } catch {
+        return null;
+      }
+    });
+
     ipcMain.handle('export:excel', async (event, state) => {
       console.log('IPC export:excel received');
       const methodName = state?.config?.method || 'Sample';
