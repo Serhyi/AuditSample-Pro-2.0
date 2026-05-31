@@ -57,8 +57,10 @@ export function smartFormat(val: any, settings?: GlobalSettings): string {
 }
 
 export function calculateExtrapolation(results: SamplingResult, config: SamplingConfig): { projected: number, ub: number } {
-    if (results.samplingInterval === 0 && (results.projectedMisstatement !== 0 || results.upperMisstatementBound !== 0)) {
-        // Fallback for imported projects where config/interval is lost but we have final numbers
+    const hasEditableItems = (results.samplingItems?.length || 0) > 0 || (results.keyItems?.length || 0) > 0;
+    if (!hasEditableItems && results.samplingInterval === 0 && (results.projectedMisstatement !== 0 || results.upperMisstatementBound !== 0)) {
+        // Fallback for imported projects where config/interval is lost AND there are no
+        // items to recompute from — show the stored final numbers as-is.
         return { projected: results.projectedMisstatement, ub: results.upperMisstatementBound };
     }
 
