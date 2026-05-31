@@ -112,6 +112,13 @@ const App: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [samplingError, setSamplingError] = useState<string | null>(null);
 
+  // Reset method to StopOrGo if free tier has a paid method saved in config
+  useEffect(() => {
+    if (licenseState.tier === 'free') {
+      setConfig(prev => prev.method !== 'StopOrGo' ? { ...prev, method: 'StopOrGo' } : prev);
+    }
+  }, [licenseState.tier]);
+
   const steps = [t('step1', lang), t('step2', lang), t('step3', lang)];
 
   const exportProject = async () => {
@@ -373,6 +380,10 @@ const App: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 50));
     
     const finalConfig = { ...config };
+    // Enforce free-tier restriction at execution level, not just UI
+    if (licenseState.tier === 'free' && finalConfig.method !== 'StopOrGo') {
+        finalConfig.method = 'StopOrGo';
+    }
     if (!finalConfig.tolerableMisstatement) {
         finalConfig.tolerableMisstatement = Math.floor(totalPopValue * 0.01);
     }
