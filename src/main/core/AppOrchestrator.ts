@@ -1,4 +1,4 @@
-import { ipcMain, dialog } from 'electron';
+import { ipcMain, dialog, app } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -267,18 +267,22 @@ export class AppOrchestrator {
     });
 
     ipcMain.handle('license:loadFromDisk', async () => {
+      // app.getPath('exe') is more reliable than process.execPath for portable builds
+      const exeDir = app.isPackaged
+        ? path.dirname(app.getPath('exe'))
+        : path.resolve(__dirname, '../../..');
+      const searchDir = exeDir;
+      console.log('[license] exe:', app.getPath('exe'), '| execPath:', process.execPath);
+      console.log('[license] searching in:', searchDir, '| isPackaged:', app.isPackaged);
       try {
-        // In packaged app, look next to the exe. In dev, look in project root.
-        const { app } = await import('electron');
-        const searchDir = app.isPackaged
-          ? path.dirname(process.execPath)
-          : path.resolve(__dirname, '../../..');
         const files = fs.readdirSync(searchDir).filter(f => f.startsWith('license-ASP') && f.endsWith('.asp'));
+        console.log('[license] found files:', files);
         if (files.length === 0) return null;
-        // Use first found .asp file
         const content = fs.readFileSync(path.join(searchDir, files[0]), 'utf-8');
+        console.log('[license] loaded:', files[0]);
         return content;
-      } catch {
+      } catch (e) {
+        console.error('[license] loadFromDisk error:', e);
         return null;
       }
     });
