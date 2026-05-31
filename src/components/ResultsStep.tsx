@@ -475,14 +475,12 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
             {items.map((item, idx) => {
-                // Always recompute the difference live from Book - Audit so it is
-                // never a stale value (e.g. 0 after an import). Empty audit = no diff.
+                // Always recompute the difference live: Book - Audit.
+                // Empty audit value is treated as 0, so Різниця = bookValue.
                 const auditNum = (item.auditedValue === '' || item.auditedValue === undefined || item.auditedValue === null)
-                    ? null
-                    : Number(item.auditedValue);
-                const liveDiff = auditNum === null
                     ? 0
-                    : Math.round((item.bookValue - auditNum) * 100) / 100;
+                    : Number(item.auditedValue);
+                const liveDiff = Math.round((item.bookValue - auditNum) * 100) / 100;
                 const liveHasDiff = Math.abs(liveDiff) > 0.001;
                 return (
                     <tr key={item.id} className="hover:bg-brand-50/10 group transition-all data-table-row">
