@@ -1,9 +1,9 @@
-// Run with: npx ts-node src/licensing/LicenseGenerator.ts
-// Requires: VITE_LICENSE_SECRET env var or uses dev key
+// Run with: VITE_LICENSE_SECRET=your_key npx ts-node src/licensing/LicenseGenerator.ts
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 
-const SECRET = process.env.VITE_LICENSE_SECRET || 'ASP-DEV-KEY-2024';
+const SECRET = process.env.VITE_LICENSE_SECRET;
+if (!SECRET) { console.error('❌ VITE_LICENSE_SECRET не вказано'); process.exit(1); }
 
 function generateId(entityCode: string): string {
   const year = new Date().getFullYear();
