@@ -211,7 +211,7 @@
         </div>
         <div class="field">
           <label>Дата закінчення</label>
-          <input type="date" id="gen-end" readonly style="background:var(--slate-100);color:var(--slate-400);" />
+          <input type="date" id="gen-end" readonly style="background:var(--brand-light);color:var(--brand);font-weight:700;border-color:var(--brand);cursor:default;" />
         </div>
       </div>
     </div>
@@ -280,6 +280,7 @@ function initDates() {
   updateEndDate();
 }
 document.getElementById('gen-years').addEventListener('change', updateEndDate);
+document.getElementById('gen-start').addEventListener('input', updateEndDate);
 document.getElementById('gen-start').addEventListener('change', updateEndDate);
 function updateEndDate() {
   const s = document.getElementById('gen-start').value;
