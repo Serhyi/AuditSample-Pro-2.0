@@ -642,7 +642,7 @@ const TableCard = ({ activeTab, setActiveTab, currentResults, lang, renderTable,
     }, [tableContainerRefs, samplingItemsLength, activeTab]);
 
     return (
-        <div className="w-full bg-white rounded-[2rem] shadow-sm border border-slate-200 flex flex-col h-[1050px] overflow-hidden transition-all hover:shadow-md">
+        <div className="w-full bg-white rounded-[2rem] shadow-sm border border-slate-200 flex flex-col min-h-[200px] overflow-hidden transition-all hover:shadow-md">
             {/* Header: tabs + export buttons */}
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0">
                 <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
