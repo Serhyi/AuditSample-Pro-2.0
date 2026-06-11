@@ -284,15 +284,16 @@ export class SamplingService {
 
     } else if (config.method === 'Systematic') {
         // Систематична вибірка з фіксованим кроком: i_n = старт + (n - 1) × k.
-        // Старт виводиться із зерна генератора: старт = (seed mod k) + 1.
+        // Старт = (seed mod N) + 1, де N — розмір залишкової сукупності.
         const step = Math.max(1, Math.floor(Number(config.systematicStep) || 10));
-        const start = (Math.floor(Number(config.seed) || 0) % step) + 1;
-        await updateProgress(`Systematic selection (start=${start}, k=${step})...`);
 
         const rowidRows: any[] = await this.db.query(
             `SELECT rowid FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`,
             [upperLimit, ctt]
         );
+        const N = rowidRows.length;
+        const start = N > 0 ? (Math.floor(Number(config.seed) || 0) % N) + 1 : 1;
+        await updateProgress(`Systematic selection (start=${start}, k=${step})...`);
         const pickedRowIds: number[] = [];
         for (let i = start - 1; i < rowidRows.length; i += step) {
             pickedRowIds.push(rowidRows[i].rowid);

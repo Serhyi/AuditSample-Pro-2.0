@@ -330,10 +330,10 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
 
         } else if (config.method === 'Systematic') {
             // Систематична вибірка з фіксованим кроком: i_n = старт + (n - 1) × k.
-            // Старт виводиться із зерна генератора: старт = (seed mod k) + 1,
-            // тож відбір повністю відтворюваний за тим самим seed.
+            // Старт = (seed mod N) + 1, де N — розмір залишкової сукупності.
             const step = Math.max(1, Math.floor(config.systematicStep || 10));
-            const start = (Math.floor(config.seed || 0) % step) + 1;
+            const N = regularItems.length;
+            const start = N > 0 ? (Math.floor(config.seed || 0) % N) + 1 : 1;
             sampleItems = [];
             for (let i = start - 1; i < regularItems.length; i += step) {
                 const item = regularItems[i];

@@ -662,8 +662,8 @@ const TableCard = ({ activeTab, setActiveTab, currentResults, lang, renderTable,
             >
                 <div style={{ width: contentWidth, height: '1px' }} />
             </div>
-            {/* Vertical scroll area only */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+            {/* Vertical scroll area only — capped at ~50 rows */}
+            <div className="overflow-y-auto overflow-x-hidden custom-scrollbar max-h-[2200px]">
                 {activeTab === 'key' ?
                     <TablePagination items={currentResults.keyItems || []} title={lang === 'ua' ? 'Ключові елементи' : 'Key Items'} isKey={true} renderTable={renderTable} /> :
                     (config.method === 'StopOrGo' ? <StopOrGoView currentResults={currentResults} lang={lang} renderTable={renderTable} /> : <TablePagination items={currentResults.samplingItems || []} renderTable={renderTable} />)

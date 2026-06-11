@@ -86,13 +86,15 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
         subst = `n = ${results.samplingItems.length}`;
     } else if (config.method === 'Systematic') {
         const sysStep = Math.max(1, Math.floor(config.systematicStep || 10));
-        const sysStart = (Math.floor(config.seed || 0) % sysStep) + 1;
+        const sysN = Math.max(1, results.populationSize - results.trivialCount - (results.keyItems?.length || 0));
+        const sysStart = (Math.floor(config.seed || 0) % sysN) + 1;
         vars[methodStr] = config.method;
         vars[isUa ? 'Зерно генератора (Seed):' : 'Seed:'] = config.seed || 0;
-        vars[isUa ? 'Початковий елемент (старт = seed mod k + 1):' : 'Starting Item (start = seed mod k + 1):'] = sysStart;
+        vars[isUa ? 'Залишкова сукупність (N):' : 'Residual Population (N):'] = sysN;
+        vars[isUa ? 'Початковий елемент (старт = seed mod N + 1):' : 'Starting Item (start = seed mod N + 1):'] = sysStart;
         vars[isUa ? 'Крок відбору (k):' : 'Selection Step (k):'] = sysStep;
         vars[isUa ? 'Кількість відібраних елементів (n):' : 'Sample Size (n):'] = results.samplingItems.length;
-        subst = `iₙ = ${sysStart} + (n − 1) × ${sysStep}\nn = ${results.samplingItems.length}`;
+        subst = `start = ${config.seed || 0} mod ${sysN} + 1 = ${sysStart}\niₙ = ${sysStart} + (n − 1) × ${sysStep}\nn = ${results.samplingItems.length}`;
     } else if (config.method === 'CVS') {
         vars[isUa ? 'Залишкова сукупність (BV):' : 'Residual Book Value (BV):'] = bvStr;
         vars[confLevelStr] = `${config.confidenceLevel}%`;
