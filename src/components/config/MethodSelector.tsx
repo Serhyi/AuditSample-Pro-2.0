@@ -2,10 +2,10 @@ import React from 'react';
 import { t } from '../../utils/translations';
 import { Language } from '../../types';
 import { METHOD_PREFIX_MAP } from '../resultsUtils';
-import { Calculator, Target, PlayCircle, Network, BarChart3, PieChart, ArrowDownUp, AlertTriangle, Siren, ListChecks, ListFilter, Sigma, Lock } from 'lucide-react';
+import { Calculator, Target, PlayCircle, Network, BarChart3, PieChart, ArrowDownUp, AlertTriangle, Siren, ListChecks, ListFilter, MoveHorizontal, Sigma, Lock } from 'lucide-react';
 import { LicenseTier } from '../../licensing/LicenseTypes';
 
-export const FREE_METHODS = ['StopOrGo', 'Benford', 'Grubbs', 'Pareto', 'Percentile'];
+export const FREE_METHODS = ['StopOrGo', 'Benford', 'Grubbs', 'Pareto', 'Percentile', 'Systematic'];
 
 interface MethodSelectorProps {
   currentMethod: string;
@@ -22,6 +22,7 @@ const METHOD_STYLES: Record<string, { icon: React.ReactNode; colorClass: string;
   RiskAssessment: { icon: <Siren className="w-[22px] h-[22px]" strokeWidth={2} />, colorClass: 'text-rose-500', bgClass: 'bg-white border border-slate-100', activeBgClass: 'bg-rose-50 border-rose-50' },
   Random: { icon: <ListChecks className="w-[22px] h-[22px]" strokeWidth={2} />, colorClass: 'text-emerald-500', bgClass: 'bg-white border border-slate-100', activeBgClass: 'bg-emerald-50 border-emerald-50' },
   FixedRandom: { icon: <ListFilter className="w-[22px] h-[22px]" strokeWidth={2} />, colorClass: 'text-emerald-500', bgClass: 'bg-white border border-slate-100', activeBgClass: 'bg-emerald-50 border-emerald-50' },
+  Systematic: { icon: <MoveHorizontal className="w-[22px] h-[22px]" strokeWidth={2} />, colorClass: 'text-teal-500', bgClass: 'bg-white border border-slate-100', activeBgClass: 'bg-teal-50 border-teal-50' },
   CVS: { icon: <Sigma className="w-[22px] h-[22px]" strokeWidth={2} />, colorClass: 'text-orange-500', bgClass: 'bg-white border border-slate-100', activeBgClass: 'bg-orange-50 border-orange-50' },
   Attribute: { icon: <Target className="w-[22px] h-[22px]" strokeWidth={2} />, colorClass: 'text-indigo-500', bgClass: 'bg-white border border-slate-100', activeBgClass: 'bg-indigo-50 border-indigo-50' },
   StopOrGo: { icon: <PlayCircle className="w-[22px] h-[22px]" strokeWidth={2} />, colorClass: 'text-blue-500', bgClass: 'bg-white border border-slate-100', activeBgClass: 'bg-blue-50 border-blue-50' },

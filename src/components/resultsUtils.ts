@@ -6,6 +6,7 @@ export const METHOD_PREFIX_MAP: Record<string, string> = {
   RiskAssessment: 'riskAssessment',
   Random: 'random',
   FixedRandom: 'fixedRandom',
+  Systematic: 'systematic',
   CVS: 'cvs',
   Attribute: 'attr',
   StopOrGo: 'stopOrGo',
@@ -83,6 +84,12 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
         }
         vars[isUa ? 'Кількість відібраних елементів (n):' : 'Sample Size (n):'] = results.samplingItems.length;
         subst = `n = ${results.samplingItems.length}`;
+    } else if (config.method === 'Systematic') {
+        vars[methodStr] = config.method;
+        vars[isUa ? 'Початковий елемент (старт):' : 'Starting Item (start):'] = config.systematicStart || 1;
+        vars[isUa ? 'Крок відбору (k):' : 'Selection Step (k):'] = config.systematicStep || 10;
+        vars[isUa ? 'Кількість відібраних елементів (n):' : 'Sample Size (n):'] = results.samplingItems.length;
+        subst = `iₙ = ${config.systematicStart || 1} + (n − 1) × ${config.systematicStep || 10}\nn = ${results.samplingItems.length}`;
     } else if (config.method === 'CVS') {
         vars[isUa ? 'Залишкова сукупність (BV):' : 'Residual Book Value (BV):'] = bvStr;
         vars[confLevelStr] = `${config.confidenceLevel}%`;
@@ -135,6 +142,7 @@ export function getStaticFormula(method: string, lang: string = 'en'): string {
         case 'MUS': return 'n = (BV × RF) / (PM − EM × EF)';
         case 'Random': return 'n = (N × Z² × p × (1-p)) / (E²)';
         case 'FixedRandom': return 'n = const';
+        case 'Systematic': return 'iₙ = start + (n − 1) × k';
         case 'CVS': return 'n = ((N × Z × σ) / PM)²';
         case 'Attribute': return 'n = AICPA_Table(ROR, TDR, EDR)';
         case 'StopOrGo': return 'n = n1 + n2';

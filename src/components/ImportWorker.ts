@@ -259,6 +259,7 @@ self.onmessage = async (e) => {
                             if (m.includes('mus') || m.includes('монетарна')) methodStr = 'MUS';
                             else if (m.includes('attribute') || m.includes('атрибутив')) methodStr = 'Attribute';
                             else if (m.includes('cvs') || m.includes('стратиф')) methodStr = 'CVS';
+                            else if (m.includes('systematic') || m.includes('систем')) methodStr = 'Systematic';
                             else if (m.includes('random') || m.includes('випад')) methodStr = 'Random';
                             else if (m.includes('benford')) methodStr = 'Benford';
                             else if (m.includes('stop') || m.includes('зупин')) methodStr = 'StopOrGo';

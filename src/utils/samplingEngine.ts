@@ -93,7 +93,7 @@ export function calculateExtrapolation(results: SamplingResult, config: Sampling
         const total = (results.samplingItems || []).length || 1;
         pm = (errors / total) * 100;
         ub = ((errors + rf) / total) * 100;
-    } else if (config.method === 'RiskAssessment' || config.method === 'FixedRandom' || config.method === 'Pareto' || config.method === 'Percentile' || config.method === 'Grubbs' || config.method === 'Benford' || config.method === 'StopOrGo') {
+    } else if (config.method === 'RiskAssessment' || config.method === 'FixedRandom' || config.method === 'Systematic' || config.method === 'Pareto' || config.method === 'Percentile' || config.method === 'Grubbs' || config.method === 'Benford' || config.method === 'StopOrGo') {
         pm = keyMisstatements + (results.samplingItems || []).reduce((acc, item) => acc + (item.difference || 0), 0);
         ub = pm;
     } else if (config.method === 'Random' || config.method === 'CVS' || config.method === 'Cluster') {
@@ -328,6 +328,26 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
                 };
             });
 
+        } else if (config.method === 'Systematic') {
+            // Систематична вибірка з фіксованим кроком: i_n = старт + (n - 1) × k.
+            // Детермінований відбір без генератора випадкових чисел.
+            const step = Math.max(1, Math.floor(config.systematicStep || 10));
+            const start = Math.max(1, Math.floor(config.systematicStart || 1));
+            sampleItems = [];
+            for (let i = start - 1; i < regularItems.length; i += step) {
+                const item = regularItems[i];
+                sampleItems.push({
+                    ...item,
+                    bookValue: item.amount,
+                    auditedValue: '',
+                    difference: item.amount,
+                    tainting: 1,
+                    isSampled: true,
+                    selectionReason: `Systematic (i=${i + 1})`
+                });
+                if (sampleItems.length >= 5000) break;
+            }
+            sampleSize = sampleItems.length;
         } else {
             if (config.method === 'FixedRandom') {
                 sampleSize = config.fixedSampleSize || 10;

@@ -29,7 +29,7 @@ interface NumberInputProps {
 const getMethodName = (method: string, lang: Language) => {
     const map: Record<string, string> = {
         'MUS': 'musName', 'Random': 'randomName', 'Attribute': 'attrName', 'StopOrGo': 'stopOrGoName',
-        'FixedRandom': 'fixedRandomName', 'Cluster': 'clusterName', 'CVS': 'cvsName', 'Benford': 'benfordName',
+        'FixedRandom': 'fixedRandomName', 'Systematic': 'systematicName', 'Cluster': 'clusterName', 'CVS': 'cvsName', 'Benford': 'benfordName',
         'Pareto': 'paretoName', 'Percentile': 'percentileName', 'Grubbs': 'grubbsName', 'RiskAssessment': 'riskAssessmentName'
     };
     const key = map[method] || method;
@@ -70,12 +70,13 @@ const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulat
 
   const showSeed = ['StopOrGo', 'MUS', 'CVS', 'Cluster', 'Random', 'FixedRandom', 'Attribute', 'RiskAssessment'].includes(config.method);
   const showPM = ['MUS', 'CVS', 'Cluster', 'Random', 'FixedRandom'].includes(config.method);
-  const showTrivial = ['StopOrGo', 'MUS', 'CVS', 'Cluster', 'Random', 'FixedRandom', 'RiskAssessment'].includes(config.method);
+  const showTrivial = ['StopOrGo', 'MUS', 'CVS', 'Cluster', 'Random', 'FixedRandom', 'Systematic', 'RiskAssessment'].includes(config.method);
   const showAnomalySelect = ['CVS', 'Cluster', 'Random', 'FixedRandom'].includes(config.method);
   const showConfidence = config.method === 'MUS' || config.method === 'CVS' || config.method === 'Random';
   const showStopOrGoParams = config.method === 'StopOrGo';
   const showAttributeParams = config.method === 'Attribute';
   const showFixedSize = config.method === 'FixedRandom';
+  const showSystematic = config.method === 'Systematic';
   const showRiskParams = config.method === 'RiskAssessment';
   
   const showPareto = config.method === 'Pareto';
@@ -154,6 +155,27 @@ const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulat
                         <Info className="w-4 h-4 flex-shrink-0 text-brand-400" />
                         {t('fixedSizeDesc', lang)}
                     </p>
+                </div>
+            )}
+
+            {showSystematic && (
+                <div className="animate-fade-in grid grid-cols-2 gap-6">
+                    <div>
+                        <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">{t('systematicStartLabel', lang)}</label>
+                        <NumberInput min={1} value={config.systematicStart || 1} onChange={(val) => handleChange('systematicStart', Math.max(1, val))} className="w-full px-5 py-3 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-bold text-[13px]" />
+                        <p className="text-[12px] font-medium text-slate-400 mt-2.5 flex items-start gap-2 italic">
+                            <Info className="w-4 h-4 flex-shrink-0 text-brand-400" />
+                            {t('systematicStartDesc', lang)}
+                        </p>
+                    </div>
+                    <div>
+                        <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">{t('systematicStepLabel', lang)}</label>
+                        <NumberInput min={1} value={config.systematicStep || 10} onChange={(val) => handleChange('systematicStep', Math.max(1, val))} className="w-full px-5 py-3 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-bold text-[13px]" />
+                        <p className="text-[12px] font-medium text-slate-400 mt-2.5 flex items-start gap-2 italic">
+                            <Info className="w-4 h-4 flex-shrink-0 text-brand-400" />
+                            {t('systematicStepDesc', lang)}
+                        </p>
+                    </div>
                 </div>
             )}
 
