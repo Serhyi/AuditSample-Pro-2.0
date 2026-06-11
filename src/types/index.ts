@@ -55,8 +55,7 @@ export interface SamplingConfig {
   
   // New Params for additional methods
   fixedSampleSize?: number; // For Fixed Random
-  systematicStep?: number; // For Systematic: step k between selected items
-  systematicStart?: number; // For Systematic: 1-based index of the first selected item
+  systematicStep?: number; // For Systematic: step k between selected items; start derives from seed
   percentileCount?: number; // e.g. 5 for Top 5% / Bottom 5%
   paretoCoverage?: number; // e.g. 80 for Pareto
   grubbsAlpha?: number; // e.g. 0.05

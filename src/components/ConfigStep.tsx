@@ -68,7 +68,7 @@ const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulat
 
   const getAnomalyDesc = () => { switch (config.anomalyMethod) { case 'ModifiedZ': return t('anomDescModZ', lang); case 'None': return t('anomDescNone', lang); default: return ''; } };
 
-  const showSeed = ['StopOrGo', 'MUS', 'CVS', 'Cluster', 'Random', 'FixedRandom', 'Attribute', 'RiskAssessment'].includes(config.method);
+  const showSeed = ['StopOrGo', 'MUS', 'CVS', 'Cluster', 'Random', 'FixedRandom', 'Systematic', 'Attribute', 'RiskAssessment'].includes(config.method);
   const showPM = ['MUS', 'CVS', 'Cluster', 'Random', 'FixedRandom'].includes(config.method);
   const showTrivial = ['StopOrGo', 'MUS', 'CVS', 'Cluster', 'Random', 'FixedRandom', 'Systematic', 'RiskAssessment'].includes(config.method);
   const showAnomalySelect = ['CVS', 'Cluster', 'Random', 'FixedRandom'].includes(config.method);
@@ -159,23 +159,13 @@ const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulat
             )}
 
             {showSystematic && (
-                <div className="animate-fade-in grid grid-cols-2 gap-6">
-                    <div>
-                        <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">{t('systematicStartLabel', lang)}</label>
-                        <NumberInput min={1} value={config.systematicStart || 1} onChange={(val) => handleChange('systematicStart', Math.max(1, val))} className="w-full px-5 py-3 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-bold text-[13px]" />
-                        <p className="text-[12px] font-medium text-slate-400 mt-2.5 flex items-start gap-2 italic">
-                            <Info className="w-4 h-4 flex-shrink-0 text-brand-400" />
-                            {t('systematicStartDesc', lang)}
-                        </p>
-                    </div>
-                    <div>
-                        <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">{t('systematicStepLabel', lang)}</label>
-                        <NumberInput min={1} value={config.systematicStep || 10} onChange={(val) => handleChange('systematicStep', Math.max(1, val))} className="w-full px-5 py-3 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-bold text-[13px]" />
-                        <p className="text-[12px] font-medium text-slate-400 mt-2.5 flex items-start gap-2 italic">
-                            <Info className="w-4 h-4 flex-shrink-0 text-brand-400" />
-                            {t('systematicStepDesc', lang)}
-                        </p>
-                    </div>
+                <div className="animate-fade-in">
+                    <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">{t('systematicStepLabel', lang)}</label>
+                    <NumberInput min={1} value={config.systematicStep || 10} onChange={(val) => handleChange('systematicStep', Math.max(1, val))} className="w-full px-5 py-3 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-bold text-[13px]" />
+                    <p className="text-[12px] font-medium text-slate-400 mt-2.5 flex items-start gap-2 italic">
+                        <Info className="w-4 h-4 flex-shrink-0 text-brand-400" />
+                        {t('systematicStepDesc', lang)}
+                    </p>
                 </div>
             )}
 

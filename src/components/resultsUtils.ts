@@ -85,11 +85,14 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
         vars[isUa ? 'Кількість відібраних елементів (n):' : 'Sample Size (n):'] = results.samplingItems.length;
         subst = `n = ${results.samplingItems.length}`;
     } else if (config.method === 'Systematic') {
+        const sysStep = Math.max(1, Math.floor(config.systematicStep || 10));
+        const sysStart = (Math.floor(config.seed || 0) % sysStep) + 1;
         vars[methodStr] = config.method;
-        vars[isUa ? 'Початковий елемент (старт):' : 'Starting Item (start):'] = config.systematicStart || 1;
-        vars[isUa ? 'Крок відбору (k):' : 'Selection Step (k):'] = config.systematicStep || 10;
+        vars[isUa ? 'Зерно генератора (Seed):' : 'Seed:'] = config.seed || 0;
+        vars[isUa ? 'Початковий елемент (старт = seed mod k + 1):' : 'Starting Item (start = seed mod k + 1):'] = sysStart;
+        vars[isUa ? 'Крок відбору (k):' : 'Selection Step (k):'] = sysStep;
         vars[isUa ? 'Кількість відібраних елементів (n):' : 'Sample Size (n):'] = results.samplingItems.length;
-        subst = `iₙ = ${config.systematicStart || 1} + (n − 1) × ${config.systematicStep || 10}\nn = ${results.samplingItems.length}`;
+        subst = `iₙ = ${sysStart} + (n − 1) × ${sysStep}\nn = ${results.samplingItems.length}`;
     } else if (config.method === 'CVS') {
         vars[isUa ? 'Залишкова сукупність (BV):' : 'Residual Book Value (BV):'] = bvStr;
         vars[confLevelStr] = `${config.confidenceLevel}%`;

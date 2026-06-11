@@ -282,10 +282,46 @@ export class SamplingService {
             selectionReason: 'Grubbs Outlier'
         }));
 
+    } else if (config.method === 'Systematic') {
+        // Систематична вибірка з фіксованим кроком: i_n = старт + (n - 1) × k.
+        // Старт виводиться із зерна генератора: старт = (seed mod k) + 1.
+        const step = Math.max(1, Math.floor(Number(config.systematicStep) || 10));
+        const start = (Math.floor(Number(config.seed) || 0) % step) + 1;
+        await updateProgress(`Systematic selection (start=${start}, k=${step})...`);
+
+        const rowidRows: any[] = await this.db.query(
+            `SELECT rowid FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`,
+            [upperLimit, ctt]
+        );
+        const pickedRowIds: number[] = [];
+        for (let i = start - 1; i < rowidRows.length; i += step) {
+            pickedRowIds.push(rowidRows[i].rowid);
+            if (pickedRowIds.length >= 5000) break;
+        }
+
+        if (pickedRowIds.length > 0) {
+            const results: any[] = [];
+            const chunkSize = 500;
+            for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
+                const chunk = pickedRowIds.slice(i, i + chunkSize);
+                const chunkResults = await this.db.query(`SELECT * FROM population WHERE rowid IN (${chunk.join(',')}) ORDER BY rowid`);
+                results.push(...chunkResults);
+            }
+            sampleItems = results.map((item, idx) => ({
+                ...item,
+                bookValue: item.amount,
+                auditedValue: '' as const,
+                difference: item.amount,
+                tainting: 1,
+                isSampled: true,
+                selectionReason: `Systematic (i=${start + idx * step})`
+            }));
+        }
+
     } else {
         let sampleSize = 10;
         let isMUS = false;
-        
+
         if (config.method === 'MUS') {
           isMUS = true;
           const pm = config.tolerableMisstatement || 1;
@@ -439,7 +475,7 @@ export class SamplingService {
         const total = (results.samplingItems || []).length || 1;
         pm = (errors / total) * 100;
         ub = ((errors + rf) / total) * 100;
-    } else if (['RiskAssessment', 'FixedRandom', 'Pareto', 'Percentile', 'Grubbs', 'Benford', 'StopOrGo'].includes(config.method)) {
+    } else if (['RiskAssessment', 'FixedRandom', 'Systematic', 'Pareto', 'Percentile', 'Grubbs', 'Benford', 'StopOrGo'].includes(config.method)) {
         pm = keyMisstatements + (results.samplingItems || []).reduce((acc: any, item: any) => acc + (item.difference || 0), 0);
         ub = pm;
     } else if (['Random', 'CVS', 'Cluster'].includes(config.method)) {
