@@ -47,7 +47,8 @@ const NumberInput: React.FC<NumberInputProps> = ({ value, onChange, placeholder,
         if (str === '') onChange(0); 
         else { const num = parseFloat(str); if (!isNaN(num)) onChange(num); }
     };
-    const isEmpty = localVal === '0' && value === 0 && placeholder;
+    // Show placeholder only when field is empty string (not when user typed '0').
+    const isEmpty = localVal === '' && value === 0 && placeholder;
     return (
         <input
             type="number"
@@ -322,7 +323,7 @@ const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulat
             {showTrivial && (
                 <div className="animate-fade-in">
                     <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">{t('trivialLabel', lang)}</label>
-                    <NumberInput value={config.clearlyTrivialThreshold} onChange={(val) => handleChange('clearlyTrivialThreshold', val)} className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-black text-[15px]" placeholder={formatMoney(suggestedTrivial, settings)} />
+                    <NumberInput min={0} value={config.clearlyTrivialThreshold} onChange={(val) => handleChange('clearlyTrivialThreshold', val)} className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-black text-[15px]" placeholder={formatMoney(suggestedTrivial, settings)} />
                     <p className="text-[12px] font-medium text-slate-400 mt-2.5 flex items-start gap-2 italic">
                         <Info className="w-4 h-4 flex-shrink-0 text-brand-400" />
                         {t('trivialDesc', lang)}

@@ -388,7 +388,7 @@ const App: React.FC = () => {
     if (!finalConfig.tolerableMisstatement) {
         finalConfig.tolerableMisstatement = Math.floor(totalPopValue * 0.01);
     }
-    if (!finalConfig.clearlyTrivialThreshold) {
+    if (finalConfig.clearlyTrivialThreshold === undefined || finalConfig.clearlyTrivialThreshold === null) {
         finalConfig.clearlyTrivialThreshold = Math.floor(finalConfig.tolerableMisstatement * 0.05);
     }
 
