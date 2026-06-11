@@ -55,12 +55,8 @@ export async function exportToExcel(
     // Licensee — license requisites are included in every export.
     addSectionHeader(isUa ? 'Власник ліцензії (Аудитор)' : 'Licensee (Auditor)', colorDarkBlue);
     if (license && license.entityName) {
-      addDetailRow(isUa ? 'Ліцензовано для' : 'Licensed to', license.entityName);
-      if (license.entityCode) addDetailRow(isUa ? 'ЄДРПОУ / ІПН' : 'Reg. Code', license.entityCode);
-      if (license.email) addDetailRow('Email', license.email);
+      addDetailRow(isUa ? 'Ліцензіат' : 'Licensee', license.entityName);
       if (license.licenseId) addDetailRow(isUa ? 'Номер ліцензії' : 'License ID', license.licenseId);
-      if (license.issuedAt) addDetailRow(isUa ? 'Дата видачі' : 'Issued', String(license.issuedAt).substring(0, 10));
-      if (license.expiresAt) addDetailRow(isUa ? 'Діє до' : 'Expires', String(license.expiresAt).substring(0, 10));
     } else {
       addDetailRow(isUa ? 'Ліцензія' : 'License', isUa ? 'Незареєстрована (безкоштовна) версія AuditSample Pro' : 'Unregistered (free) version of AuditSample Pro');
     }
