@@ -547,7 +547,68 @@ header { align-items: center; }
   transition:all .2s;opacity:.7;}
 .btn-copy-code:hover{opacity:1;background:var(--accent2);color:#fff;border-color:var(--accent2);}
 .btn-copy-code.copied{background:var(--accent);color:#fff;border-color:var(--accent);opacity:1;}
-@media print{.btn-settings,.settings-panel,.settings-overlay{display:none!important;}}
+@media print{.btn-settings,.settings-panel,.settings-overlay,.btn-guide,.guide-overlay,.guide-panel{display:none!important;}}
+
+/* ── GUIDE PANEL ── */
+.btn-guide{background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+  padding:7px 14px;cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:1.5px;
+  color:var(--muted);display:inline-flex;align-items:center;gap:6px;transition:all .2s;}
+.btn-guide:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-guide svg{width:13px;height:13px;}
+.guide-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9996;
+  backdrop-filter:blur(3px);animation:fadeIn .2s ease;}
+.guide-overlay.show{display:block;}
+.guide-panel{display:none;position:fixed;top:0;right:0;bottom:0;width:min(680px,100vw);
+  z-index:9997;background:var(--surface);border-left:1px solid var(--border);
+  overflow-y:auto;animation:guideSlide .25s ease;
+  box-shadow:-8px 0 40px rgba(0,0,0,.35);}
+.guide-panel.show{display:block;}
+@keyframes guideSlide{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.guide-close{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;
+  padding:16px 24px;background:var(--surface);border-bottom:1px solid var(--border);}
+.guide-close-title{font-family:var(--mono);font-size:10px;letter-spacing:2px;
+  color:var(--accent);text-transform:uppercase;}
+.guide-close-btn{background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+  width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:var(--muted);font-size:16px;transition:all .15s;}
+.guide-close-btn:hover{background:var(--accent3);color:#fff;border-color:var(--accent3);}
+.guide-content{padding:24px 28px 40px;}
+.guide-content h2{font-size:15px;font-weight:700;color:var(--text);margin:28px 0 10px;
+  padding-left:12px;border-left:3px solid var(--accent);}
+.guide-content h2:first-child{margin-top:0;}
+.guide-content h3{font-size:12px;font-weight:700;color:var(--accent);margin:18px 0 8px;
+  letter-spacing:.5px;}
+.guide-content h4{font-size:11px;font-weight:600;color:var(--muted);margin:14px 0 6px;
+  text-transform:uppercase;letter-spacing:.5px;font-family:var(--mono);}
+.guide-content p{font-size:12px;color:var(--text);line-height:1.65;margin-bottom:8px;opacity:.88;}
+.guide-content ul,.guide-content ol{font-size:12px;color:var(--text);line-height:1.65;
+  margin:4px 0 10px 18px;opacity:.88;}
+.guide-content li{margin-bottom:4px;}
+.guide-content table{width:100%;border-collapse:collapse;margin:8px 0 14px;font-size:11px;}
+.guide-content th{background:var(--accent);color:#fff;font-weight:600;text-align:left;
+  padding:7px 10px;font-size:10px;letter-spacing:.3px;}
+.guide-content td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text);
+  vertical-align:top;}
+.guide-content tbody tr:nth-child(even){background:var(--surface2);}
+.guide-content code{font-family:var(--mono);font-size:10px;background:var(--surface2);
+  padding:1px 5px;border-radius:3px;color:var(--accent4);}
+.guide-cat{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.5px;
+  text-transform:uppercase;padding:2px 9px;border-radius:12px;margin-bottom:6px;}
+.guide-cat.a{background:rgba(0,133,75,.12);color:var(--accent);}
+.guide-cat.l{background:rgba(37,99,235,.12);color:var(--accent2);}
+.guide-cat.o{background:rgba(196,155,42,.12);color:var(--accent4);}
+.guide-info{background:rgba(0,133,75,.06);border-left:3px solid var(--accent);
+  border-radius:0 6px 6px 0;padding:8px 12px;margin:10px 0;font-size:11px;color:var(--text);opacity:.9;}
+.guide-info strong{color:var(--accent);font-weight:700;}
+.guide-warn{background:rgba(217,119,6,.08);border-left:3px solid #D97706;
+  border-radius:0 6px 6px 0;padding:8px 12px;margin:10px 0;font-size:11px;color:var(--text);opacity:.9;}
+.guide-warn strong{color:#D97706;font-weight:700;}
+.guide-divider{border:none;border-top:1px solid var(--border);margin:22px 0;}
+.guide-steps{counter-reset:gs;list-style:none;margin-left:0;padding-left:0;}
+.guide-steps li{counter-increment:gs;padding:3px 0 3px 30px;position:relative;font-size:12px;}
+.guide-steps li::before{content:counter(gs);position:absolute;left:0;top:3px;width:20px;height:20px;
+  background:var(--accent);color:#fff;border-radius:50%;text-align:center;font-size:10px;
+  font-weight:700;line-height:20px;font-family:var(--mono);}
 </style>
 </head>
 <body>
@@ -647,6 +708,268 @@ export default {
   </div>
 </div>
 
+<!-- GUIDE OVERLAY + PANEL -->
+<div class="guide-overlay" id="guideOverlay" onclick="toggleGuide()"></div>
+<div class="guide-panel" id="guidePanel">
+  <div class="guide-close">
+    <span class="guide-close-title">Керівництво користувача</span>
+    <button class="guide-close-btn" onclick="toggleGuide()" title="Закрити">✕</button>
+  </div>
+  <div class="guide-content">
+
+<h2>1. Призначення програми</h2>
+<p><strong>FinDiscounting Pro</strong> — інструмент для дисконтування фінансових інструментів та розрахунку оренди.</p>
+<ul>
+  <li>Обчислення теперішньої вартості (ТВ) грошових потоків</li>
+  <li>Визначення ефективної ставки відсотка (ЕСВ)</li>
+  <li>Побудова таблиць амортизації методом ефективної ставки</li>
+  <li>Формування бухгалтерських проведень за НП(С)БО та МСФЗ</li>
+  <li>Порівняння облікових підходів (НП(С)БО / МСФЗ 9) для ОВДП</li>
+</ul>
+<div class="guide-info"><strong>Нормативна база:</strong> НП(С)БО 10, 11, 12, 13, 28 · МСФЗ 9, 16 · МСБО 32, 37, 39</div>
+
+<hr class="guide-divider">
+
+<h2>2. Робочий простір</h2>
+<p>Екран складається з двох карток та блоку результатів.</p>
+<h4>Ліва картка — «Параметри інструменту»</h4>
+<table><thead><tr><th>Панель</th><th>Типи інструментів</th></tr></thead><tbody>
+<tr><td>Стандартні поля</td><td>Видана позика · Отримана позика · Довгострокове зобов'язання · Облігації</td></tr>
+<tr><td>Панель ОВДП</td><td>ОВДП (гривнева) · ОВДП (валютна)</td></tr>
+<tr><td>Панель оренди</td><td>Оренда (МСФЗ 16)</td></tr>
+</tbody></table>
+<h4>Права картка — «Строки та рахунки»</h4>
+<p>Спільна для всіх типів: дати визнання та погашення, рахунки обліку, кнопка <strong>«Розрахувати»</strong>.</p>
+
+<hr class="guide-divider">
+
+<h2>3. Типи фінансових інструментів</h2>
+
+<!-- 3.1 -->
+<h3>3.1 Видана позика</h3>
+<span class="guide-cat a">Фінансові активи</span>
+<p>Підприємство видало позику за ставкою нижче ринкової або безвідсотково.</p>
+<table><thead><tr><th>Поле</th><th>Призначення</th></tr></thead><tbody>
+<tr><td>Номінальна сума</td><td>Основна сума позики (тіло боргу)</td></tr>
+<tr><td>Договірна ставка, %</td><td>Ставка за договором. Для безвідсоткових — <code>0</code></td></tr>
+<tr><td>Ринкова / ефективна ставка, %</td><td>Ставка для дисконтування грошових потоків</td></tr>
+<tr><td>Комісія при видачі</td><td>Включається до балансової вартості; змінює ЕСВ</td></tr>
+<tr><td>Пов'язана особа</td><td>Змінює рахунки: 424/425 замість 949/733 (МСБО 24)</td></tr>
+</tbody></table>
+<p><strong>Рахунки обліку:</strong> 183 · 377 · 14</p>
+<h4>Проведення (НП(С)БО)</h4>
+<table><thead><tr><th>Операція</th><th>Дт</th><th>Кт</th><th>Сума</th></tr></thead><tbody>
+<tr><td>Видача позики</td><td>Рахунок</td><td>311</td><td>ТВ</td></tr>
+<tr><td>Визнання дисконту</td><td>949 (424)</td><td>Рахунок</td><td>Дисконт</td></tr>
+<tr><td>Комісія</td><td>Рахунок</td><td>685</td><td>Комісія</td></tr>
+<tr><td>Нарахування ЕСВ</td><td>Рахунок</td><td>733 (425)</td><td>Відсотки</td></tr>
+<tr><td>Переведення до поточної</td><td>183/377</td><td>Довгостр.</td><td>Залишок</td></tr>
+<tr><td>Погашення</td><td>311</td><td>Рахунок</td><td>Номінал</td></tr>
+</tbody></table>
+<div class="guide-info"><strong>Автовизначення підтипу:</strong> безвідсоткова (ставка ≈ 0), договірна X % (нижче ринку), за номіналом, з премією.</div>
+
+<!-- 3.2 -->
+<h3>3.2 Отримана позика (кредит)</h3>
+<span class="guide-cat l">Фінансові зобов'язання</span>
+<p>Підприємство отримало позику або кредит за пільговою ставкою.</p>
+<table><thead><tr><th>Поле</th><th>Призначення</th></tr></thead><tbody>
+<tr><td>Номінальна сума</td><td>Сума зобов'язання до погашення</td></tr>
+<tr><td>Договірна ставка кредиту, %</td><td>Ставка за кредитним договором</td></tr>
+<tr><td>Ринкова ставка, %</td><td>Ставка для дисконтування</td></tr>
+<tr><td>Комісія</td><td>Витрати на оформлення</td></tr>
+<tr><td>Пов'язана особа</td><td>Перемикач (МСБО 24)</td></tr>
+</tbody></table>
+<p><strong>Рахунки обліку:</strong> 505 · 55 · 601</p>
+<ul>
+<li><strong>Рекласифікація</strong> — автоматично: довгостроковий → 611 в останній рік перед погашенням.</li>
+<li><strong>Погашення</strong> — через 611 → 311. Дисконт визнається як дохід (Кт 733 або 425).</li>
+</ul>
+
+<!-- 3.3 -->
+<h3>3.3 Довгострокове зобов'язання</h3>
+<span class="guide-cat l">Фінансові зобов'язання</span>
+<p>Довгострокова торговельна або інша заборгованість. Поля аналогічні отриманій позиці. Рекласифікація не передбачена. Погашення — Дт рахунок / Кт 311 напряму.</p>
+<p><strong>Рахунки обліку:</strong> 55 · 685 · 505</p>
+
+<!-- 3.4 -->
+<h3>3.4 Облігації розміщені</h3>
+<span class="guide-cat l">Фінансові зобов'язання</span>
+<p>Підприємство розмістило власні облігації — купонні або безкупонні.</p>
+<table><thead><tr><th>Поле</th><th>Призначення</th></tr></thead><tbody>
+<tr><td>Номінальна сума</td><td>Номінальна вартість випуску</td></tr>
+<tr><td>Купонна ставка, %</td><td>Ставка купона за умовами випуску</td></tr>
+<tr><td>Ринкова ставка, %</td><td>Ставка для визначення ЕСВ</td></tr>
+<tr><td>Комісія при розміщенні</td><td>НП(С)БО 13 п. 29</td></tr>
+<tr><td>Дата емісії</td><td>Дата випуску облігацій</td></tr>
+</tbody></table>
+<p><strong>Рахунки обліку:</strong> 521 · 522</p>
+<h4>Проведення (НП(С)БО)</h4>
+<table><thead><tr><th>Операція</th><th>Дт</th><th>Кт</th><th>Сума</th></tr></thead><tbody>
+<tr><td>Надходження</td><td>311</td><td>521</td><td>ТВ</td></tr>
+<tr><td>Дисконт</td><td>522</td><td>521</td><td>Номінал − ТВ</td></tr>
+<tr><td>Премія</td><td>521</td><td>522</td><td>ТВ − Номінал</td></tr>
+<tr><td>Комісія</td><td>521</td><td>685</td><td>Комісія</td></tr>
+<tr><td>Фін. витрати ЕСВ</td><td>952</td><td>521</td><td>Амортизація</td></tr>
+<tr><td>Нарахування купону</td><td>521</td><td>684</td><td>Купон</td></tr>
+<tr><td>Виплата купону</td><td>684</td><td>311</td><td>Купон</td></tr>
+<tr><td>Погашення</td><td>521</td><td>311</td><td>Номінал</td></tr>
+</tbody></table>
+
+<!-- 3.5 -->
+<h3>3.5 ОВДП (гривнева)</h3>
+<span class="guide-cat a">Фінансові активи</span>
+<p>Облігації внутрішньої державної позики, номіновані в гривні. Найбільш розвинутий тип: окрема панель, завантаження з Мінфіну, подвійний розрахунок НП(С)БО / МСФЗ 9.</p>
+
+<h4>Поля введення</h4>
+<table><thead><tr><th>Поле</th><th>Призначення</th></tr></thead><tbody>
+<tr><td>Код ISIN</td><td>Ідентифікатор облігації + кнопка <strong>«Завантажити»</strong></td></tr>
+<tr><td>Номінал 1 облігації</td><td>Зазвичай 1 000 грн</td></tr>
+<tr><td>Кількість, шт.</td><td>Кількість придбаних облігацій</td></tr>
+<tr><td>Термін обігу, днів</td><td>Від емісії до погашення</td></tr>
+<tr><td>Комісія при придбанні</td><td>Включається до балансової вартості</td></tr>
+<tr><td>Купон, грн / 1 обл.</td><td>Сума купону за виплату. <code>0</code> для безкупонних</td></tr>
+<tr><td>Дохідність НБУ, %</td><td>Річна дохідність із реєстру НБУ</td></tr>
+<tr><td>Фактична ціна 1 обл.</td><td>Ціна придбання — основа ЕСВ за НП(С)БО</td></tr>
+<tr><td>Справ. вартість НБУ</td><td>З реєстру НБУ — основа ЕСВ за МСФЗ 9</td></tr>
+</tbody></table>
+
+<h4>Завантаження з Міністерства фінансів</h4>
+<ol class="guide-steps">
+<li>Введіть код ISIN.</li>
+<li>Натисніть <strong>«Завантажити»</strong> (або Enter).</li>
+<li>Програма отримує: валюту, термін, дохідність, купон, дати погашення та купонів.</li>
+<li>Якщо графік купонів не знайдено — введіть дати вручну через блок <strong>«Дати купонних виплат»</strong>.</li>
+</ol>
+
+<h4>Дві вкладки: НП(С)БО та МСФЗ 9</h4>
+<table><thead><tr><th></th><th>НП(С)БО</th><th>МСФЗ 9</th></tr></thead><tbody>
+<tr><td><strong>Основа ЕСВ</strong></td><td>Фактична ціна + комісія</td><td>Справ. вартість НБУ + комісія</td></tr>
+<tr><td><strong>Різниця 1-го дня</strong></td><td>Поглинається дисконтом</td><td>Визнається у П&З одразу</td></tr>
+<tr><td><strong>Рахунок доходу</strong></td><td>733</td><td>732</td></tr>
+<tr><td><strong>Норм. основа</strong></td><td>НП(С)БО 12, 13</td><td>МСФЗ 9 п. 5.1.1, В5.1.1</td></tr>
+</tbody></table>
+<p><strong>Рахунки:</strong> 352 · 143</p>
+<div class="guide-info"><strong>Безкупонні ОВДП:</strong> автоматично розраховується дисконтована ціна P = N / (1 + y × d / 365). Єдиний грошовий потік — повернення номіналу.</div>
+
+<!-- 3.6 -->
+<h3>3.6 ОВДП (валютна)</h3>
+<span class="guide-cat a">Фінансові активи</span>
+<p>ОВДП у іноземній валюті (долар США або євро). Усе як для гривневої, плюс:</p>
+<table><thead><tr><th>Поле</th><th>Призначення</th></tr></thead><tbody>
+<tr><td>Валюта ОВДП</td><td>Долар США або євро</td></tr>
+<tr><td>Курс НБУ на дату придбання</td><td>Офіційний курс, грн / валюта</td></tr>
+<tr><td>Номінал у гривнях</td><td>Автоматично: номінал × кількість × курс</td></tr>
+</tbody></table>
+<p><strong>Розклад курсів НБУ:</strong> після першого розрахунку — блок «Курси НБУ по датах» з полями для кожної дати. Кнопки: <strong>«Оновити курси НБУ»</strong> (автозавантаження) та <strong>«Перерахувати»</strong> (після ручного коригування).</p>
+<p><strong>Курсові різниці:</strong> позитивна → Кт 714; від'ємна → Дт 945.</p>
+<p><strong>Додаткові стовпці таблиці:</strong> Курс НБУ · Баланс (грн) · Нарах. % (грн) · КР (грн) · Грош. потік (грн).</p>
+
+<!-- 3.7 -->
+<h3>3.7 Оренда (МСФЗ 16)</h3>
+<span class="guide-cat o">Оренда</span>
+<p>Підприємство є орендарем. Розрахунок зобов'язання з оренди та ППКО (актив з права користування).</p>
+<table><thead><tr><th>Поле</th><th>Призначення</th></tr></thead><tbody>
+<tr><td>Орендний платіж, грн</td><td>Фіксований орендний платіж за період</td></tr>
+<tr><td>Періодичність</td><td>Щомісяця / щоквартально / щорічно</td></tr>
+<tr><td>Момент оплати</td><td>На початку або наприкінці періоду</td></tr>
+<tr><td>Ставка дисконтування</td><td>Гранична ставка запозичення (МСФЗ 16.26)</td></tr>
+<tr><td>Початкові прямі витрати</td><td>МСФЗ 16.24(d) — додаються до ППКО</td></tr>
+<tr><td>Стимули орендодавця</td><td>МСФЗ 16.24(b) — зменшують ППКО</td></tr>
+<tr><td>Резерв на демонтаж</td><td>МСФЗ 16.24(d), МСБО 37 — додається до ППКО</td></tr>
+</tbody></table>
+
+<h4>Модифікація оренди (МСФЗ 16.44–46)</h4>
+<p>Увімкніть перемикач <strong>«Модифікація оренди»</strong>:</p>
+<table><thead><tr><th>Поле</th><th>Призначення</th></tr></thead><tbody>
+<tr><td>Дата модифікації</td><td>Автоматично або вручну</td></tr>
+<tr><td>Новий платіж / дата / ставка</td><td>Порожнє — без змін</td></tr>
+<tr><td>Тип модифікації</td><td>«Не окрема оренда» (16.45) або «Зменшення обсягу» (16.46a)</td></tr>
+</tbody></table>
+
+<h4>Рахунки обліку</h4>
+<table><thead><tr><th>Рахунок</th><th>Призначення</th></tr></thead><tbody>
+<tr><td>5311 / 6111</td><td>Зобов'язання з оренди (довгострок. / поточне)</td></tr>
+<tr><td>1051–1054</td><td>ППКО: нерухомість / транспорт / обладнання / інші</td></tr>
+<tr><td>1351–1354</td><td>Знос ППКО</td></tr>
+<tr><td>92 / 93 / 91 / 23</td><td>Витрати на амортизацію ППКО</td></tr>
+</tbody></table>
+<p><strong>Вкладки:</strong> «Зобов'язання з оренди» (графік погашення) та «ППКО — амортизація» (прямолінійний метод).</p>
+
+<hr class="guide-divider">
+
+<h2>4. Строки та рахунки</h2>
+<table><thead><tr><th>Поле</th><th>Призначення</th><th>Видимість</th></tr></thead><tbody>
+<tr><td>Дата емісії</td><td>Дата випуску інструменту</td><td>Облігації, ОВДП</td></tr>
+<tr><td>Дата визнання</td><td>Початок дисконтування</td><td>Усі типи</td></tr>
+<tr><td>Дата погашення</td><td>Закінчення дії</td><td>Усі типи</td></tr>
+<tr><td>Рахунок обліку</td><td>Специфічний для кожного типу</td><td>Усі типи</td></tr>
+</tbody></table>
+<div class="guide-warn"><strong>Попередження:</strong> якщо строк менше 1 року — «дисконтування може бути несуттєвим (НП(С)БО 13 п. 6)».</div>
+
+<hr class="guide-divider">
+
+<h2>5. Результати розрахунку</h2>
+<h4>Позначки</h4>
+<p>Тип інструменту з підтипом (або ISIN) · строк у роках та днях · ЕСВ або ТВ.</p>
+<h4>Показники</h4>
+<p>Теперішня вартість · дисконт або премія · номінал · щоденні ставки НП(С)БО та МСФЗ 9.</p>
+<h4>Таблиця амортизації</h4>
+<p>Метод ефективної ставки: Дата · Подія · Баланс поч. · Нарах.&nbsp;% · Грош. потік · Баланс кін.</p>
+<h4>Бухгалтерські проведення</h4>
+<p>Згруповані за етапами: первісне визнання → амортизація по роках → рекласифікація → погашення.</p>
+<h4>Пояснення та методологія</h4>
+<p>Розкривна панель: формула, нормативна основа, оцінка суттєвості, опис методу ЕСВ, порівняння НП(С)БО та МСФЗ.</p>
+
+<hr class="guide-divider">
+
+<h2>6. Додаткові можливості</h2>
+<h4>Завантаження з Мінфіну</h4>
+<p>Для ОВДП: введіть ISIN → <strong>«Завантажити»</strong> → поля заповнюються автоматично. Потрібен проксі-сервер (налаштування в <strong>⚙</strong>).</p>
+<h4>Автозавантаження курсів НБУ</h4>
+<p>Для валютних ОВДП: при першому розрахунку курси завантажуються автоматично. Можна коригувати вручну.</p>
+<h4>Пов'язані особи</h4>
+<p>Перемикач для позик та зобов'язань: рахунки 424/425 замість 949/733 (МСБО 24, НП(С)БО 23).</p>
+
+<hr class="guide-divider">
+
+<h2>7. Налаштування</h2>
+<p>Кнопка <strong>⚙</strong> у заголовку: адреса проксі-сервера для завантаження даних ОВДП. Інструкція зі створення власного сервера. Зберігається у сховищі браузера.</p>
+
+<h2>8. Друк</h2>
+<p>Кнопка <strong>🖨</strong>: обидві вкладки (НП(С)БО та МСФЗ) на окремих сторінках, чорно-білий режим. Для PDF — «Зберегти як PDF» у діалозі друку.</p>
+
+<hr class="guide-divider">
+
+<h2>9. Приклади</h2>
+
+<h4>Безвідсоткова позика</h4>
+<ol class="guide-steps">
+<li>Тип → <strong>«Видана позика»</strong></li>
+<li>Номінальна сума → <code>100 000</code>, договірна ставка → <code>0</code>, ринкова → <code>18</code></li>
+<li>Дата визнання → 01.01.2025, дата погашення → 01.01.2028</li>
+<li>Натисніть <strong>«Розрахувати»</strong></li>
+</ol>
+
+<h4>Купонна ОВДП</h4>
+<ol class="guide-steps">
+<li>Тип → <strong>«ОВДП (гривнева)»</strong></li>
+<li>Код ISIN → введіть, натисніть <strong>«Завантажити»</strong></li>
+<li>Перевірте поля, введіть справедливу вартість НБУ</li>
+<li>Натисніть <strong>«Розрахувати»</strong>, перемикайте вкладки НП(С)БО / МСФЗ</li>
+</ol>
+
+<h4>Оренда офісу</h4>
+<ol class="guide-steps">
+<li>Тип → <strong>«Оренда (МСФЗ 16)»</strong></li>
+<li>Платіж → <code>15 000</code>, щомісяця, на початку, ставка → <code>14</code></li>
+<li>Дата початку → 01.01.2025, закінчення → 01.01.2028</li>
+<li>Рахунок ППКО → <code>1051 — нерухомість</code></li>
+<li>Натисніть <strong>«Розрахувати»</strong></li>
+</ol>
+
+  </div>
+</div>
+
 <div class="container">
 
 <header>
@@ -669,6 +992,11 @@ export default {
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
+  <button class="btn-guide" onclick="toggleGuide()" title="Інструкція">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+    </svg>
+  </button>
   <button class="btn-settings" onclick="toggleSettings()" title="Налаштування">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -1160,6 +1488,21 @@ function getWorkerBaseUrl() {
   } catch(e) {}
   return DEFAULT_WORKER_URL;
 }
+
+function toggleGuide() {
+  const p = document.getElementById('guidePanel');
+  const o = document.getElementById('guideOverlay');
+  const isOpen = p.classList.contains('show');
+  p.classList.toggle('show', !isOpen);
+  o.classList.toggle('show', !isOpen);
+  if (!isOpen) p.scrollTop = 0;
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const gp = document.getElementById('guidePanel');
+    if (gp && gp.classList.contains('show')) toggleGuide();
+  }
+});
 
 function toggleSettings() {
   const panel = document.getElementById('settingsPanel');
