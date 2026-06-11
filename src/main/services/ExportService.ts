@@ -12,11 +12,10 @@ export class ExportService {
         throw new Error('No active database to export');
     }
     
-    // Save state inside DuckDB as a metadata table
-    const stateJson = JSON.stringify(state).replace(/'/g, "''");
+    // Save state inside the SQLite DB using a parameterized statement.
     await this.db.execute(`DROP TABLE IF EXISTS audit_metadata`);
     await this.db.execute(`CREATE TABLE audit_metadata (data VARCHAR)`);
-    await this.db.execute(`INSERT INTO audit_metadata VALUES ('${stateJson}')`);
+    await this.db.execute(`INSERT INTO audit_metadata VALUES (?)`, [JSON.stringify(state)]);
     
     // Close the DB temporarily to copy the file safely? 
     // Actually DuckDB supports EXPORT DATABASE, but simple file copy might work 

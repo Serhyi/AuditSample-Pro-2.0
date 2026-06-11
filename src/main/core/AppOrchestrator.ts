@@ -3,6 +3,14 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 
+// Allowed table names that IPC callers may reference.
+const ALLOWED_TABLES = new Set(['population', 'samplingItems', 'keyItems']);
+function assertTable(table: string): void {
+  if (!ALLOWED_TABLES.has(table)) {
+    throw new Error(`IPC: forbidden table name "${table}"`);
+  }
+}
+
 import { DatabaseService } from '../services/DatabaseService';
 import { ImportService } from '../services/ImportService';
 import { SamplingService } from '../services/SamplingService';
@@ -15,6 +23,8 @@ export class AppOrchestrator {
   private samplingService: SamplingService;
   private exportService: ExportService;
   private workerPool: WorkerPool;
+  // Pre-warmed sql.js constructor passed in from index.ts startup warmup.
+  public sqlJsWarmup: Promise<any> | null = null;
 
   constructor() {
     this.dbService = new DatabaseService();
@@ -35,7 +45,7 @@ export class AppOrchestrator {
       await this.dbService.close();
       const directory = path.dirname(result.dbPath);
       const id = path.basename(result.dbPath, '.sqlite');
-      await this.dbService.initialize(id, directory);
+      await this.dbService.initialize(id, directory, this.sqlJsWarmup ? await this.sqlJsWarmup.catch(() => undefined) : undefined);
       
       return result;
     });
@@ -198,7 +208,7 @@ export class AppOrchestrator {
           // Re-open DB
           const directory = path.dirname(this.dbService.dbPath!);
           const id = path.basename(this.dbService.dbPath!, '.sqlite');
-          await this.dbService.initialize(id, directory);
+          await this.dbService.initialize(id, directory, this.sqlJsWarmup ? await this.sqlJsWarmup.catch(() => undefined) : undefined);
           
           const state = JSON.parse(stateJson);
           return state;
@@ -209,10 +219,12 @@ export class AppOrchestrator {
     });
 
     ipcMain.handle('query:getRows', async (event, table, limit, offset) => {
+      assertTable(table);
       return await this.dbService.query(`SELECT * FROM ${table} LIMIT ? OFFSET ?`, [limit, offset]);
     });
 
     ipcMain.handle('query:insertRows', async (event, table, rows) => {
+      assertTable(table);
       await this.dbService.execute(`DROP TABLE IF EXISTS ${table}`);
       await this.dbService.execute(`
         CREATE TABLE ${table} (
@@ -224,15 +236,25 @@ export class AppOrchestrator {
           difference DOUBLE
         )
       `);
-      // very naive batch insert for restored projects
-      const values = rows.map((r: any) => `('${r.id}', '${r.date}', ${r.amount}, ${r.bookValue || r.amount}, ${r.auditedValue !== undefined ? r.auditedValue : 'NULL'}, ${r.difference || 0})`).join(',');
-      if (values.length > 0) {
-        await this.dbService.execute(`INSERT INTO ${table} (id, date, amount, bookValue, auditedValue, difference) VALUES ${values}`);
+      // Parameterized batch insert — no string interpolation of row values.
+      for (const r of (rows as any[])) {
+        await this.dbService.execute(
+          `INSERT INTO ${table} (id, date, amount, bookValue, auditedValue, difference) VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            String(r.id ?? ''),
+            String(r.date ?? ''),
+            Number(r.amount) || 0,
+            Number(r.bookValue ?? r.amount) || 0,
+            r.auditedValue != null ? Number(r.auditedValue) : null,
+            Number(r.difference) || 0
+          ]
+        );
       }
       return true;
     });
 
     ipcMain.handle('query:getAggregates', async (event, table) => {
+      assertTable(table);
       try {
         const result = await this.dbService.query<any>(`SELECT COUNT(*) as cnt, SUM(ABS(amount)) as val, MIN(amount) as min_amt, MAX(amount) as max_amt FROM ${table}`);
         const cnt = result[0]?.cnt || 0;

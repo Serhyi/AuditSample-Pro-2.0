@@ -5,7 +5,20 @@ import { AppOrchestrator } from './core/AppOrchestrator';
 let orchestrator: AppOrchestrator;
 let splash: BrowserWindow | null;
 let mainWindowStarted = false;
-const SPLASH_MIN_MS = 3000; // мінімальний час показу splash
+const SPLASH_MIN_MS = 2000; // мінімальний час показу splash (скорочено з 3000)
+
+// Починаємо прогрів sql.js одразу при старті процесу — паралельно зі
+// створенням BrowserWindow і завантаженням рендерера. Це економить ~300-500 ms,
+// які інакше витрачались би синхронно під час першого виклику initialize().
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const sqlJsWarmup: Promise<any> = (async () => {
+  try {
+    const initSqlJs = require('sql.js');
+    return await initSqlJs();
+  } catch {
+    return null;
+  }
+})();
 let splashShownAt = 0;
 
 function createWindow() {
@@ -63,6 +76,7 @@ function setupMainWindow() {
   });
 
   orchestrator = new AppOrchestrator();
+  orchestrator.sqlJsWarmup = sqlJsWarmup;
   orchestrator.registerIpcHandlers();
 
   if (process.env.VITE_DEV_SERVER_URL) {
