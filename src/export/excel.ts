@@ -52,15 +52,19 @@ export async function exportToExcel(
     // Main header
     addSectionHeader(isUa ? 'Опис та результат' : 'Description and Result', colorGreen);
 
-    // Licensee
+    // Licensee — license requisites are included in every export.
+    addSectionHeader(isUa ? 'Власник ліцензії (Аудитор)' : 'Licensee (Auditor)', colorDarkBlue);
     if (license && license.entityName) {
-      addSectionHeader(isUa ? 'Власник ліцензії (Аудитор)' : 'Licensee (Auditor)', colorDarkBlue);
       addDetailRow(isUa ? 'Ліцензовано для' : 'Licensed to', license.entityName);
       if (license.entityCode) addDetailRow(isUa ? 'ЄДРПОУ / ІПН' : 'Reg. Code', license.entityCode);
       if (license.email) addDetailRow('Email', license.email);
       if (license.licenseId) addDetailRow(isUa ? 'Номер ліцензії' : 'License ID', license.licenseId);
-      sheet.addRow([]);
+      if (license.issuedAt) addDetailRow(isUa ? 'Дата видачі' : 'Issued', String(license.issuedAt).substring(0, 10));
+      if (license.expiresAt) addDetailRow(isUa ? 'Діє до' : 'Expires', String(license.expiresAt).substring(0, 10));
+    } else {
+      addDetailRow(isUa ? 'Ліцензія' : 'License', isUa ? 'Незареєстрована (безкоштовна) версія AuditSample Pro' : 'Unregistered (free) version of AuditSample Pro');
     }
+    sheet.addRow([]);
 
     // Method
     addSectionHeader(isUa ? 'Метод відбору' : 'Sampling Method', colorDarkBlue);
