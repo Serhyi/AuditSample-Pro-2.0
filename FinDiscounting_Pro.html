@@ -726,7 +726,7 @@ export default {
   <li>Формування бухгалтерських проведень за НП(С)БО та МСФЗ</li>
   <li>Порівняння облікових підходів (НП(С)БО / МСФЗ 9) для ОВДП</li>
 </ul>
-<div class="guide-info"><strong>Нормативна база:</strong> НП(С)БО 10, 11, 12, 13, 28 · МСФЗ 9, 16 · МСБО 32, 37, 39</div>
+<div class="guide-info"><strong>Нормативна база:</strong> НП(С)БО 10, 11, 12, 13, 15, 28 · МСФЗ 9, 16 · МСБО 20, 32, 37, 39</div>
 
 <hr class="guide-divider">
 
@@ -895,6 +895,29 @@ export default {
 </tbody></table>
 <p><strong>Вкладки:</strong> «Зобов'язання з оренди» (графік погашення) та «ППКО — амортизація» (прямолінійний метод).</p>
 
+<!-- 3.8 -->
+<h3>3.8 Кредит «Доступні кредити 5-7-9%»</h3>
+<span class="guide-cat l">Фінансові зобов'язання</span>
+<p>Державна програма пільгового кредитування. Банк видає кредит за базовою ставкою, позичальник сплачує лише пільгову частину (5%, 7% або 9%), різницю компенсує Фонд розвитку підприємництва.</p>
+<table><thead><tr><th>Поле</th><th>Призначення</th></tr></thead><tbody>
+<tr><td>Сума кредиту</td><td>Номінальна сума отриманого кредиту</td></tr>
+<tr><td>Пільгова ставка</td><td>5%, 7% або 9% — яку фактично сплачує позичальник</td></tr>
+<tr><td>Базова ставка банку</td><td>Повна ставка, за якою банк нараховує відсотки</td></tr>
+<tr><td>Ринкова ставка МСФЗ</td><td>Ставка за аналогічним кредитом без субсидії (для дисконтування)</td></tr>
+<tr><td>Тип погашення тіла</td><td>В кінці строку / рівними частинами / ануїтет</td></tr>
+<tr><td>Комісія</td><td>Разова комісія при отриманні кредиту</td></tr>
+</tbody></table>
+
+<h4>Дві вкладки: НП(С)БО та МСФЗ</h4>
+<table><thead><tr><th></th><th>НП(С)БО</th><th>МСФЗ (IFRS 9 + IAS 20)</th></tr></thead><tbody>
+<tr><td><strong>Дисконтування</strong></td><td>Без дисконтування</td><td>За ринковою ставкою</td></tr>
+<tr><td><strong>Вигода</strong></td><td>Цільове фінансування (482→718)</td><td>Державний грант (69→733)</td></tr>
+<tr><td><strong>Фін. витрати</strong></td><td>951 — базова ставка банку</td><td>952 — EIR за ринковою ставкою</td></tr>
+<tr><td><strong>Норм. основа</strong></td><td>НП(С)БО 11, 15</td><td>МСФЗ 9 п. 5.1.1 + МСБО 20 п. 10А</td></tr>
+</tbody></table>
+<div class="guide-info"><strong>МСБО 20 п. 10А:</strong> вигода від кредиту за ставкою нижче ринкової розглядається як державний грант. Грант = Номінал − Справедлива вартість (PV фактичних виплат, дисконтованих за ринковою ставкою).</div>
+<div class="guide-warn"><strong>Увага:</strong> ринкова ставка для МСФЗ повинна відповідати ставці за аналогічним кредитом без субсидії (з урахуванням валюти, строку, кредитного ризику позичальника).</div>
+
 <hr class="guide-divider">
 
 <h2>4. Строки та рахунки</h2>
@@ -967,6 +990,15 @@ export default {
 <li>Натисніть <strong>«Розрахувати»</strong></li>
 </ol>
 
+<h4>Кредит «5-7-9%»</h4>
+<ol class="guide-steps">
+<li>Тип → <strong>«Кредит «Доступні кредити 5-7-9%»»</strong></li>
+<li>Сума → <code>1 000 000</code>, пільгова → <code>9%</code>, базова банку → <code>16</code>, ринкова МСФЗ → <code>20</code></li>
+<li>Тип погашення → <strong>«Рівними частинами»</strong></li>
+<li>Дата отримання → 01.01.2025, дата погашення → 01.01.2028</li>
+<li>Натисніть <strong>«Розрахувати»</strong>, перемикайте вкладки НП(С)БО / МСФЗ</li>
+</ol>
+
   </div>
 </div>
 
@@ -986,7 +1018,7 @@ export default {
   <path class="st0" d="M299.6 49.5V44h-48.4c.4 1.8.8 3.6 1 5.4h47.4z"/>
 </svg></div>
     <div>
-      <div class="header-label">Марінченко і Партнери &middot; НП(С)БО 10 &middot; 11 &middot; 13 &middot; 28 &middot; МСФЗ 9 &middot; МСФЗ 16 &middot; МСБО 32 &middot; 39</div>
+      <div class="header-label">Марінченко і Партнери &middot; НП(С)БО 10 &middot; 11 &middot; 13 &middot; 28 &middot; МСФЗ 9 &middot; МСФЗ 16 &middot; МСБО 20 &middot; 32 &middot; 39</div>
     <h1><span class="product-name">FinDiscounting</span><span class="product-suffix"> Pro</span></h1>
     <div class="subtitle">Дисконтування фінансових інструментів &middot; Оренда &middot; PV &middot; EIR &middot; Амортизація &middot; Проведення</div>
     </div>
@@ -1029,6 +1061,7 @@ export default {
         <option value="loan_in">Отримана позика (кредит)</option>
         <option value="liab">Довгострокове зобов’язання</option>
         <option value="bond">Облігації розміщені</option>
+        <option value="credit_579">Кредит «Доступні кредити 5-7-9%»</option>
       </optgroup>
       <optgroup label="── ОРЕНДА ───────────────────────────">
         <option value="lease">Оренда (МСФЗ 16 / IFRS 16)</option>
@@ -1264,6 +1297,54 @@ export default {
         <div class="ovdp-sum-row"><span>Загальні відсотки:</span><span id="leaseTotalInt">—</span></div>
       </div>
     </div>
+
+    <!-- ── CREDIT 5-7-9% PANEL ── -->
+    <div id="credit579Panel" style="display:none">
+      <div class="ovdp-divider" style="margin-top:4px">Параметри кредиту «Доступні кредити 5-7-9%»</div>
+
+      <label>Сума кредиту (грн)</label>
+      <input type="number" id="credit579Amount" value="1000000" min="1" step="0.01">
+
+      <div class="grid-2-eq">
+        <div>
+          <label>Пільгова ставка позичальника (% річних)</label>
+          <select id="credit579SubRate">
+            <option value="5">5%</option>
+            <option value="7">7%</option>
+            <option value="9" selected>9%</option>
+          </select>
+        </div>
+        <div>
+          <label>Базова ставка банку (% річних)</label>
+          <input type="number" id="credit579BankRate" value="16" min="0.1" max="99" step="0.1">
+        </div>
+      </div>
+
+      <label>Ринкова ставка для МСФЗ (% річних) <span style="color:var(--muted);font-size:9px">ставка за аналогічним кредитом без субсидії (МСФЗ 9 B5.1.1)</span></label>
+      <input type="number" id="credit579MarketRate" value="20" min="0.1" max="99" step="0.1">
+
+      <div class="grid-2-eq">
+        <div>
+          <label>Тип погашення тіла кредиту</label>
+          <select id="credit579RepayType">
+            <option value="bullet">В кінці строку (разово)</option>
+            <option value="equal" selected>Рівними частинами (щокварталу)</option>
+            <option value="annuity">Ануїтет (рівний платіж)</option>
+          </select>
+        </div>
+        <div>
+          <label>Комісія при отриманні (грн)</label>
+          <input type="number" id="credit579Commission" value="0" min="0" step="0.01" placeholder="0.00">
+        </div>
+      </div>
+
+      <div class="ovdp-summary" style="margin-top:14px">
+        <div class="ovdp-sum-row"><span>Різниця ставок (компенсація Фонду):</span><span id="c579RateDiff">—</span></div>
+        <div class="ovdp-sum-row"><span>Справедлива вартість (МСФЗ):</span><span id="c579FairValue">—</span></div>
+        <div class="ovdp-sum-row"><span>Державний грант (МСФЗ):</span><span id="c579Grant">—</span></div>
+        <div class="ovdp-sum-row"><span>ЕСВ МСФЗ (щоденна):</span><span id="c579EirDaily">—</span></div>
+      </div>
+    </div>
   </div>
 
   <!-- Права -->
@@ -1424,7 +1505,7 @@ export default {
 </svg></div>
       <div class="about-text">
         <div class="about-title"><span style="font-weight:800">FinDiscounting</span><span style="font-weight:300;color:var(--accent)"> Pro</span></div>
-        <div class="about-sub">Дисконтування фінансових інструментів · Оренда · НП(С)БО · МСФЗ 9 · МСФЗ 16 · МСБО 32, 39</div>
+        <div class="about-sub">Дисконтування фінансових інструментів · Оренда · Кредити 5-7-9% · НП(С)БО · МСФЗ 9 · МСФЗ 16 · МСБО 20, 32, 39</div>
         <div class="about-meta">
           <div class="about-row">
             <span class="about-label">Автор</span>
@@ -1436,7 +1517,7 @@ export default {
           </div>
           <div class="about-row">
             <span class="about-label">Нормативна база</span>
-            <span class="about-value">НП(С)БО 10, 11, 12, 13, 21, 23, 28 · МСФЗ 9 · МСФЗ 16 (Оренда) · МСБО 32, 39</span>
+            <span class="about-value">НП(С)БО 10, 11, 12, 13, 15, 21, 23, 28 · МСФЗ 9 · МСФЗ 16 (Оренда) · МСБО 20 (Держ. гранти), 32, 39</span>
           </div>
         </div>
         <div class="about-disclaimer-note">
@@ -1664,6 +1745,7 @@ const ACCS = {
   liab:     [{v:'55',l:`55 — Інші довгострокові зобов.`},{v:'685',l:`685 — Розрахунки з ін. кредиторами`},{v:'505',l:`505 — Інші довгострокові позики`}],
   lease:    [{v:'5311',l:`5311 — Довгострокові зобов'язання з оренди`},{v:'6111',l:`6111 — Поточна частина зобов'язань з оренди`}],
   bond:     [{v:'521',l:`521 — Зобов. за облігаціями`},{v:'522',l:`522 — Дисконт/Премія за облігаціями`}],
+  credit_579: [{v:'501',l:`501 — Довгострокові кредити банків у нац. валюті`},{v:'601',l:`601 — Короткострокові кредити банків у нац. валюті`}],
 };
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -1858,13 +1940,15 @@ function onTypeChange() {
   const isOvdp  = type === 'ovdp' || type === 'ovdp_fx';
   const isFx    = type === 'ovdp_fx';
   const isLease = type === 'lease';
+  const is579   = type === 'credit_579';
 
   // Panels
-  document.getElementById('standardFields').style.display = (isOvdp || isLease) ? 'none' : 'block';
+  document.getElementById('standardFields').style.display = (isOvdp || isLease || is579) ? 'none' : 'block';
   document.getElementById('ovdpPanel').style.display      = isOvdp ? 'block' : 'none';
   document.getElementById('leasePanel').style.display     = isLease ? 'block' : 'none';
   const leaseAccBlock = document.getElementById('leaseAccountsBlock');
   if (leaseAccBlock) leaseAccBlock.style.display = isLease ? 'block' : 'none';
+  document.getElementById('credit579Panel').style.display = is579 ? 'block' : 'none';
   document.getElementById('fxRateRow').style.display      = 'none'; // shown after OVDP data loads
 
   // Labels for lease
@@ -1881,7 +1965,7 @@ function onTypeChange() {
   // Emission date — only for bonds and OVDP
   const emRow = document.getElementById('emissionRow');
   if(emRow) emRow.style.display = (isOvdp || type === 'bond') ? 'block' : 'none';
-  if(isLease && emRow) emRow.style.display = 'none';
+  if((isLease || is579) && emRow) emRow.style.display = 'none';
 
   // "Пов\u2019язані особи" checkbox — for loans and liabilities only
   const canBeRel = type === 'loan_out' || type === 'loan_in' || type === 'liab';
@@ -1894,9 +1978,9 @@ function onTypeChange() {
   const accsArr = Array.isArray(ACCS[type]) ? ACCS[type] : [];
   sel.innerHTML = accsArr.map(a => `<option value="${a.v}">${a.l}</option>`).join('');
 
-  // Договірна ставка — показуємо завжди для не-ОВДП
+  // Договірна ставка — показуємо завжди для не-ОВДП та не-579
   // 0 = безвідсотковий, > 0 але < ринкової = нижче ринку, >= ринкової = ринкова
-  if(!isOvdp) {
+  if(!isOvdp && !is579) {
     const nrRow = document.getElementById('nomRateRow');
     if(nrRow) nrRow.style.display = 'block';
     // Update label based on type
@@ -1923,12 +2007,21 @@ function onTypeChange() {
     if (cpnLbl) cpnLbl.textContent = 'Купонна ставка (грн / 1 обл.)';
   }
 
-  // Dynamic labels for lease vs default
+  // Hide nomRate for 579 and lease
+  if (is579) {
+    const nrRow = document.getElementById('nomRateRow');
+    if(nrRow) nrRow.style.display = 'none';
+  }
+
+  // Dynamic labels for lease / credit_579 vs default
   const sdLabel = document.getElementById('startDateLabel');
   const edLabel = document.getElementById('endDateLabel');
   if (isLease) {
     if(sdLabel) sdLabel.innerHTML = 'Дата початку оренди <span style="color:var(--muted);font-size:10px">(комменсмент)</span>';
     if(edLabel) edLabel.textContent = 'Дата закінчення оренди';
+  } else if (is579) {
+    if(sdLabel) sdLabel.innerHTML = 'Дата отримання кредиту <span style="color:var(--muted);font-size:10px">(дата видачі)</span>';
+    if(edLabel) edLabel.textContent = 'Дата погашення кредиту';
   } else {
     if(sdLabel) sdLabel.innerHTML = 'Дата первісного визнання <span style="color:var(--muted);font-size:10px">(дата купівлі)</span>';
     if(edLabel) edLabel.textContent = 'Дата погашення';
@@ -2848,11 +2941,382 @@ async function fetchNbuFxRates() {
   if (btn) btn.disabled = false;
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// КРЕДИТ «ДОСТУПНІ КРЕДИТИ 5-7-9%»
+// НП(С)БО: без дисконтування, цільове фінансування (рах. 482→718)
+// МСФЗ: IFRS 9 + IAS 20.10A — грант = номінал − СВ, EIR = ринкова ставка
+// ─────────────────────────────────────────────────────────────────────────
+function calculateCredit579() {
+  const nominal   = parseFloat(document.getElementById('credit579Amount').value);
+  const subRate   = parseFloat(document.getElementById('credit579SubRate').value) / 100;
+  const bankRate  = parseFloat(document.getElementById('credit579BankRate').value) / 100;
+  const mktRate   = parseFloat(document.getElementById('credit579MarketRate').value) / 100;
+  const repayType = document.getElementById('credit579RepayType').value;
+  const commission = Math.max(0, parseFloat(document.getElementById('credit579Commission').value) || 0);
+  const acc       = document.getElementById('account').value;
+  const sStr      = document.getElementById('startDate').value;
+  const eStr      = document.getElementById('endDate').value;
+  if (!nominal || !sStr || !eStr) return;
+
+  const sDate = parseLocalDate(sStr), eDate = parseLocalDate(eStr);
+  const days  = Math.round((eDate - sDate) / 86400000);
+  const totalQ = Math.round(days / 91.3125);
+  if (totalQ < 1) { alert('Дата погашення повинна бути пізніше дати видачі'); return; }
+
+  // ── Build quarterly cash flow schedule ──
+  const qDates = [];
+  for (let q = 1; q <= totalQ; q++) qDates.push(addM(sDate, q * 3));
+  qDates[totalQ - 1] = new Date(eDate);
+
+  // Cash flows from borrower's perspective (what borrower actually pays)
+  const cfSub = [];   // пільгова ставка (фактичні виплати)
+  const cfBank = [];  // базова ставка банку (НП(С)БО — повні витрати)
+  let remainBal = nominal;
+
+  for (let q = 0; q < totalQ; q++) {
+    const isLast = q === totalQ - 1;
+    const intSub  = Math.round(remainBal * subRate / 4 * 100) / 100;
+    const intBank = Math.round(remainBal * bankRate / 4 * 100) / 100;
+    let principal = 0;
+    if (repayType === 'bullet' && isLast) {
+      principal = nominal;
+    } else if (repayType === 'equal') {
+      principal = Math.round(nominal / totalQ * 100) / 100;
+      if (isLast) principal = remainBal;
+    } else if (repayType === 'annuity') {
+      const annPmt = nominal * (subRate / 4) / (1 - Math.pow(1 + subRate / 4, -totalQ));
+      principal = Math.round((annPmt - intSub) * 100) / 100;
+      if (isLast) principal = remainBal;
+    }
+    cfSub.push({ intSub, intBank, principal, total: intSub + principal, totalBank: intBank + principal });
+    remainBal = Math.round((remainBal - principal) * 100) / 100;
+    if (remainBal < 0) remainBal = 0;
+  }
+
+  // ── НП(С)БО calculation ──
+  // No discounting. Interest expense = bank rate. Compensation = bank - sub rate portion via Fund.
+  const qRowsNpsbo = [];
+  let balNpsbo = nominal;
+  let prevD = sDate;
+  for (let q = 0; q < totalQ; q++) {
+    const isLast = q === totalQ - 1;
+    const daysQ = Math.round((qDates[q] - prevD) / 86400000);
+    const cf = cfSub[q];
+    const compensation = Math.round((cf.intBank - cf.intSub) * 100) / 100;
+    const nb = Math.round((balNpsbo - cf.principal) * 100) / 100;
+    qRowsNpsbo.push({
+      idx: q + 1, date: fmtD(qDates[q]), rawDate: qDates[q],
+      qLabel: qLbl(qDates[q]) + ' · ' + daysQ + ' дн.',
+      openBal: balNpsbo, intBank: cf.intBank, intSub: cf.intSub,
+      compensation, principal: cf.principal, cf: cf.total,
+      closeBalance: nb < 0 ? 0 : nb, isLast, daysQ
+    });
+    balNpsbo = nb < 0 ? 0 : nb;
+    prevD = qDates[q];
+  }
+
+  // ── МСФЗ calculation (IFRS 9 + IAS 20.10A) ──
+  // Fair value = PV of borrower's actual cash flows (sub rate payments) discounted at market rate
+  const rDmkt = Math.pow(1 + mktRate, 1 / 365) - 1;
+  let fairValue = 0;
+  remainBal = nominal;
+  for (let q = 0; q < totalQ; q++) {
+    const daysToQ = Math.round((qDates[q] - sDate) / 86400000);
+    const cf = cfSub[q];
+    fairValue += (cf.intSub + cf.principal) / Math.pow(1 + rDmkt, daysToQ);
+  }
+  fairValue = Math.round(fairValue * 100) / 100;
+
+  const grant = Math.round((nominal - fairValue) * 100) / 100;
+
+  // EIR for МСФЗ amortization = market rate (daily compounding)
+  let balIfrs = fairValue;
+  const qRowsIfrs = [];
+  let prevDI = sDate;
+  let grantBal = grant; // deferred grant balance
+
+  for (let q = 0; q < totalQ; q++) {
+    const isLast = q === totalQ - 1;
+    const daysQ = Math.round((qDates[q] - prevDI) / 86400000);
+    const cfActual = cfSub[q].intSub + cfSub[q].principal;
+    let intEir;
+    if (isLast) {
+      intEir = Math.round((cfActual - balIfrs) * 100) / 100;
+    } else {
+      intEir = Math.round(balIfrs * (Math.pow(1 + rDmkt, daysQ) - 1) * 100) / 100;
+    }
+    const grantAmort = Math.round((intEir - cfSub[q].intSub) * 100) / 100;
+    const nb = Math.round((balIfrs + intEir - cfActual) * 100) / 100;
+
+    qRowsIfrs.push({
+      idx: q + 1, date: fmtD(qDates[q]), rawDate: qDates[q],
+      qLabel: qLbl(qDates[q]) + ' · ' + daysQ + ' дн.',
+      openBal: balIfrs, interest: intEir, intSub: cfSub[q].intSub,
+      grantAmort: grantAmort > 0 ? grantAmort : 0,
+      principal: cfSub[q].principal, cf: cfActual,
+      closeBalance: nb, isLast, daysQ
+    });
+    balIfrs = nb;
+    prevDI = qDates[q];
+  }
+
+  // ── Update summary panel ──
+  const rateDiffPct = ((bankRate - subRate) * 100).toFixed(2);
+  document.getElementById('c579RateDiff').textContent = rateDiffPct + '% (банк ' + (bankRate * 100).toFixed(1) + '% − пільг. ' + (subRate * 100).toFixed(0) + '%)';
+  document.getElementById('c579FairValue').textContent = fmt(fairValue) + ' грн';
+  document.getElementById('c579Grant').textContent = fmt(grant) + ' грн';
+  document.getElementById('c579EirDaily').textContent = (rDmkt * 100).toFixed(6) + '%';
+
+  // ── Badges ──
+  document.getElementById('badgeType').textContent = 'Кредит 5-7-9% (пільг. ' + (subRate * 100).toFixed(0) + '%)';
+  document.getElementById('badgePeriod').textContent = days < 365 ? days + ' дн.' : Math.floor(days / 365) + ' р. (' + days + ' дн.)';
+  document.getElementById('badgeRate').textContent = 'Ринк. ' + (mktRate * 100).toFixed(2) + '% · Банк ' + (bankRate * 100).toFixed(1) + '% · Пільг. ' + (subRate * 100).toFixed(0) + '%';
+
+  // ── Metrics ──
+  const totalIntSub = qRowsNpsbo.reduce((s, r) => s + r.intSub, 0);
+  const totalIntBank = qRowsNpsbo.reduce((s, r) => s + r.intBank, 0);
+  const totalComp = qRowsNpsbo.reduce((s, r) => s + r.compensation, 0);
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric mg"><div class="metric-label">Номінал кредиту</div><div class="metric-value">${fmt(nominal)}</div></div>
+    <div class="metric mr"><div class="metric-label">Грант (МСФЗ)</div><div class="metric-value">${fmt(grant)}</div></div>
+    <div class="metric mb"><div class="metric-label">Справедлива вартість (МСФЗ)</div><div class="metric-value">${fmt(fairValue)}</div></div>
+    <div class="metric mo"><div class="metric-label">Відсотки пільгові (${(subRate*100).toFixed(0)}%)</div><div class="metric-value">${fmt(Math.round(totalIntSub*100)/100)}</div></div>
+    <div class="metric mo"><div class="metric-label">Відсотки за базовою (${(bankRate*100).toFixed(1)}%)</div><div class="metric-value">${fmt(Math.round(totalIntBank*100)/100)}</div></div>
+    <div class="metric mg"><div class="metric-label">Компенсація Фонду</div><div class="metric-value">${fmt(Math.round(totalComp*100)/100)}</div></div>
+    <div class="metric mo"><div class="metric-label">Щоденна ставка · МСФЗ</div><div class="metric-value">${(rDmkt*100).toFixed(6)}%</div></div>`;
+
+  // ── НП(С)БО amortization table ──
+  const amortHead = document.getElementById('amortHead');
+  if (amortHead) amortHead.innerHTML = '<tr><th>Дата</th><th>Період</th><th>Залишок тіла</th><th>% банку</th><th>% пільг.</th><th>Компенс. Фонду</th><th>Погаш. тіла</th><th>Залишок кін.</th></tr>';
+
+  let tbody = '';
+  tbody += '<tr style="background:rgba(77,184,255,0.04);border-bottom:1px solid rgba(77,184,255,0.15)">'
+    + '<td style="color:var(--accent2)">' + fmtD(sDate) + '</td>'
+    + '<td style="color:var(--accent2)">📌 Отримання кредиту</td>'
+    + '<td style="color:var(--muted)">—</td><td style="color:var(--muted)">—</td>'
+    + '<td style="color:var(--muted)">—</td><td style="color:var(--muted)">—</td>'
+    + '<td style="font-weight:700;font-family:var(--mono);color:var(--accent)">+' + fmt(nominal) + '</td>'
+    + '<td style="color:var(--accent2)">' + fmt(nominal) + '</td></tr>';
+
+  qRowsNpsbo.forEach(row => {
+    const hl = row.isLast ? ' style="background:rgba(79,255,176,0.03);border-top:1px solid rgba(79,255,176,0.1)"' : '';
+    tbody += '<tr' + hl + '>'
+      + '<td style="color:var(--accent2)">' + row.date + '</td>'
+      + '<td style="color:' + (row.isLast ? 'var(--accent)' : 'var(--muted)') + '">' + row.qLabel + (row.isLast ? ' ★' : '') + '</td>'
+      + '<td>' + fmt(row.openBal) + '</td>'
+      + '<td class="tg">+' + fmt(row.intBank) + '</td>'
+      + '<td style="color:#ff6b6b">−' + fmt(row.intSub) + '</td>'
+      + '<td style="color:var(--accent)">+' + fmt(row.compensation) + '</td>'
+      + '<td class="tb">' + (row.principal > 0 ? fmt(row.principal) : '—') + '</td>'
+      + '<td>' + fmt(row.closeBalance) + '</td></tr>';
+  });
+  document.getElementById('amortBody').innerHTML = tbody;
+
+  // ── НП(С)БО postings ──
+  document.getElementById('postings').innerHTML = buildPostings579Npsbo(acc, nominal, qRowsNpsbo, fmtD(sDate), fmtD(eDate), commission);
+
+  // ── МСФЗ amortization table ──
+  const amortHeadI = document.getElementById('amortHeadIfrs');
+  if (amortHeadI) amortHeadI.innerHTML = '<tr><th>Дата</th><th>Період</th><th>Баланс зоб. поч.</th><th>Фін. витрати (EIR)</th><th>Факт. виплата</th><th>Визнання гранту</th><th>Баланс зоб. кін.</th></tr>';
+
+  let tbodyI = '';
+  tbodyI += '<tr style="background:rgba(77,184,255,0.04);border-bottom:1px solid rgba(77,184,255,0.15)">'
+    + '<td style="color:var(--accent2)">' + fmtD(sDate) + '</td>'
+    + '<td style="color:var(--accent2)">📌 Первісне визнання · МСФЗ</td>'
+    + '<td style="color:var(--muted)">—</td><td style="color:var(--muted)">—</td>'
+    + '<td style="font-weight:700;font-family:var(--mono);color:var(--accent)">+' + fmt(nominal) + '</td>'
+    + '<td style="color:var(--muted)">—</td>'
+    + '<td style="color:var(--accent2)">' + fmt(fairValue) + '</td></tr>';
+
+  qRowsIfrs.forEach(row => {
+    const hl = row.isLast ? ' style="background:rgba(79,255,176,0.03);border-top:1px solid rgba(79,255,176,0.1)"' : '';
+    tbodyI += '<tr' + hl + '>'
+      + '<td style="color:var(--accent2)">' + row.date + '</td>'
+      + '<td style="color:' + (row.isLast ? 'var(--accent)' : 'var(--muted)') + '">' + row.qLabel + (row.isLast ? ' ★' : '') + '</td>'
+      + '<td>' + fmt(row.openBal) + '</td>'
+      + '<td class="tg">+' + fmt(row.interest) + '</td>'
+      + '<td class="tb">' + fmt(row.cf) + '</td>'
+      + '<td style="color:var(--accent)">' + (row.grantAmort > 0 ? '+' + fmt(row.grantAmort) : '—') + '</td>'
+      + '<td>' + fmt(row.closeBalance) + '</td></tr>';
+  });
+  document.getElementById('amortBodyIfrs').innerHTML = tbodyI;
+
+  // ── МСФЗ postings ──
+  document.getElementById('postingsIfrs').innerHTML = buildPostings579Ifrs(acc, nominal, fairValue, grant, qRowsIfrs, fmtD(sDate), fmtD(eDate), mktRate, commission);
+
+  // ── Explanations ──
+  buildExplain579Npsbo(bankRate * 100, subRate * 100);
+  buildExplain579Ifrs(mktRate * 100, rDmkt * 100, grant, fairValue, nominal);
+
+  // ── Show results, tabs visible ──
+  const el = document.getElementById('results');
+  el.classList.add('show');
+  const tabsEl = document.getElementById('stdTabs');
+  if (tabsEl) tabsEl.style.display = 'flex';
+  switchTab('npsbo');
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Проведення 5-7-9%: НП(С)БО ──────────────────────────────────────────
+function buildPostings579Npsbo(acc, nominal, qRows, sDate, eDate, commission) {
+  let html = '';
+
+  html += GRP('📌 Первісне визнання — ' + sDate + ' (Кредит «5-7-9%»)', [
+    PR(sDate, '311', acc, nominal, 'Отримано кредитні кошти на поточний рахунок'),
+    commission > 0.005 ? PR(sDate, '951', '685', commission, 'Комісія банку при отриманні кредиту') : '',
+    commission > 0.005 ? PR(sDate, '685', '311', commission, 'Сплата комісії банку') : '',
+  ].filter(Boolean));
+
+  html += byYear(qRows, (yr, yR) => GRP(
+    '📆 ' + yr + ' — нарахування відсотків та компенсація Фонду',
+    yR.flatMap(q => [
+      PR(q.date, '951', '684', q.intBank, q.qLabel + ' — нараховано відсотки за базовою ставкою банку'),
+      PR(q.date, '684', '311', q.intSub, q.qLabel + ' — сплачено відсотки за пільговою ставкою (позичальник)'),
+      q.compensation > 0.005
+        ? PR(q.date, '684', '482', q.compensation, q.qLabel + ' — компенсація Фонду (цільове фінансування)')
+        : '',
+      q.compensation > 0.005
+        ? PR(q.date, '482', '718', q.compensation, q.qLabel + ' — визнано дохід від цільового фінансування')
+        : '',
+      q.principal > 0.005
+        ? PR(q.date, acc, '311', q.principal, q.qLabel + ' — погашення тіла кредиту')
+        : '',
+    ]).filter(Boolean)
+  ));
+
+  const lastQ = qRows[qRows.length - 1];
+  if (acc === '501') {
+    html += GRP('🔄 Переведення до поточного (≤ 12 міс. до погашення)', [
+      PR(eDate, '501', '611', nominal, 'Переведення довгострокового кредиту до поточної частини (Кт 611)')
+    ]);
+  }
+
+  return html;
+}
+
+// ── Проведення 5-7-9%: МСФЗ (IFRS 9 + IAS 20.10A) ─────────────────────
+function buildPostings579Ifrs(acc, nominal, fairValue, grant, qRows, sDate, eDate, mktRate, commission) {
+  let html = '';
+
+  html += GRP('📌 Первісне визнання · МСФЗ 9 + МСБО 20.10А — ' + sDate, [
+    PR(sDate, '311', acc, nominal, 'Отримано кредитні кошти за номіналом (МСФЗ 9 п.5.1.1)'),
+    grant > 0.01 ? PR(sDate, acc, '69', grant, 'Дисконт до справедливої вартості = державний грант (МСБО 20.10А): ' + fmt(nominal) + ' − ' + fmt(fairValue) + ' = ' + fmt(grant)) : '',
+    commission > 0.005 ? PR(sDate, '952', '685', commission, 'Комісія банку — транзакційні витрати (МСФЗ 9 B5.1.1)') : '',
+    commission > 0.005 ? PR(sDate, '685', '311', commission, 'Сплата комісії') : '',
+  ].filter(Boolean));
+
+  html += byYear(qRows, (yr, yR) => GRP(
+    '📆 ' + yr + ' · МСФЗ 9 — фін. витрати (EIR ' + (mktRate * 100).toFixed(2) + '%) + амортизація гранту',
+    yR.flatMap(q => [
+      PR(q.date, '952', acc, q.interest, q.qLabel + ' — фінансові витрати за ЕСВ (ринкова ставка ' + (mktRate * 100).toFixed(2) + '%)'),
+      PR(q.date, acc, '684', q.intSub, q.qLabel + ' — нараховано відсотки за пільговою ставкою'),
+      PR(q.date, '684', '311', q.intSub, q.qLabel + ' — сплачено відсотки позичальником'),
+      q.grantAmort > 0.005
+        ? PR(q.date, '69', '733', q.grantAmort, q.qLabel + ' — визнання гранту в доході (МСБО 20 п.12): різниця EIR − пільг. %')
+        : '',
+      q.principal > 0.005
+        ? PR(q.date, acc, '311', q.principal, q.qLabel + ' — погашення тіла кредиту')
+        : '',
+    ]).filter(Boolean)
+  ));
+
+  if (acc === '501') {
+    html += GRP('🔄 Переведення до поточного · МСФЗ (≤ 12 міс.)', [
+      PR(eDate, '501', '611', nominal, 'Переведення до поточної частини (МСБО 1 п.69)')
+    ]);
+    html += GRP('✅ Погашення · МСФЗ 9 — ' + eDate, [
+      PR(eDate, '611', '311', nominal, 'Повернення кредиту (МСФЗ 9 п.3.3.1 — припинення визнання)')
+    ]);
+  } else {
+    html += GRP('✅ Погашення · МСФЗ 9 — ' + eDate, [
+      PR(eDate, acc, '311', nominal, 'Повернення кредиту (МСФЗ 9 п.3.3.1)')
+    ]);
+  }
+
+  return html;
+}
+
+// ── Пояснення 5-7-9%: НП(С)БО ──────────────────────────────────────────
+function buildExplain579Npsbo(bankRatePct, subRatePct) {
+  const grid = document.getElementById('explainGrid');
+  if (!grid) return;
+  grid.innerHTML = `
+    <div class="explain-card">
+      <div class="explain-card-title">📘 Метод обліку</div>
+      <div class="explain-card-text">
+        Кредит «Доступні кредити 5-7-9%» за НП(С)БО обліковується <strong>без дисконтування</strong>.<br>
+        Банк нараховує відсотки за базовою ставкою (${bankRatePct.toFixed(1)}%), позичальник сплачує лише пільгову частину (${subRatePct.toFixed(0)}%).<br>
+        Різницю компенсує Фонд розвитку підприємництва — це <strong>цільове фінансування</strong>.
+      </div>
+    </div>
+    <div class="explain-card">
+      <div class="explain-card-title">📋 Нормативна основа</div>
+      <div class="explain-card-text">
+        НП(С)БО 11 «Зобов'язання» п. 9–10 · НП(С)БО 15 «Дохід» п. 16–19.<br>
+        <strong>Рах. 951</strong> — витрати на відсотки (повна базова ставка).<br>
+        <strong>Рах. 482</strong> — цільове фінансування з бюджету.<br>
+        <strong>Рах. 718</strong> — дохід від безоплатно одержаних активів.
+      </div>
+    </div>
+    <div class="explain-card">
+      <div class="explain-card-title">⚙ Механізм програми</div>
+      <div class="explain-card-text">
+        1. Банк видає кредит за базовою ставкою (${bankRatePct.toFixed(1)}%).<br>
+        2. Позичальник сплачує пільгову частину (${subRatePct.toFixed(0)}%).<br>
+        3. Фонд компенсує різницю (${(bankRatePct - subRatePct).toFixed(1)}%) напряму банку.<br>
+        4. У бухобліку відсоткові витрати = базова ставка, компенсація = дохід від ЦФ.
+      </div>
+    </div>`;
+  const b = document.getElementById('explainBody');
+  const t = document.getElementById('explainToggle');
+  if (b) b.classList.add('open');
+  if (t) t.classList.add('open');
+}
+
+// ── Пояснення 5-7-9%: МСФЗ ─────────────────────────────────────────────
+function buildExplain579Ifrs(mktPct, rDpct, grant, fairValue, nominal) {
+  const grid = document.getElementById('explainGridIfrs');
+  if (!grid) return;
+  grid.innerHTML = `
+    <div class="explain-card">
+      <div class="explain-card-title">🌐 МСФЗ 9 + МСБО 20.10А</div>
+      <div class="explain-card-text">
+        Вигода від ставки нижче ринкової = <strong>державний грант</strong> (МСБО 20 п.10А).<br>
+        Кредит визнається за <strong>справедливою вартістю</strong> (МСФЗ 9 п.5.1.1) = ${fmt(fairValue)} грн.<br>
+        Грант = Номінал − СВ = ${fmt(nominal)} − ${fmt(fairValue)} = <strong>${fmt(grant)} грн</strong>.
+      </div>
+    </div>
+    <div class="explain-card">
+      <div class="explain-card-title">📐 Формула</div>
+      <div class="explain-card-text">
+        <strong>СВ</strong> = Σ CF<sub>i</sub> / (1 + r<sub>D</sub>)<sup>d<sub>i</sub></sup>, де r<sub>D</sub> = (1+${mktPct.toFixed(2)}%)<sup>1/365</sup> − 1 = ${rDpct.toFixed(6)}%<br>
+        <strong>EIR</strong> = ринкова ставка = ${mktPct.toFixed(2)}% річних<br>
+        <strong>Фін. витрати</strong> = Баланс × ((1+r<sub>D</sub>)<sup>днів</sup> − 1)<br>
+        <strong>Грант</strong> амортизується = Фін. витрати EIR − Факт. сплата пільг. %
+      </div>
+    </div>
+    <div class="explain-card">
+      <div class="explain-card-title">📋 Проведення (МСФЗ)</div>
+      <div class="explain-card-text">
+        <strong>Рах. 69</strong> — доходи майбутніх періодів (відкладений грант).<br>
+        <strong>Рах. 952</strong> — фінансові витрати (EIR за ринковою ставкою).<br>
+        <strong>Рах. 733</strong> — інші доходи від фінансових операцій (амортизація гранту).<br>
+        Чисті фін. витрати = 952 − 733 = фактична пільгова ставка.
+      </div>
+    </div>`;
+  const b = document.getElementById('explainBodyIfrs');
+  const t = document.getElementById('explainToggleIfrs');
+  if (b) b.classList.add('open');
+  if (t) t.classList.add('open');
+}
+
+
 // CALCULATE
 // ─────────────────────────────────────────────────────────────────────────
 function calculate() {
   const type    = document.getElementById('instrType').value;
   if (type === 'lease') { calculateLease(); return; }
+  if (type === 'credit_579') { calculateCredit579(); return; }
   const isOvdp  = type === 'ovdp' || type === 'ovdp_fx';
   const isFx    = type === 'ovdp_fx';
   const relCb   = document.getElementById('isRelParty');
