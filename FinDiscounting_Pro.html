@@ -3480,7 +3480,8 @@ function calculate() {
         const intCalc = Math.round(bal2 * (Math.pow(1 + rD, daysEv) - 1) * 100) / 100;
         intEv = Math.round((cfEv - bal2) * 100) / 100;
         const plugDiff = Math.abs(intEv - intCalc);
-        if (plugDiff > 1.0) {
+        const plugThreshold = Math.max(1.0, Math.abs(bal2) * 1e-7);
+        if (plugDiff > plugThreshold) {
           console.warn('Нев\'язка амортизації на погашенні: ' + plugDiff.toFixed(2) + ' грн (розрахунковий: ' + intCalc + ', плаг: ' + intEv + ')');
           window._amortResidualWarning = plugDiff;
         }
@@ -3522,7 +3523,8 @@ function calculate() {
         const intCalc = Math.round(bal * (Math.pow(1+rD, daysQ) - 1) * 100) / 100;
         int = Math.round((cf - bal) * 100) / 100;
         const plugDiff = Math.abs(int - intCalc);
-        if (plugDiff > 1.0) {
+        const plugThreshold = Math.max(1.0, Math.abs(bal) * 1e-7);
+        if (plugDiff > plugThreshold) {
           console.warn('Нев\'язка амортизації на погашенні: ' + plugDiff.toFixed(2) + ' грн');
           window._amortResidualWarning = plugDiff;
         }
@@ -3857,8 +3859,8 @@ function calculate() {
     if(pi){pi.classList.remove('active');}
     document.querySelectorAll('.std-tab').forEach((el,i)=>el.classList.toggle('active',i===0));
   }
-  // Show residual warning if amortization plug is large
-  if (window._amortResidualWarning && window._amortResidualWarning > 1.0) {
+  // Show residual warning if amortization plug is large (set by plugThreshold in amort loop)
+  if (window._amortResidualWarning && window._amortResidualWarning > 0) {
     const warnEl = document.getElementById('metrics');
     if (warnEl) {
       warnEl.innerHTML += `<div class="metric" style="background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.3)">
