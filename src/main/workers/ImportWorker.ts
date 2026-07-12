@@ -4,7 +4,7 @@ import * as fs from 'fs';
 function parseAmount(val: any): number {
     if (typeof val === 'number') return val;
     if (val === null || val === undefined) return 0;
-    let str = String(val).replace(/[\s\u00A0\u202F$€£₴]/g, '').trim();
+    let str = String(val).replace(/[\s  $€£₴]/g, '').trim();
     if (!str) return 0;
     if (str.startsWith('(') && str.endsWith(')')) str = '-' + str.slice(1, -1);
     
@@ -78,8 +78,9 @@ async function startTask() {
                 else if (commaCount > semiCount && commaCount > tabCount) detectedDelimiter = ',';
             }
 
+            // Do NOT skip empty lines: row numbers must match the source file
+            // so the detected header row position is accurate.
             const results = Papa.parse(sampleText, {
-                skipEmptyLines: true,
                 ...(detectedDelimiter ? { delimiter: detectedDelimiter } : {})
             });
 
@@ -105,15 +106,17 @@ async function startTask() {
               const data: any[][] = [];
               let headers: string[] = [];
               
-              sheet.eachRow((row, rowNumber) => {
-                  if (rowNumber <= 50) {
-                      const rowData = row.values as any[];
-                      // exceljs 1-indexes the values array and the first element is empty
-                      const cleanedRow = rowData.slice(1).map(v => typeof v === 'object' && v !== null && 'text' in v ? v.text : v);
-                      if (rowNumber === 1) headers = cleanedRow.map(String);
-                      data.push(cleanedRow);
-                  }
-              });
+              // Iterate by explicit row number (eachRow skips empty rows and would
+              // shift all data up, breaking header row detection).
+              const previewLimit = Math.min(sheet.rowCount, 50);
+              for (let rowNumber = 1; rowNumber <= previewLimit; rowNumber++) {
+                  const row = sheet.getRow(rowNumber);
+                  const rowData = (row.values || []) as any[];
+                  // exceljs 1-indexes the values array and the first element is empty
+                  const cleanedRow = rowData.slice(1).map(v => typeof v === 'object' && v !== null && 'text' in v ? v.text : v);
+                  if (rowNumber === 1) headers = cleanedRow.map(String);
+                  data.push(cleanedRow);
+              }
               parentPort?.postMessage({ type: 'done', headers, data });
           }
       } catch (err: any) {
@@ -219,7 +222,8 @@ async function startTask() {
           let rowCount = 0;
           Papa.parse(fileStream, {
               header: false,
-              skipEmptyLines: true,
+              // Do NOT skip empty lines: rowCount must match the row numbers the
+              // user saw in the preview, otherwise startRow points at the wrong row.
               ...(detectedDelimiter ? { delimiter: detectedDelimiter } : {}),
               chunk: function(results: any) {
                   for (let i = 0; i < results.data.length; i++) {
@@ -230,6 +234,8 @@ async function startTask() {
 
                       if (rowCount >= startRow) {
                           const row = results.data[i];
+                          // Skip fully empty rows inside the data area
+                          if (!Array.isArray(row) || row.every((c: any) => c === null || c === undefined || String(c).trim() === '')) continue;
                           const idv = row[activeIndices.id] !== undefined ? row[activeIndices.id] : "";
                           const dtv = row[activeIndices.date] !== undefined ? row[activeIndices.date] : "";
                           const amtRaw = row[activeIndices.amount] !== undefined ? row[activeIndices.amount] : 0;
@@ -307,13 +313,18 @@ async function startTask() {
           styles: "drop",
        });
 
+       let insertedXlsx = 0;
        for await (const worksheet of workbook) {
            for await (const row of worksheet) {
-               parseCount++;
+               // Use the actual row number from the sheet: the streaming reader
+               // skips empty rows, so a plain counter would shift positions and
+               // startRow (chosen from the preview) would target the wrong row.
+               parseCount = row.number;
                if (parseCount >= startRow) {
                    const rValues = row.values as any[];
                    const r = rValues.slice(1);
-                   
+                   if (r.every((v: any) => v === null || v === undefined || String(typeof v === 'object' && v !== null && 'text' in v ? v.text : v).trim() === '')) continue;
+
                    const idv = r[activeIndices.id];
                    const dt = r[activeIndices.date];
                    const amtRaw = r[activeIndices.amount];
@@ -325,6 +336,7 @@ async function startTask() {
                    const cleanRowArray = r.map((v: any) => typeof v === 'object' && v !== null && 'result' in v ? v.result : (typeof v === 'object' && v !== null && 'text' in v ? v.text : v));
                    
                    stmt.run([idVal, dateVal, amountVal, amountVal, amountVal, JSON.stringify(cleanRowArray)]);
+                   insertedXlsx++;
                }
                if (parseCount % 50000 === 0) db.run('COMMIT; BEGIN TRANSACTION;');
                if (parseCount % 10000 === 0) parentPort?.postMessage({ type: 'progress', pct: Math.min(90, 10 + (parseCount / 10000)), stage: `Parsing ${parseCount} rows...` });
@@ -345,7 +357,7 @@ async function startTask() {
        db.close();
        
        parentPort?.postMessage({ type: 'progress', pct: 100, stage: 'Complete' });
-       parentPort?.postMessage({ type: 'done', rowCount: Math.max(0, parseCount - startRow + 1), columns: [] });
+       parentPort?.postMessage({ type: 'done', rowCount: insertedXlsx, columns: [] });
     }
     
   } catch (err: any) {

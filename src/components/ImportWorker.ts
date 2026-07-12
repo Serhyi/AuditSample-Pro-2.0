@@ -51,7 +51,7 @@ const parseAmount = (rawAmt: any): number => {
     if (str.startsWith('(') && str.endsWith(')')) str = '-' + str.slice(1, -1);
     
     // Also strip generic characters not parsing well
-    const cleanStr = str.replace(/[\s\u00A0\u200B\u202F$€£₴]/g, ''); 
+    const cleanStr = str.replace(/[\s ​ $€£₴]/g, ''); 
     if (cleanStr === '') return NaN;
     
     if (cleanStr.includes(',') && cleanStr.includes('.')) {
@@ -204,9 +204,10 @@ self.onmessage = async (e) => {
                 }
 
                 self.postMessage({ type: 'PARSE_PROGRESS', payload: { pct: 60, stage: 'Importing...' } });
-                const results = Papa.parse(text, { 
-                    skipEmptyLines: true, 
-                    ...(detectedDelimiter ? { delimiter: detectedDelimiter } : {}) 
+                // Do NOT skip empty lines: row numbers must match the source file
+                // so the detected header row position is accurate.
+                const results = Papa.parse(text, {
+                    ...(detectedDelimiter ? { delimiter: detectedDelimiter } : {})
                 });
                 const rawResultsData = results.data as any[][];
                 if (!rawResultsData || rawResultsData.length === 0) throw new Error('errFileEmpty');
