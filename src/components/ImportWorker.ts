@@ -247,8 +247,9 @@ self.onmessage = async (e) => {
                     let sampleSize = 0, trivialCount = 0, tolerableMisstatement = 0, confidenceLevel = 0;
                     let methodStr = 'MUS';
                     let configJson: any = null;
+                    let resultsSnapshot: any = null;
 
-                    if (!sheet) return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount, tolerableMisstatement, confidenceLevel, method: methodStr, config: configJson };
+                    if (!sheet) return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount, tolerableMisstatement, confidenceLevel, method: methodStr, config: configJson, resultsSnapshot };
                     
                     for (let r = 1; r <= sheet.rowCount; r++) {
                         const row = sheet.getRow(r);
@@ -295,8 +296,11 @@ self.onmessage = async (e) => {
                         if (lbl === '__AUDITSAMPLE_CONFIG__' && val) {
                             try { configJson = JSON.parse(String(val)); } catch { configJson = null; }
                         }
+                        if (lbl === '__AUDITSAMPLE_RESULTS__' && val) {
+                            try { resultsSnapshot = JSON.parse(String(val)); } catch { resultsSnapshot = null; }
+                        }
                     }
-                    return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount, tolerableMisstatement, confidenceLevel, method: methodStr, config: configJson };
+                    return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount, tolerableMisstatement, confidenceLevel, method: methodStr, config: configJson, resultsSnapshot };
                 };
                 
                 const sampleSheet = workbook.getWorksheet('Вибірка') || workbook.getWorksheet('Sample');

@@ -76,7 +76,17 @@ export class AppOrchestrator {
         };
         const parseAmount = (v: any): number => {
           if (v === null || v === undefined || v === '') return 0;
-          const s = String(v).replace(/[^\d.,-]/g, '').replace(',', '.');
+          if (typeof v === 'number') return v;
+          let s = String(v).replace(/[^\d.,-]/g, '');
+          const lastComma = s.lastIndexOf(',');
+          const lastDot = s.lastIndexOf('.');
+          if (lastComma > lastDot) {
+            // comma is the decimal separator: 1.234.567,89 or 1234567,89
+            s = s.replace(/\./g, '').replace(/,/g, '.');
+          } else if (lastDot > lastComma) {
+            // dot is the decimal separator: 1,234,567.89 or 1234567.89
+            s = s.replace(/,/g, '');
+          }
           return parseFloat(s) || 0;
         };
 
@@ -87,11 +97,15 @@ export class AppOrchestrator {
               upperMisstatementBound = 0, sampleSize = 0, trivialCount = 0,
               tolerableMisstatement = 0, confidenceLevel = 95, methodStr = 'MUS';
           let configJson: any = null;
+          let resultsSnapshot: any = null;
           sheet.eachRow((row: any) => {
             const lbl = String(getCellValue(row.getCell(1).value) || '').trim();
             const val = getCellValue(row.getCell(2).value);
             if (lbl === '__AUDITSAMPLE_CONFIG__' && val) {
               try { configJson = JSON.parse(String(val)); } catch { configJson = null; }
+            }
+            if (lbl === '__AUDITSAMPLE_RESULTS__' && val) {
+              try { resultsSnapshot = JSON.parse(String(val)); } catch { resultsSnapshot = null; }
             }
             if (lbl.includes('Метод')) methodStr = String(val || 'MUS');
             if (lbl.includes('Обсяг ген. сукупності') || lbl.includes('Population Size')) populationSize = parseInt(String(val || '0').replace(/\D/g, '')) || 0;
@@ -105,7 +119,7 @@ export class AppOrchestrator {
           });
           return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound,
                    sampleSize, trivialCount, tolerableMisstatement, confidenceLevel,
-                   method: methodStr, config: configJson };
+                   method: methodStr, config: configJson, resultsSnapshot };
         };
 
         const extractSheet = (sheet: any) => {

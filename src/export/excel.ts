@@ -214,6 +214,29 @@ export async function exportToExcel(
     } catch {
       // If config cannot be serialized, the text-based recovery still applies.
     }
+
+    // Machine-readable results snapshot: exact numbers needed to recompute
+    // projected misstatement / upper bound after the client fills audit values
+    // and the file is re-imported (samplingInterval, trivialValue etc. cannot
+    // be reliably reverse-engineered from the formatted text labels).
+    try {
+      const resultsSnapshot = {
+        populationSize: results.populationSize,
+        populationValue: results.populationValue,
+        trivialCount: results.trivialCount,
+        trivialValue: results.trivialValue,
+        areTrivialExcluded: results.areTrivialExcluded,
+        sampleSize: results.sampleSize,
+        sampleValue: results.sampleValue,
+        samplingInterval: results.samplingInterval
+      };
+      const resRow = sheet.addRow(['__AUDITSAMPLE_RESULTS__', JSON.stringify(resultsSnapshot)]);
+      resRow.hidden = true;
+      resRow.getCell(1).font = { color: { argb: 'FFCBD5E1' } };
+      resRow.getCell(2).font = { color: { argb: 'FFCBD5E1' } };
+    } catch {
+      // Text-based recovery still applies.
+    }
   };
 
   // Create summary sheet
