@@ -1,6 +1,6 @@
 
 export const en = {
-  appVersion: "VERSION 2.0",
+  appVersion: "VERSION 2.0.1",
   appTitle: "AuditSample Pro",
   appSubtitle: "ISA 530 Compliant Tool",
   isaCompliant: "ISA 530 COMPLIANT",

@@ -1,6 +1,6 @@
 {
   "name": "audit-sample-pro",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Professional audit sampling tool compliant with ISA 530 standards.",
   "author": "Serhii Minin <serhyi.minin@gmail.com>",
   "type": "module",
