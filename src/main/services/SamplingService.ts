@@ -160,7 +160,10 @@ export class SamplingService {
             riskQueryConds.push(`(julianday(date(date, 'start of month', '+1 month', '-1 day')) - julianday(date)) <= ${closingDays}`);
         }
         
-        const riskWhereStr = riskQueryConds.length > 0 ? `(${riskQueryConds.join(' OR ')})` : 'FALSE';
+        // COALESCE: strftime/julianday return NULL for unparseable dates; such
+        // rows must count as non-risk (eligible for the random pick), otherwise
+        // both NULL and NOT NULL filter them out and the sample comes back empty.
+        const riskWhereStr = riskQueryConds.length > 0 ? `COALESCE((${riskQueryConds.join(' OR ')}), 0)` : '0';
         
         // Find risk matched
         const riskMatchedQuery = `

@@ -32,6 +32,41 @@ function parseAmount(val: any): number {
     return parseFloat(str) || 0;
 }
 
+// Dates must be stored strictly as YYYY-MM-DD (see types/index.ts):
+// SamplingService queries use SQLite strftime()/julianday(), which silently
+// return NULL for any other format (e.g. "01.07.2025"), breaking methods
+// that filter by date such as RiskAssessment.
+function normalizeDate(rawVal: any): string {
+    if (rawVal === undefined || rawVal === null || rawVal === '') return '';
+    if (rawVal instanceof Date) {
+        const y = rawVal.getFullYear();
+        const m = String(rawVal.getMonth() + 1).padStart(2, '0');
+        const d = String(rawVal.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+    const numVal = Number(rawVal);
+    if (!isNaN(numVal) && typeof rawVal !== 'boolean' && String(rawVal).trim() !== '') {
+        // Excel serial date
+        if (numVal > 10000 && numVal < 73050) {
+            const date = new Date((numVal - 25569) * 86400 * 1000);
+            return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+        }
+        // Unix timestamp in ms
+        if (numVal > 1000000000000) {
+            const date = new Date(numVal);
+            return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+        }
+    }
+    const strVal = String(rawVal).trim();
+    const ddmmyyyy = strVal.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);
+    if (ddmmyyyy) return `${ddmmyyyy[3]}-${String(ddmmyyyy[2]).padStart(2, '0')}-${String(ddmmyyyy[1]).padStart(2, '0')}`;
+    const yyyymmdd = strVal.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
+    if (yyyymmdd) return `${yyyymmdd[1]}-${String(yyyymmdd[2]).padStart(2, '0')}-${String(yyyymmdd[3]).padStart(2, '0')}`;
+    const ddmmyy = strVal.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2})$/);
+    if (ddmmyy) return `20${ddmmyy[3]}-${String(ddmmyy[2]).padStart(2, '0')}-${String(ddmmyy[1]).padStart(2, '0')}`;
+    return '';
+}
+
 async function startTask() {
   const { filePath, config, dbPath, mode } = workerData;
 
@@ -243,7 +278,7 @@ async function startTask() {
                           const amountVal = parseAmount(amtRaw);
                           const rowArray = Array.isArray(row) ? row.map(String) : [];
                           
-                          stmt.run([String(idv), String(dtv), amountVal, amountVal, amountVal, JSON.stringify(rowArray)]);
+                          stmt.run([String(idv), normalizeDate(dtv), amountVal, amountVal, amountVal, JSON.stringify(rowArray)]);
                           inserted++;
                           
                           if (inserted % 50000 === 0) {
@@ -330,7 +365,7 @@ async function startTask() {
                    const amtRaw = r[activeIndices.amount];
                    
                    const idVal = String(typeof idv === 'object' && idv !== null && 'text' in idv ? idv.text : (idv || ''));
-                   const dateVal = String(typeof dt === 'object' && dt !== null && 'text' in dt ? dt.text : (dt || ''));
+                   const dateVal = normalizeDate(typeof dt === 'object' && dt !== null && !(dt instanceof Date) && 'text' in dt ? dt.text : dt);
                    const amountVal = parseAmount(typeof amtRaw === 'object' && amtRaw !== null && 'text' in amtRaw ? amtRaw.text : (typeof amtRaw === 'object' && amtRaw !== null && 'result' in amtRaw ? amtRaw.result : amtRaw));
                    
                    const cleanRowArray = r.map((v: any) => typeof v === 'object' && v !== null && 'result' in v ? v.result : (typeof v === 'object' && v !== null && 'text' in v ? v.text : v));
