@@ -2,46 +2,14 @@ import './worker-polyfill';
 import Papa from 'papaparse';
 import * as ExcelJSModule from 'exceljs';
 import { TransactionItem, ColumnIndices } from '../types';
+import { toIsoDate, normalizeCellValue } from '../utils/cellNormalization';
 
 const ExcelJS: any = (ExcelJSModule as any).default || ExcelJSModule;
 console.log('WORKER init: ExcelJS keys:', Object.keys(ExcelJSModule).join(', '));
 if (ExcelJS) console.log('WORKER init: ExcelJS is truthy, Workbook is:', typeof ExcelJS.Workbook);
 else console.log('WORKER init: ExcelJS is falsy');
 
-const parseExcelRawDate = (rawVal: any): string | null => {
-    if (rawVal === undefined || rawVal === null || rawVal === '') return null;
-    if (rawVal instanceof Date) {
-        const y = rawVal.getFullYear();
-        const m = String(rawVal.getMonth() + 1).padStart(2, '0');
-        const d = String(rawVal.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-    }
-    const numVal = Number(rawVal);
-    if (!isNaN(numVal) && typeof rawVal !== 'boolean') {
-        if (numVal > 10000 && numVal < 73050) {
-            const date = new Date((numVal - 25569) * 86400 * 1000);
-            const y = date.getUTCFullYear();
-            const m = String(date.getUTCMonth() + 1).padStart(2, '0');
-            const d = String(date.getUTCDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
-        }
-        if (numVal > 1000000000000) {
-            const date = new Date(numVal);
-            const y = date.getUTCFullYear();
-            const m = String(date.getUTCMonth() + 1).padStart(2, '0');
-            const d = String(date.getUTCDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
-        }
-    }
-    const strVal = String(rawVal).trim();
-    const ddmmyyyy = strVal.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);
-    if (ddmmyyyy) return `${ddmmyyyy[3]}-${String(ddmmyyyy[2]).padStart(2, '0')}-${String(ddmmyyyy[1]).padStart(2, '0')}`;
-    const yyyymmdd = strVal.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
-    if (yyyymmdd) return `${yyyymmdd[1]}-${String(yyyymmdd[2]).padStart(2, '0')}-${String(yyyymmdd[3]).padStart(2, '0')}`;
-    const ddmmyy = strVal.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2})$/);
-    if (ddmmyy) return `20${ddmmyy[3]}-${String(ddmmyy[2]).padStart(2, '0')}-${String(ddmmyy[1]).padStart(2, '0')}`;
-    return null;
-};
+const parseExcelRawDate = (rawVal: any): string | null => toIsoDate(rawVal) || null;
 
 const parseAmount = (rawAmt: any): number => {
     if (typeof rawAmt === 'number') return rawAmt;
@@ -152,7 +120,9 @@ const doValidation = (data: any[][], sRow: number, indices: ColumnIndices) => {
         }
         
         totalVal += Math.abs(val);
-        normalized.push({ id: idStr, amount: val, date: dateStr, originalRow: row });
+        // Normalize on import: dates become ISO strings and numeric text becomes
+        // numbers, so display, sampling and export all see typed values.
+        normalized.push({ id: idStr, amount: val, date: dateStr, originalRow: row.map(c => normalizeCellValue(c)) });
     }
     return { normalized, invalidAmountRows, invalidDateRows, totalVal, negativeCount: negCount, zeroCount, duplicateCount: dupCount };
 };
@@ -334,7 +304,7 @@ self.onmessage = async (e) => {
                         for (let r=2; r<=sheet.rowCount; r++) {
                             const row = sheet.getRow(r);
                             const originalRow = [];
-                            for(let c=1; c<=baseN; c++) originalRow.push(getCellValue(row.getCell(c).value));
+                            for(let c=1; c<=baseN; c++) originalRow.push(normalizeCellValue(getCellValue(row.getCell(c).value)));
                             
                             const bookVal = (docCol !== -1) ? parseAmount(getCellValue(row.getCell(docCol).value)) : 0;
                             const auditValRaw = (audCol !== -1) ? getCellValue(row.getCell(audCol).value) : null;

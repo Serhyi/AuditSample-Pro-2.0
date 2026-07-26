@@ -53,7 +53,11 @@ export function smartFormat(val: any, settings?: GlobalSettings): string {
         }
         return val.toFixed(2);
     }
-    return String(val);
+    const str = String(val);
+    // Cells normalized on import store dates as ISO; show them in the user's
+    // format instead of leaking the storage representation into the table.
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return formatDate(str, settings);
+    return str;
 }
 
 export function calculateExtrapolation(results: SamplingResult, config: SamplingConfig): { projected: number, ub: number } {

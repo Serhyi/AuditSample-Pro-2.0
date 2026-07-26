@@ -16,6 +16,7 @@ import { ImportService } from '../services/ImportService';
 import { SamplingService } from '../services/SamplingService';
 import { ExportService } from '../services/ExportService';
 import { WorkerPool } from './WorkerPool';
+import { normalizeCellValue } from '../../utils/cellNormalization';
 
 export class AppOrchestrator {
   private dbService: DatabaseService;
@@ -142,7 +143,7 @@ export class AppOrchestrator {
           for (let r = 2; r <= sheet.rowCount; r++) {
             const row = sheet.getRow(r);
             const originalRow = [];
-            for (let c = 1; c <= baseN; c++) originalRow.push(getCellValue(row.getCell(c).value));
+            for (let c = 1; c <= baseN; c++) originalRow.push(normalizeCellValue(getCellValue(row.getCell(c).value)));
             const bookVal = docCol !== -1 ? parseAmount(getCellValue(row.getCell(docCol).value)) : 0;
             const auditValRaw = audCol !== -1 ? getCellValue(row.getCell(audCol).value) : null;
             const commentsVal = commentCol !== -1 ? String(getCellValue(row.getCell(commentCol).value) || '') : '';

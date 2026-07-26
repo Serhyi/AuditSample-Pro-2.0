@@ -491,7 +491,11 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                             } else if (i === colIndices.id) {
                                 // For the ID/Number column, show as is (plain string or integer)
                                 content = item.originalRow[i] !== undefined && item.originalRow[i] !== null 
-                                    ? String(item.originalRow[i]).replace('.0', '') 
+                                    // Normalized IDs are already numbers; the trailing
+                                    // ".0" strip only still applies to rows loaded from
+                                    // projects saved before normalization. Anchored so
+                                    // "1.05" does not become "1.5".
+                                    ? String(item.originalRow[i]).replace(/\.0$/, '')
                                     : '';
                             } else {
                                 content = smartFormat(item.originalRow[i], settings);

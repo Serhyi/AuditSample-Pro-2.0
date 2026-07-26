@@ -65009,6 +65009,107 @@ var WorkerPool = class {
   }
 };
 
+// src/utils/cellNormalization.ts
+var makeIso = (y, m, d) => {
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  const date = new Date(Date.UTC(y, m - 1, d));
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return null;
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+};
+var looksLikeDate = (str) => /^\d{1,4}[./-]\d{1,2}[./-]\d{2,4}/.test(str);
+function parseDateText(str, monthFirst = false) {
+  const s = str.trim();
+  const iso = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[T ][\d:.]+Z?)?$/);
+  if (iso) return makeIso(Number(iso[1]), Number(iso[2]), Number(iso[3]));
+  const full = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})(?:[T ][\d:.]+Z?)?$/);
+  if (full) {
+    const a = Number(full[1]);
+    const b = Number(full[2]);
+    const y = Number(full[3]);
+    if (monthFirst && a <= 12) return makeIso(y, a, b);
+    return makeIso(y, b, a);
+  }
+  const short = s.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2})$/);
+  if (short) {
+    const y = 2e3 + Number(short[3]);
+    return monthFirst ? makeIso(y, Number(short[1]), Number(short[2])) : makeIso(y, Number(short[2]), Number(short[1]));
+  }
+  return null;
+}
+function parseNumericText(str) {
+  let s = str.trim();
+  if (s === "") return null;
+  let negative = false;
+  if (/^\(.*\)$/.test(s)) {
+    negative = true;
+    s = s.slice(1, -1);
+  }
+  s = s.replace(/[\s   $€£₴]/g, "");
+  if (!/^[+-]?\d[\d.,]*$/.test(s)) return null;
+  const sign = s.startsWith("-") ? -1 : 1;
+  const digits = s.replace(/^[+-]/, "");
+  if (/^0\d/.test(digits)) return null;
+  if (digits.replace(/[.,]/g, "").length > 15) return null;
+  const lastComma = digits.lastIndexOf(",");
+  const lastDot = digits.lastIndexOf(".");
+  let normalized;
+  if (lastComma >= 0 && lastDot >= 0) {
+    normalized = lastComma > lastDot ? digits.replace(/\./g, "").replace(",", ".") : digits.replace(/,/g, "");
+  } else if (lastComma >= 0) {
+    const parts = digits.split(",");
+    normalized = parts.length > 2 || parts[parts.length - 1].length === 3 ? digits.replace(/,/g, "") : digits.replace(",", ".");
+  } else if (lastDot >= 0) {
+    const parts = digits.split(".");
+    normalized = parts.length > 2 ? digits.replace(/\./g, "") : digits;
+  } else {
+    normalized = digits;
+  }
+  const num = Number(normalized);
+  if (!isFinite(num)) return null;
+  const signed = sign * num;
+  return negative ? -Math.abs(signed) : signed;
+}
+function toIsoDate(raw, monthFirst = false) {
+  if (raw === void 0 || raw === null || raw === "") return "";
+  if (raw instanceof Date) {
+    return `${raw.getFullYear()}-${String(raw.getMonth() + 1).padStart(2, "0")}-${String(raw.getDate()).padStart(2, "0")}`;
+  }
+  if (typeof raw === "object" && "text" in raw) return toIsoDate(raw.text, monthFirst);
+  if (typeof raw === "object" && "result" in raw) return toIsoDate(raw.result, monthFirst);
+  const str = String(raw).trim();
+  if (str === "") return "";
+  if (typeof raw === "number" || /^\d+(\.\d+)?$/.test(str)) {
+    const numVal = Number(str);
+    if (numVal > 1e4 && numVal < 73050) {
+      const date = new Date((numVal - 25569) * 86400 * 1e3);
+      return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+    }
+    if (numVal > 1e12) {
+      const date = new Date(numVal);
+      return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+    }
+  }
+  return parseDateText(str, monthFirst) || "";
+}
+function normalizeCellValue(raw, monthFirst = false) {
+  if (raw === null || raw === void 0) return "";
+  if (raw instanceof Date) return toIsoDate(raw, monthFirst);
+  if (typeof raw === "number") return raw;
+  if (typeof raw === "boolean") return raw;
+  if (typeof raw === "object") {
+    if ("result" in raw) return normalizeCellValue(raw.result, monthFirst);
+    if ("text" in raw) return normalizeCellValue(raw.text, monthFirst);
+    return String(raw);
+  }
+  const str = String(raw).trim();
+  if (str === "") return "";
+  const asDate = parseDateText(str, monthFirst);
+  if (asDate) return asDate;
+  if (looksLikeDate(str)) return str;
+  const asNumber = parseNumericText(str);
+  return asNumber !== null ? asNumber : str;
+}
+
 // src/main/core/AppOrchestrator.ts
 var ALLOWED_TABLES = /* @__PURE__ */ new Set(["population", "samplingItems", "keyItems"]);
 function assertTable(table) {
@@ -65140,7 +65241,7 @@ var AppOrchestrator = class {
           for (let r = 2; r <= sheet.rowCount; r++) {
             const row = sheet.getRow(r);
             const originalRow = [];
-            for (let c = 1; c <= baseN; c++) originalRow.push(getCellValue(row.getCell(c).value));
+            for (let c = 1; c <= baseN; c++) originalRow.push(normalizeCellValue(getCellValue(row.getCell(c).value)));
             const bookVal = docCol !== -1 ? parseAmount(getCellValue(row.getCell(docCol).value)) : 0;
             const auditValRaw = audCol !== -1 ? getCellValue(row.getCell(audCol).value) : null;
             const commentsVal = commentCol !== -1 ? String(getCellValue(row.getCell(commentCol).value) || "") : "";

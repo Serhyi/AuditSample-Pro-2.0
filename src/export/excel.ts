@@ -2,6 +2,7 @@ import type ExcelJSType from 'exceljs';
 import { Language, TransactionItem } from '../types';
 import { t } from '../utils/translations';
 import { formatMoney, methodsSupportingAnomalies, calculateExtrapolation } from '../utils/samplingEngine';
+import { parseDateText, parseNumericText, looksLikeDate } from '../utils/cellNormalization';
 import { METHOD_PREFIX_MAP, getStaticFormula, getCalculationDetails, getDynamicMethodName, getDynamicMethodDescription } from '../components/resultsUtils';
 
 export async function exportToExcel(
@@ -242,13 +243,12 @@ export async function exportToExcel(
   // Create summary sheet
   addSummarySheet();
 
-  // --- Source cell normalization -------------------------------------------
-  // originalRow cells arrive as strings (the exe importer stores the row via
-  // JSON.stringify(row.map(String)), and CSV parsing yields text as well), so
-  // without normalization Excel treats every source date and amount as text:
-  // it cannot sort, filter or sum them. Convert what is unambiguously a date
-  // or a number into a real Date/number and let Excel format it; leave
-  // everything else untouched.
+  // --- Source cell presentation --------------------------------------------
+  // Cells are normalized on import (utils/cellNormalization): numbers are
+  // numbers and dates are ISO 'YYYY-MM-DD' strings. Here they only need the
+  // Excel representation: an ISO string becomes a real Date with the user's
+  // date format. Files imported before normalization existed still carry raw
+  // text, so the same parsers run as a fallback.
 
   const DATE_NUM_FMT: Record<string, string> = {
     'dd.mm.yyyy': 'dd.mm.yyyy',
@@ -258,109 +258,32 @@ export async function exportToExcel(
   const dateNumFmt = DATE_NUM_FMT[settings?.dateFormat] || 'dd.mm.yyyy';
   const monthFirst = settings?.dateFormat === 'mm/dd/yyyy';
 
-  const makeDate = (y: number, m: number, d: number): Date | null => {
-    if (m < 1 || m > 12 || d < 1 || d > 31) return null;
-    const date = new Date(y, m - 1, d);
-    // Rejects impossible dates that JS would roll over (31.02 -> 03.03).
-    if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return null;
-    return date;
-  };
-
-  const parseCellDate = (str: string): Date | null => {
-    // ISO first: yyyy-mm-dd, optionally with a time part (JSON.stringify of a
-    // Date produces exactly this).
-    const iso = str.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[T ][\d:.]+Z?)?$/);
-    if (iso) return makeDate(Number(iso[1]), Number(iso[2]), Number(iso[3]));
-
-    const dmy = str.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})(?:[T ][\d:.]+Z?)?$/);
-    if (dmy) {
-      const a = Number(dmy[1]);
-      const b = Number(dmy[2]);
-      const y = Number(dmy[3]);
-      // Day-first is the app-wide convention (matches the importer); only the
-      // US setting flips it, and an out-of-range first part disambiguates.
-      if (monthFirst && a <= 12) return makeDate(y, a, b);
-      if (a > 12 && b <= 12) return makeDate(y, b, a);
-      return makeDate(y, b, a);
-    }
-
-    const dmy2 = str.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2})$/);
-    if (dmy2) {
-      const y = 2000 + Number(dmy2[3]);
-      return monthFirst ? makeDate(y, Number(dmy2[1]), Number(dmy2[2]))
-                        : makeDate(y, Number(dmy2[2]), Number(dmy2[1]));
-    }
-    return null;
-  };
-
-  const parseCellNumber = (str: string): number | null => {
-    let s = str;
-    let negative = false;
-    if (/^\(.*\)$/.test(s)) {
-      negative = true;
-      s = s.slice(1, -1);
-    }
-    // \s plus the non-breaking / narrow / figure spaces used for digit grouping.
-    s = s.replace(/[\s\u00A0\u202F\u2007$€£₴]/g, '');
-    if (!/^[+-]?\d[\d.,]*$/.test(s)) return null;
-
-    const sign = s.startsWith('-') ? -1 : 1;
-    const digitsOnly = s.replace(/^[+-]/, '');
-
-    // Identifiers must stay text: a leading zero ("007") and codes longer than
-    // 15 significant digits (IBAN, tax number) would be corrupted by Number().
-    const bare = digitsOnly.replace(/[.,]/g, '');
-    if (/^0\d/.test(digitsOnly)) return null;
-    if (bare.length > 15) return null;
-
-    const lastComma = digitsOnly.lastIndexOf(',');
-    const lastDot = digitsOnly.lastIndexOf('.');
-    let normalized: string;
-    if (lastComma >= 0 && lastDot >= 0) {
-      // The rightmost separator is the decimal one, the other groups thousands.
-      normalized = lastComma > lastDot
-        ? digitsOnly.replace(/\./g, '').replace(',', '.')
-        : digitsOnly.replace(/,/g, '');
-    } else if (lastComma >= 0) {
-      const parts = digitsOnly.split(',');
-      // "1,234" / "1,234,567" is grouping; "1,5" is a decimal comma.
-      normalized = (parts.length > 2 || parts[parts.length - 1].length === 3)
-        ? digitsOnly.replace(/,/g, '')
-        : digitsOnly.replace(',', '.');
-    } else if (lastDot >= 0) {
-      const parts = digitsOnly.split('.');
-      normalized = parts.length > 2 ? digitsOnly.replace(/\./g, '') : digitsOnly;
-    } else {
-      normalized = digitsOnly;
-    }
-
-    const num = Number(normalized);
-    if (!isFinite(num)) return null;
-    return sign * (negative ? -Math.abs(num) : num);
+  const isoToDate = (iso: string): Date => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d);
   };
 
   // Returns the value to write plus the number format it needs (if any).
   const normalizeCell = (raw: any): { value: any; numFmt?: string } => {
     if (raw instanceof Date) return { value: raw, numFmt: dateNumFmt };
-    if (typeof raw === 'number') return { value: raw, numFmt: '#,##0.00' };
+    if (typeof raw === 'number') {
+      // Integers keep an integer format so IDs and account codes do not gain
+      // a misleading ",00" tail.
+      return { value: raw, numFmt: Number.isInteger(raw) ? '#,##0' : '#,##0.00' };
+    }
     if (raw === null || raw === undefined) return { value: raw };
     if (typeof raw !== 'string') return { value: raw };
 
     const str = raw.trim();
     if (str === '') return { value: raw };
 
-    const asDate = parseCellDate(str);
-    if (asDate) return { value: asDate, numFmt: dateNumFmt };
+    const iso = parseDateText(str, monthFirst);
+    if (iso) return { value: isoToDate(iso), numFmt: dateNumFmt };
 
-    // A date-shaped string that failed validation (e.g. 31.02.2025) must stay
-    // text: the number parser would read the dots as thousands separators and
-    // silently turn it into 31022025.
-    if (/^\d{1,4}[./-]\d{1,2}[./-]\d{2,4}/.test(str)) return { value: raw };
+    if (looksLikeDate(str)) return { value: raw };
 
-    const asNumber = parseCellNumber(str);
+    const asNumber = parseNumericText(str);
     if (asNumber !== null) {
-      // Integers keep an integer format so IDs and account codes do not gain
-      // a misleading ",00" tail.
       return { value: asNumber, numFmt: Number.isInteger(asNumber) ? '#,##0' : '#,##0.00' };
     }
 
