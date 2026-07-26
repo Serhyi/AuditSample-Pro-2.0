@@ -19,7 +19,7 @@ const parseAmount = (rawAmt: any): number => {
     if (str.startsWith('(') && str.endsWith(')')) str = '-' + str.slice(1, -1);
     
     // Also strip generic characters not parsing well
-    const cleanStr = str.replace(/[\s ​ $€£₴]/g, ''); 
+    const cleanStr = str.replace(/[\s\u00A0\u200B$€£₴]/g, '');
     if (cleanStr === '') return NaN;
     
     if (cleanStr.includes(',') && cleanStr.includes('.')) {
@@ -277,7 +277,11 @@ self.onmessage = async (e) => {
                 if (sampleSheet) {
                     self.postMessage({ type: 'PARSE_PROGRESS', payload: { pct: 50, stage: 'Reading exported project...' } });
                     
-                    const summarySheet = workbook.getWorksheet('Опис та результат') || workbook.getWorksheet('Description and Result');
+                    // Client exports carry no summary sheet; their snapshots live on the
+                    // hidden meta sheet instead.
+                    const summarySheet = workbook.getWorksheet('Опис та результат')
+                      || workbook.getWorksheet('Description and Result')
+                      || workbook.getWorksheet('__AuditSampleData');
                     const summaryData = extractSummaryInfo(summarySheet);
                     
                     const extractSheet = (sheet: any): {items: any[], headers: string[]} => {

@@ -64,3 +64,38 @@ describe('export normalization', () => {
     expect(r1.getCell(7).numFmt).toBe('#,##0.00');
   });
 });
+
+describe('client export', () => {
+  it('contains only the sample sheets plus the hidden snapshot sheet', async () => {
+    await exportToExcel(state, 'client.xlsx', true, 'ua');
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(captured!);
+    const names = wb.worksheets.map(w => w.name);
+
+    expect(names).toContain('Вибірка');
+    expect(names).not.toContain('Опис та результат');
+    expect(names).not.toContain('Генеральна сукупність');
+
+    const meta = wb.getWorksheet('__AuditSampleData')!;
+    expect(meta).toBeDefined();
+    expect(meta.state).toBe('veryHidden');
+    // The snapshots must survive so the returned file re-imports losslessly.
+    const labels = [meta.getRow(1).getCell(1).value, meta.getRow(2).getCell(1).value];
+    expect(labels).toEqual(['__AUDITSAMPLE_CONFIG__', '__AUDITSAMPLE_RESULTS__']);
+    expect(JSON.parse(String(meta.getRow(2).getCell(2).value)).samplingInterval).toBe(100);
+
+    // The auditor's comments column stays empty for the client.
+    const sample = wb.getWorksheet('Вибірка')!;
+    expect(String(sample.getRow(1).getCell(12).value)).toBe('Коментарі');
+  });
+
+  it('keeps the summary and population sheets in the working export', async () => {
+    await exportToExcel({ ...state, population: state.results.samplingItems }, 'work.xlsx', false, 'ua');
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(captured!);
+    const names = wb.worksheets.map(w => w.name);
+    expect(names).toContain('Опис та результат');
+    expect(names).toContain('Генеральна сукупність');
+    expect(names).not.toContain('__AuditSampleData');
+  });
+});

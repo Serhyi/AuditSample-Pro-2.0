@@ -65133,7 +65133,7 @@ var AppOrchestrator = class {
         await workbook.xlsx.readFile(filePath);
         const sampleSheet = workbook.getWorksheet("\u0412\u0438\u0431\u0456\u0440\u043A\u0430") || workbook.getWorksheet("Sample");
         if (!sampleSheet) return null;
-        const summarySheet = workbook.getWorksheet("\u041E\u043F\u0438\u0441 \u0442\u0430 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442") || workbook.getWorksheet("Description and Result");
+        const summarySheet = workbook.getWorksheet("\u041E\u043F\u0438\u0441 \u0442\u0430 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442") || workbook.getWorksheet("Description and Result") || workbook.getWorksheet("__AuditSampleData");
         const getCellValue = (v) => {
           if (v === null || v === void 0) return null;
           if (typeof v === "object" && "result" in v) return v.result;

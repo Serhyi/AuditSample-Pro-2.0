@@ -5,6 +5,10 @@ import { formatMoney, methodsSupportingAnomalies, calculateExtrapolation } from 
 import { parseDateText, parseNumericText, looksLikeDate } from '../utils/cellNormalization';
 import { METHOD_PREFIX_MAP, getStaticFormula, getCalculationDetails, getDynamicMethodName, getDynamicMethodDescription } from '../components/resultsUtils';
 
+// Hidden sheet that carries the machine-readable snapshots in client exports,
+// which have no summary sheet to host them.
+export const META_SHEET_NAME = '__AuditSampleData';
+
 export async function exportToExcel(
   fullState: any,
   filename: string,
@@ -24,6 +28,37 @@ export async function exportToExcel(
   const colorDarkBlue = 'FF1E293B';
   const colorRowBg = 'FFF8FAFC';
   
+  // Machine-readable snapshots for lossless project recovery on re-import.
+  // Written as hidden rows: the config restores the sampling parameters, and
+  // the results snapshot carries the exact samplingInterval / trivialValue
+  // needed to recompute projected misstatement and upper bound once the client
+  // fills in audit values (they cannot be reverse-engineered from the
+  // formatted text labels).
+  const addMachineReadableRows = (sheet: ExcelJSType.Worksheet) => {
+    const write = (label: string, payload: unknown) => {
+      try {
+        const row = sheet.addRow([label, JSON.stringify(payload)]);
+        row.hidden = true;
+        row.getCell(1).font = { color: { argb: 'FFCBD5E1' } };
+        row.getCell(2).font = { color: { argb: 'FFCBD5E1' } };
+      } catch {
+        // If the payload cannot be serialized, text-based recovery still applies.
+      }
+    };
+
+    write('__AUDITSAMPLE_CONFIG__', config);
+    write('__AUDITSAMPLE_RESULTS__', {
+      populationSize: results.populationSize,
+      populationValue: results.populationValue,
+      trivialCount: results.trivialCount,
+      trivialValue: results.trivialValue,
+      areTrivialExcluded: results.areTrivialExcluded,
+      sampleSize: results.sampleSize,
+      sampleValue: results.sampleValue,
+      samplingInterval: results.samplingInterval
+    });
+  };
+
   // 1. "Опис та результат" (Description and Result) map
   const addSummarySheet = () => {
     const sheet = workbook.addWorksheet(isUa ? 'Опис та результат' : 'Description and Result');
@@ -205,43 +240,19 @@ export async function exportToExcel(
 
     sheet.addRow([]);
 
-    // Machine-readable config snapshot for lossless project recovery on re-import.
-    // Stored in a hidden row so it does not clutter the human-readable report.
-    try {
-      const metaRow = sheet.addRow(['__AUDITSAMPLE_CONFIG__', JSON.stringify(config)]);
-      metaRow.hidden = true;
-      metaRow.getCell(1).font = { color: { argb: 'FFCBD5E1' } };
-      metaRow.getCell(2).font = { color: { argb: 'FFCBD5E1' } };
-    } catch {
-      // If config cannot be serialized, the text-based recovery still applies.
-    }
-
-    // Machine-readable results snapshot: exact numbers needed to recompute
-    // projected misstatement / upper bound after the client fills audit values
-    // and the file is re-imported (samplingInterval, trivialValue etc. cannot
-    // be reliably reverse-engineered from the formatted text labels).
-    try {
-      const resultsSnapshot = {
-        populationSize: results.populationSize,
-        populationValue: results.populationValue,
-        trivialCount: results.trivialCount,
-        trivialValue: results.trivialValue,
-        areTrivialExcluded: results.areTrivialExcluded,
-        sampleSize: results.sampleSize,
-        sampleValue: results.sampleValue,
-        samplingInterval: results.samplingInterval
-      };
-      const resRow = sheet.addRow(['__AUDITSAMPLE_RESULTS__', JSON.stringify(resultsSnapshot)]);
-      resRow.hidden = true;
-      resRow.getCell(1).font = { color: { argb: 'FFCBD5E1' } };
-      resRow.getCell(2).font = { color: { argb: 'FFCBD5E1' } };
-    } catch {
-      // Text-based recovery still applies.
-    }
+    addMachineReadableRows(sheet);
   };
 
-  // Create summary sheet
-  addSummarySheet();
+  // The client receives only the selected items: no methodology, no
+  // conclusion, no population. The snapshots still travel with the file on a
+  // hidden sheet so the returned workbook re-imports losslessly.
+  if (isClientVersion) {
+    const metaSheet = workbook.addWorksheet(META_SHEET_NAME);
+    metaSheet.state = 'veryHidden';
+    addMachineReadableRows(metaSheet);
+  } else {
+    addSummarySheet();
+  }
 
   // --- Source cell presentation --------------------------------------------
   // Cells are normalized on import (utils/cellNormalization): numbers are
