@@ -157,10 +157,12 @@ export async function exportToExcel(
     addSectionHeader(isUa ? '2. НАЛАШТУВАННЯ ТА ОЦІНКА РИЗИКІВ' : '2. SETTINGS AND RISK ASSESSMENT', 'FF0F172A');
     const calcDetails = getCalculationDetails(config, results, settings, lang);
     Object.entries(calcDetails.vars).forEach(([k, v]) => {
-        if (!isNaN(Number(v)) && k !== "Z" && k !== "R") {
-             addDetailRow(k, formatMoney(Number(v), settings));
-        } else if (!isNaN(Number(v))) {
-             addDetailRow(k, Number(v).toFixed(2));
+        // Monetary figures already arrive as formatted strings from
+        // getCalculationDetails. Raw numbers here are counts, seeds and
+        // coefficients, so money formatting would misreport them (a step of 5
+        // as "5,00", a reliability factor of 2.996 as "3,00").
+        if (typeof v === 'number') {
+             addDetailRow(k, Number.isInteger(v) ? String(v) : v.toFixed(3));
         } else {
              addDetailRow(k, String(v));
         }

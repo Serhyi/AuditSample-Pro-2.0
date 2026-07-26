@@ -1,53 +1,33 @@
 import { DatabaseService } from './DatabaseService';
 import { getReliabilityFactor, getZScore, getExpansionFactor } from '../../statistics/reliabilityFactor';
+import { Mulberry32 } from '../../statistics/prng';
 
 export class SamplingService {
   constructor(private db: DatabaseService) {}
 
-    private async getRandomSample(whereClause: string, params: any[], sampleSize: number): Promise<any[]> {
-        // Find total matching count first
-        const countAgg: { cnt: number }[] = await this.db.query(`SELECT COUNT(*) as cnt FROM population WHERE ${whereClause}`, params);
-        const total = countAgg[0]?.cnt || 0;
-        if (total === 0) return [];
+    /**
+     * Draws `sampleSize` items at random from the rows matching `whereClause`.
+     * Seeded from config.seed via Mulberry32 so a sample can be reproduced and
+     * matches what the web engine produces for the same seed. SQL RANDOM() must
+     * not be used here: it is unseedable, which would make the sample
+     * impossible to reproduce for review.
+     */
+    private async getRandomSample(whereClause: string, params: any[], sampleSize: number, seed: number): Promise<any[]> {
+        if (sampleSize <= 0) return [];
 
-        // Calculate probability multiplier to fetch slightly more than we need
-        // E.g. we want 25 items from 100,000, we pull ~150 to randomize.
-        const poolSize = Math.max(sampleSize * 5, 200);
-        let prob = poolSize / total;
-        if (prob >= 1) {
-            prob = 1; // Fetch all if total is small
-        }
+        const rowidRows = await this.db.query(`SELECT rowid FROM population WHERE ${whereClause}`, params);
+        const poolIds: number[] = rowidRows.map((r: any) => r.rowid);
+        if (poolIds.length === 0) return [];
 
-        // P is probability out of 1,000,000 to avoid floats in modulo
-        const pThreshold = Math.ceil(prob * 1000000);
-
-        // Fetch a pool of IDs using random modulus matching
-        // (ABS(RANDOM()) % 1000000) generates number from 0 to 999999
-        let poolIds: number[] = [];
-        if (prob < 1) {
-            const poolQuery = `SELECT rowid FROM population WHERE ${whereClause} AND (ABS(RANDOM()) % 1000000) < ${pThreshold}`;
-            const poolResults = await this.db.query(poolQuery, params);
-            poolIds = poolResults.map((r: any) => r.rowid);
-        }
-
-        // If the pool somehow is smaller than sampleSize (due to RNG variance), fallback to fetching all IDs
-        if (poolIds.length < sampleSize) {
-           const fallbackQuery = `SELECT rowid FROM population WHERE ${whereClause}`;
-           const fallbackResults = await this.db.query(fallbackQuery, params);
-           poolIds = fallbackResults.map((r: any) => r.rowid);
-        }
-
-        // Shuffle in JS O(N)
-        for (let i = poolIds.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
+        // Partial Fisher-Yates: only the first `count` positions are needed.
+        const rng = new Mulberry32(Math.floor(seed) || 0);
+        const count = Math.min(sampleSize, poolIds.length);
+        for (let i = 0; i < count; i++) {
+            const j = i + rng.nextInt(0, poolIds.length - i);
             [poolIds[i], poolIds[j]] = [poolIds[j], poolIds[i]];
         }
+        const pickedRowIds = poolIds.slice(0, count);
 
-        // Slice to required size
-        const pickedRowIds = poolIds.slice(0, sampleSize);
-        if (pickedRowIds.length === 0) return [];
-
-        // Fetch actual items
         const results: any[] = [];
         const chunkSize = 500;
         for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
@@ -91,6 +71,7 @@ export class SamplingService {
       throw new Error('Population cannot be empty');
     }
 
+    const seed = Math.floor(Number(config.seed)) || 0;
     const tm = Number(config.tolerableMisstatement) || 0;
     const ctt = Number(config.clearlyTrivialThreshold) || 0;
     const isAnomalyDisabled = config.anomalyMethod === 'None';
@@ -188,7 +169,7 @@ export class SamplingService {
         // Find risk unmatched (random ones)
         const randomCount = config.riskRandomCount ?? 5;
         const riskUnmatchedWhere = `ABS(amount) < ? AND ABS(amount) >= ? AND NOT ${riskWhereStr}`;
-        const randomMatched: any[] = await this.getRandomSample(riskUnmatchedWhere, [upperLimit, ctt], randomCount);
+        const randomMatched: any[] = await this.getRandomSample(riskUnmatchedWhere, [upperLimit, ctt], randomCount, seed);
         
         for (const item of randomMatched) {
             sampleItems.push({
@@ -262,7 +243,7 @@ export class SamplingService {
     } else if (config.method === 'Benford') {
         const benfordCount = config.benfordSampleSize || 50;
         const whereCond = `ABS(amount) < ? AND ABS(amount) >= ?`;
-        const items: any[] = await this.getRandomSample(whereCond, [upperLimit, ctt], benfordCount);
+        const items: any[] = await this.getRandomSample(whereCond, [upperLimit, ctt], benfordCount, seed);
         sampleItems = items.map(item => ({
             ...item,
             bookValue: item.amount,
@@ -409,7 +390,7 @@ export class SamplingService {
         } else {
             await updateProgress(`Performing random selection (${sampleSize} items)...`);
             const whereStr = `ABS(amount) < ? AND ABS(amount) >= ?`;
-            const rawSampleItems: any[] = await this.getRandomSample(whereStr, [upperLimit, ctt], sampleSize);
+            const rawSampleItems: any[] = await this.getRandomSample(whereStr, [upperLimit, ctt], sampleSize, seed);
     
             sampleItems = rawSampleItems.map((item, idx) => ({
               ...item,
