@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { SamplingConfig, Language, GlobalSettings } from '../types';
+import { SamplingConfig, Language } from '../types';
 import { Settings, Info, Dices, Zap, Check } from 'lucide-react';
 import { t } from '../utils/translations';
 import { formatMoney } from '../utils/samplingEngine';
@@ -12,7 +12,6 @@ interface ConfigStepProps {
   setConfig: (config: SamplingConfig) => void;
   totalPopulationValue: number;
   lang: Language;
-  settings: GlobalSettings;
   licenseState?: LicenseState;
   onLockedMethodClick?: () => void;
 }
@@ -62,7 +61,7 @@ const NumberInput: React.FC<NumberInputProps> = ({ value, onChange, placeholder,
     );
 };
 
-const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulationValue, lang, settings, licenseState, onLockedMethodClick }) => {
+const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulationValue, lang, licenseState, onLockedMethodClick }) => {
   const handleChange = (key: keyof SamplingConfig, value: any) => { setConfig({ ...config, [key]: value }); };
   const suggestedPM = Math.floor(totalPopulationValue * 0.01);
   const suggestedTrivial = Math.floor(suggestedPM * 0.05); 
@@ -311,7 +310,7 @@ const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulat
               <div className="animate-fade-in">
                 <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">{t('pmLabel', lang)}</label>
                 <div className="relative group">
-                  <NumberInput value={config.tolerableMisstatement} onChange={(val) => handleChange('tolerableMisstatement', val)} className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-black text-[15px]" placeholder={formatMoney(suggestedPM, settings)} />
+                  <NumberInput value={config.tolerableMisstatement} onChange={(val) => handleChange('tolerableMisstatement', val)} className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-black text-[15px]" placeholder={formatMoney(suggestedPM)} />
                 </div>
                 <p className="text-[12px] font-medium text-slate-400 mt-2.5 flex items-start gap-2 italic">
                   <Info className="w-4 h-4 flex-shrink-0 text-brand-400" />
@@ -323,7 +322,7 @@ const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulat
             {showTrivial && (
                 <div className="animate-fade-in">
                     <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">{t('trivialLabel', lang)}</label>
-                    <NumberInput min={0} value={config.clearlyTrivialThreshold} onChange={(val) => handleChange('clearlyTrivialThreshold', val)} className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-black text-[15px]" placeholder={formatMoney(suggestedTrivial, settings)} />
+                    <NumberInput min={0} value={config.clearlyTrivialThreshold} onChange={(val) => handleChange('clearlyTrivialThreshold', val)} className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-black text-[15px]" placeholder={formatMoney(suggestedTrivial)} />
                     <p className="text-[12px] font-medium text-slate-400 mt-2.5 flex items-start gap-2 italic">
                         <Info className="w-4 h-4 flex-shrink-0 text-brand-400" />
                         {t('trivialDesc', lang)}

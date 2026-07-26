@@ -6,14 +6,14 @@ import ConfigStep from './components/ConfigStep';
 import ResultsStep from './components/ResultsStep';
 import { LicenseActivationModal } from './components/LicenseActivationModal';
 import { UpgradeModal } from './components/UpgradeModal';
-import { TransactionItem, SamplingConfig, SamplingResult, Currency, ColumnIndices, GlobalSettings, Language } from './types';
+import { TransactionItem, SamplingConfig, SamplingResult, Currency, ColumnIndices, Language } from './types';
 import { runSampling } from './utils/samplingEngine';
 import { t } from './utils/translations';
 import { useAppStorage } from './contexts/StorageContext';
 import { usePopulationAdapter } from './adapters/usePopulationAdapter';
 import { isElectron } from './utils/isElectron';
 import { DEFAULT_HOLIDAYS, sanitizeHolidays, isValidHoliday } from './utils/holidays';
-import { isMonthFirstLocale, formatIsoDate } from './utils/locale';
+import { isMonthFirstLocale, formatIsoDate, getNumberExample } from './utils/locale';
 import { useLicense } from './licensing/useLicense';
 import { FREE_METHODS } from './components/config/MethodSelector';
 
@@ -581,7 +581,6 @@ const App: React.FC = () => {
                   lang={lang} 
                   currency={currency}
                   setCurrency={setCurrency}
-                  settings={settings}
                 />
                 <div className="flex justify-end">
                     <button 
@@ -617,7 +616,6 @@ const App: React.FC = () => {
                     setConfig={setConfig}
                     totalPopulationValue={totalPopValue}
                     lang={lang}
-                    settings={settings}
                     licenseState={licenseState}
                     onLockedMethodClick={() => setShowUpgradeModal(true)}
                 />
@@ -808,21 +806,18 @@ const App: React.FC = () => {
                   </div>
                   <div className="p-8 space-y-8">
                       <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                          <p className="text-[10px] font-black text-brand-600 uppercase tracking-[0.15em] mb-1.5">{t('settingDateSystem', lang)}</p>
-                          <p className="text-[12px] font-bold text-neutral-900 font-mono">{formatIsoDate('2025-09-30')}</p>
-                          <p className="text-[11px] text-slate-400 font-medium italic mt-1.5">{t('settingDateSystemHelp', lang)}</p>
-                      </div>
-                      <div>
-                          <label className="block text-[10px] font-black text-brand-600 mb-3 uppercase tracking-[0.15em]">{t('settingNumber', lang)}</label>
-                          <select 
-                            className="w-full border border-slate-200 rounded-xl p-3.5 text-[13px] font-medium focus:ring-2 focus:ring-brand-500 outline-none transition-all bg-slate-50" 
-                            value={settings.numberSeparator} 
-                            onChange={(e) => updateSettings({...settings, numberSeparator: e.target.value as GlobalSettings['numberSeparator']})}
-                          >
-                              <option value="space_comma">1 234,56</option>
-                              <option value="comma_dot">1,234.56</option>
-                              <option value="dot_comma">1.234,56</option>
-                          </select>
+                          <p className="text-[10px] font-black text-brand-600 uppercase tracking-[0.15em] mb-2">{t('settingFormatsSystem', lang)}</p>
+                          <div className="flex gap-6">
+                              <div>
+                                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">{t('settingFormatsDate', lang)}</p>
+                                  <p className="text-[12px] font-bold text-neutral-900 font-mono">{formatIsoDate('2025-09-30')}</p>
+                              </div>
+                              <div>
+                                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">{t('settingFormatsNumber', lang)}</p>
+                                  <p className="text-[12px] font-bold text-neutral-900 font-mono">{getNumberExample()}</p>
+                              </div>
+                          </div>
+                          <p className="text-[11px] text-slate-400 font-medium italic mt-2">{t('settingFormatsHelp', lang)}</p>
                       </div>
                       <div>
                           <div className="flex items-baseline justify-between mb-3">

@@ -12,7 +12,6 @@ interface StorageContextType {
 }
 
 const defaultSettings: GlobalSettings = {
-  numberSeparator: 'space_comma',
   language: 'ua',
   currency: 'UAH',
   holidays: DEFAULT_HOLIDAYS

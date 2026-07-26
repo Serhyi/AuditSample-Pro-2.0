@@ -20,7 +20,7 @@ export async function exportToExcel(
   // when the user actually exports, keeping the main bundle small.
   const ExcelJS = (await import('exceljs')).default as typeof ExcelJSType;
   const workbook = new ExcelJS.Workbook();
-  const { results, sourceHeaders, config, settings, population, license } = fullState;
+  const { results, sourceHeaders, config, population, license } = fullState;
   
   const isUa = lang === 'ua';
 
@@ -125,7 +125,7 @@ export async function exportToExcel(
 
     // Trivial
     addSectionHeader(isUa ? 'Вочевидь незначні суми (ВНС)' : 'Clearly Trivial Items (CTT)', colorRowBg, 'FF1E293B');
-    addDetailRow(isUa ? 'Поріг ВНС' : 'CTT Threshold', formatMoney(config.clearlyTrivialThreshold, settings));
+    addDetailRow(isUa ? 'Поріг ВНС' : 'CTT Threshold', formatMoney(config.clearlyTrivialThreshold));
 
     let trivialActionDesc = t('trivialItemsNotExcluded', lang);
     if (results.areTrivialExcluded) {
@@ -149,14 +149,14 @@ export async function exportToExcel(
     addSectionHeader(isUa ? 'РОЗРАХУНОК ВИБІРКИ' : 'SAMPLING CALCULATION', colorDarkBlue);
     
     addSectionHeader(isUa ? '1. ПАРАМЕТРИ ГЕНЕРАЛЬНОЇ СУКУПНОСТІ' : '1. POPULATION PARAMETERS', 'FF0F172A');
-    addDetailRow(isUa ? 'ГЕНЕРАЛЬНА СУКУПНІСТЬ' : 'TOTAL POPULATION', formatMoney(results.populationValue, settings));
+    addDetailRow(isUa ? 'ГЕНЕРАЛЬНА СУКУПНІСТЬ' : 'TOTAL POPULATION', formatMoney(results.populationValue));
     addDetailRow(isUa ? 'Обсяг ген. сукупності' : 'Population Size', results.populationSize, '0');
     if (config.seed) addDetailRow(isUa ? 'Зерно генератора (Seed)' : 'Generator Seed', config.seed);
 
     sheet.addRow([]);
 
     addSectionHeader(isUa ? '2. НАЛАШТУВАННЯ ТА ОЦІНКА РИЗИКІВ' : '2. SETTINGS AND RISK ASSESSMENT', 'FF0F172A');
-    const calcDetails = getCalculationDetails(config, results, settings, lang);
+    const calcDetails = getCalculationDetails(config, results, lang);
     Object.entries(calcDetails.vars).forEach(([k, v]) => {
         // Monetary figures already arrive as formatted strings from
         // getCalculationDetails. Raw numbers here are counts, seeds and
@@ -191,8 +191,8 @@ export async function exportToExcel(
         addDetailRow(isUa ? 'Очікуваний ступінь відхилення' : 'Projected Deviation', `${projNum.toFixed(2)}%`);
         addDetailRow(isUa ? 'Максимальна помилка (СУЕВ)' : 'Upper Deviation Bound', `${ubNum.toFixed(2)}%`);
     } else {
-        addDetailRow(isUa ? 'Прогнозоване викривлення' : 'Projected Misstatement', formatMoney(projNum, settings));
-        addDetailRow(isUa ? 'Верхня межа викривлення' : 'Upper Misstatement Bound', formatMoney(ubNum, settings));
+        addDetailRow(isUa ? 'Прогнозоване викривлення' : 'Projected Misstatement', formatMoney(projNum));
+        addDetailRow(isUa ? 'Верхня межа викривлення' : 'Upper Misstatement Bound', formatMoney(ubNum));
     }
     
     sheet.addRow([]);
@@ -211,14 +211,14 @@ export async function exportToExcel(
     } else if (config.method === 'RiskAssessment') {
         const keyItemsMisstatements = (results.keyItems || []).reduce((acc: any, i: any) => acc + (i.difference || 0), 0);
         conclusionPrefix = isUa ? "🟡 ОЦІНКА РИЗИКІВ" : "🟡 RISK ASSESSMENT";
-        conclusionText = isUa ? `Знайдено викривлень на суму ${formatMoney(keyItemsMisstatements, settings)}.` : `Total misstatements found is ${formatMoney(keyItemsMisstatements, settings)}.`;
+        conclusionText = isUa ? `Знайдено викривлень на суму ${formatMoney(keyItemsMisstatements)}.` : `Total misstatements found is ${formatMoney(keyItemsMisstatements)}.`;
     } else {
         if (ubNum <= config.tolerableMisstatement) {
             conclusionPrefix = isUa ? "🟢 НИЗЬКИЙ РИЗИК" : "🟢 LOW RISK";
-            conclusionText = isUa ? `Верхня межа викривлення (${formatMoney(ubNum, settings)}) НЕ ПЕРЕВИЩУЄ допустиме викривлення (${formatMoney(config.tolerableMisstatement, settings)}). Вибірка підтверджує відсутність суттєвих викривлень (Низький ризик).` : `Upper misstatement bound (${formatMoney(ubNum, settings)}) DOES NOT EXCEED tolerable misstatement (${formatMoney(config.tolerableMisstatement, settings)}). Sample confirms absence of material misstatements (Low risk).`;
+            conclusionText = isUa ? `Верхня межа викривлення (${formatMoney(ubNum)}) НЕ ПЕРЕВИЩУЄ допустиме викривлення (${formatMoney(config.tolerableMisstatement)}). Вибірка підтверджує відсутність суттєвих викривлень (Низький ризик).` : `Upper misstatement bound (${formatMoney(ubNum)}) DOES NOT EXCEED tolerable misstatement (${formatMoney(config.tolerableMisstatement)}). Sample confirms absence of material misstatements (Low risk).`;
         } else {
              conclusionPrefix = isUa ? "🔴 ВИСОКИЙ РИЗИК" : "🔴 HIGH RISK";
-             conclusionText = isUa ? `Верхня межа викривлення (${formatMoney(ubNum, settings)}) ПЕРЕВИЩУЄ допустиме викривлення (${formatMoney(config.tolerableMisstatement, settings)}). Вибірка свідчить про наявність суттєвих викривлень (Високий ризик).` : `Upper misstatement bound (${formatMoney(ubNum, settings)}) EXCEEDS tolerable misstatement (${formatMoney(config.tolerableMisstatement, settings)}). Sample indicates presence of material misstatements (High risk).`;
+             conclusionText = isUa ? `Верхня межа викривлення (${formatMoney(ubNum)}) ПЕРЕВИЩУЄ допустиме викривлення (${formatMoney(config.tolerableMisstatement)}). Вибірка свідчить про наявність суттєвих викривлень (Високий ризик).` : `Upper misstatement bound (${formatMoney(ubNum)}) EXCEEDS tolerable misstatement (${formatMoney(config.tolerableMisstatement)}). Sample indicates presence of material misstatements (High risk).`;
         }
     }
     

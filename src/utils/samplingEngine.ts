@@ -1,31 +1,15 @@
-import { TransactionItem, SamplingConfig, SamplingResult, SampledItem, GlobalSettings } from '../types';
+import { TransactionItem, SamplingConfig, SamplingResult, SampledItem } from '../types';
 import { Mulberry32 } from '../statistics/prng';
 import { DEFAULT_HOLIDAYS, sanitizeHolidays, isHoliday } from '../utils/holidays';
-import { formatIsoDate } from '../utils/locale';
+import { formatIsoDate, formatNumber } from '../utils/locale';
 import { getReliabilityFactor, getZScore, getExpansionFactor } from '../statistics/reliabilityFactor';
 
 export const methodsSupportingAnomalies = ['MUS', 'CVS', 'Random', 'FixedRandom'];
 
-export function formatMoney(val: number, settings?: GlobalSettings): string {
-    const raw = new Intl.NumberFormat('en-US', { 
-        style: 'decimal', 
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2 
-    }).format(val);
-    
-    if (settings) {
-        if (settings.numberSeparator === 'comma_dot') {
-            return raw; // 1,000.00
-        } else if (settings.numberSeparator === 'dot_comma') {
-            // 1.000,00
-            return raw.replace(/,/g, 'X').replace(/\./g, ',').replace(/X/g, '.');
-        } else {
-            // space_comma: 1 000,00
-            return raw.replace(/,/g, ' ').replace(/\./g, ',');
-        }
-    }
-    
-    return raw.replace(/,/g, ' ');
+export function formatMoney(val: number): string {
+    // Grouping and decimal separators follow the operating system, the same
+    // source the date format comes from.
+    return formatNumber(val);
 }
 
 export function formatDate(val: string): string {
@@ -34,17 +18,12 @@ export function formatDate(val: string): string {
     return formatIsoDate(val);
 }
 
-export function smartFormat(val: any, settings?: GlobalSettings): string {
+export function smartFormat(val: any): string {
     if (val === null || val === undefined) return '';
     if (typeof val === 'number') {
-        if (Number.isInteger(val)) return val.toString();
-        if (settings) {
-            return new Intl.NumberFormat('en-US', { 
-                minimumFractionDigits: 2, 
-                maximumFractionDigits: 2 
-            }).format(val).replace(/,/g, ' ');
-        }
-        return val.toFixed(2);
+        // Integers are identifiers or codes as often as they are amounts, so
+        // they stay bare; only fractional values get the money rendering.
+        return Number.isInteger(val) ? val.toString() : formatNumber(val);
     }
     const str = String(val);
     // Cells normalized on import store dates as ISO; show them in the user's

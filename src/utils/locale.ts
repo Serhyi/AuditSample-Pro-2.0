@@ -70,3 +70,33 @@ export function formatIsoDate(iso: string, locale: string = getSystemLocale()): 
     return iso;
   }
 }
+
+/**
+ * Formats a number the way the operating system writes numbers, always with
+ * two decimals (money and audit figures are never shown truncated).
+ */
+export function formatNumber(val: number, locale: string = getSystemLocale()): string {
+  try {
+    return new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(val);
+  } catch {
+    return val.toFixed(2);
+  }
+}
+
+/** A sample rendering, shown read-only in the settings dialog. */
+export function getNumberExample(locale: string = getSystemLocale()): string {
+  return formatNumber(1234.56, locale);
+}
+
+/** The decimal separator the locale uses, for pre-filling editable fields. */
+export function getDecimalSeparator(locale: string = getSystemLocale()): string {
+  try {
+    const part = new Intl.NumberFormat(locale).formatToParts(1.1).find(p => p.type === 'decimal');
+    return part ? part.value : '.';
+  } catch {
+    return '.';
+  }
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getDateOrder, isMonthFirstLocale, getExcelDateFormat, formatIsoDate, getSystemLocale } from './locale';
+import { getDateOrder, isMonthFirstLocale, getExcelDateFormat, formatIsoDate, getSystemLocale, formatNumber, getNumberExample } from './locale';
 
 describe('getDateOrder', () => {
   it('reads the field order out of the locale', () => {
@@ -47,5 +47,28 @@ describe('formatIsoDate', () => {
 describe('getSystemLocale', () => {
   it('always returns a usable locale tag', () => {
     expect(new Intl.DateTimeFormat(getSystemLocale())).toBeTruthy();
+  });
+});
+
+describe('formatNumber', () => {
+  const nbsp = (str: string) => str.replace(/[\s\u00A0\u202F]/g, ' ');
+
+  it('uses the separators of the locale', () => {
+    expect(nbsp(formatNumber(1234567.891, 'uk-UA'))).toBe('1 234 567,89');
+    expect(formatNumber(1234567.891, 'en-US')).toBe('1,234,567.89');
+    expect(formatNumber(1234567.891, 'de-DE')).toBe('1.234.567,89');
+  });
+
+  it('always shows two decimals and keeps the sign', () => {
+    expect(formatNumber(5, 'en-US')).toBe('5.00');
+    expect(formatNumber(-100.5, 'en-US')).toBe('-100.50');
+  });
+
+  it('falls back rather than throwing on a broken locale', () => {
+    expect(formatNumber(12.5, 'not-a-locale!!')).toBe('12.50');
+  });
+
+  it('renders a sample for the settings dialog', () => {
+    expect(getNumberExample('en-US')).toBe('1,234.56');
   });
 });

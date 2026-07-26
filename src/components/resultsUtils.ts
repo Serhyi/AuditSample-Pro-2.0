@@ -1,4 +1,4 @@
-import { SamplingConfig, SamplingResult, GlobalSettings, Language } from '../types';
+import { SamplingConfig, SamplingResult, Language } from '../types';
 import { DEFAULT_HOLIDAYS, sanitizeHolidays } from '../utils/holidays';
 import { t } from '../utils/translations';
 
@@ -42,7 +42,7 @@ export function getDynamicMethodDescription(config: SamplingConfig, lang: Langua
 import { formatMoney } from '../utils/samplingEngine';
 import { getReliabilityFactor, getExpansionFactor } from '../statistics/reliabilityFactor';
 
-export function getCalculationDetails(config: SamplingConfig, results: SamplingResult, settings: GlobalSettings, lang: string): { vars: Record<string, string|number>, subst: string } {
+export function getCalculationDetails(config: SamplingConfig, results: SamplingResult, lang: string): { vars: Record<string, string|number>, subst: string } {
     const isUa = lang === 'ua';
     const rf = getReliabilityFactor(config.confidenceLevel);
     
@@ -53,8 +53,8 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
     const vars: Record<string, string|number> = {};
     let subst = '';
 
-    const bvStr = formatMoney(bv, settings);
-    const pmStr = formatMoney(pm, settings);
+    const bvStr = formatMoney(bv);
+    const pmStr = formatMoney(pm);
     const methodStr = isUa ? 'Метод:' : 'Method:';
     const confLevelStr = isUa ? 'Рівень впевненості:' : 'Confidence Level:';
     
@@ -62,7 +62,7 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
         const expectedMisstatement = config.expectedMisstatement || 0;
         const expansionFactor = getExpansionFactor(config.confidenceLevel);
         const denominator = Math.max(pm - expectedMisstatement * expansionFactor, pm * 0.01);
-        const denomStr = formatMoney(denominator, settings);
+        const denomStr = formatMoney(denominator);
 
         vars[isUa ? 'Залишкова сукупність (BV):' : 'Residual Book Value (BV):'] = bvStr;
         vars[isUa ? `Коефіцієнт RF (${config.confidenceLevel}%):` : `Reliability Factor RF (${config.confidenceLevel}%):`] = rf;
@@ -70,7 +70,7 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
 
         const calcN = Math.ceil((bv * rf) / denominator);
         if (expectedMisstatement > 0) {
-            const eeStr = formatMoney(expectedMisstatement, settings);
+            const eeStr = formatMoney(expectedMisstatement);
             vars[isUa ? 'Очікуване викривлення (EM):' : 'Expected Misstatement (EM):'] = eeStr;
             vars[isUa ? `Коефіцієнт розширення (EF):` : `Expansion Factor (EF):`] = expansionFactor;
             subst = `n = (${bvStr} × ${rf}) / (${pmStr} − ${eeStr} × ${expansionFactor})\nn = (${bvStr} × ${rf}) / ${denomStr}\nn = ${calcN}`;

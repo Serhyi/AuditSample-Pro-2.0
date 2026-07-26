@@ -6,9 +6,9 @@ export type Language = 'en' | 'ua';
 export type Currency = 'UAH' | 'USD' | 'EUR';
 
 export interface GlobalSettings {
-  // Date handling is not a setting: it follows the operating system's locale
-  // (see utils/locale.ts), so display, import and export can never disagree.
-  numberSeparator: 'space_comma' | 'comma_dot' | 'dot_comma'; // 1 000,00 vs 1,000.00 vs 1.000,00
+  // Date and number formatting are not settings: they follow the operating
+  // system's locale (see utils/locale.ts), so what is shown on screen, what is
+  // read on import and what is written on export can never disagree.
   language: Language;
   currency: Currency;
   /**

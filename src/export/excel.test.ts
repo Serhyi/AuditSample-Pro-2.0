@@ -9,7 +9,7 @@ let captured: Buffer | null = null;
 (globalThis as any).URL = { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} } as any;
 (globalThis as any).document = { createElement: () => ({ click: () => {}, set href(_v: any) {}, get href() { return ''; } }) } as any;
 
-const settings = { numberSeparator: 'space_comma', language: 'ua', currency: 'UAH', holidays: [] };
+const settings = { language: 'ua', currency: 'UAH', holidays: [] };
 
 const mkItem = (row: any[], amount: number) => ({
   id: row[0], amount, bookValue: amount, auditedValue: '', difference: amount, date: '2025-07-01', originalRow: row

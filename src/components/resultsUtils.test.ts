@@ -1,10 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getCalculationDetails } from './resultsUtils';
-import { SamplingConfig, SamplingResult, GlobalSettings } from '../types';
-
-const settings: GlobalSettings = {
-  numberSeparator: 'space_comma', language: 'ua', currency: 'UAH', holidays: []
-};
+import { SamplingConfig, SamplingResult } from '../types';
 
 const mkResult = (over: Partial<SamplingResult> = {}): SamplingResult => ({
   populationSize: 100, populationValue: 100000, trivialCount: 0, trivialValue: 0,
@@ -30,7 +26,7 @@ describe('getCalculationDetails: RiskAssessment', () => {
   });
 
   it('reports only parameters the method actually uses', () => {
-    const { vars } = getCalculationDetails(config, results, settings, 'ua');
+    const { vars } = getCalculationDetails(config, results, 'ua');
     const keys = Object.keys(vars);
 
     // Neither is configurable for RiskAssessment, so neither may be reported.
@@ -48,7 +44,7 @@ describe('getCalculationDetails: RiskAssessment', () => {
   });
 
   it('spells out the enabled criteria and how the sample adds up', () => {
-    const { subst } = getCalculationDetails(config, results, settings, 'ua');
+    const { subst } = getCalculationDetails(config, results, 'ua');
     expect(subst).toContain('вихідні дні');
     expect(subst).toContain('останні 5 дн. місяця');
     expect(subst).not.toContain('святкові дні'); // disabled in this config
@@ -57,7 +53,7 @@ describe('getCalculationDetails: RiskAssessment', () => {
 
   it('says so when every criterion is switched off', () => {
     const off = { ...config, riskWeekend: false, riskHoliday: false, riskClosingDays: 0 } as SamplingConfig;
-    const { subst } = getCalculationDetails(off, mkResult(), settings, 'ua');
+    const { subst } = getCalculationDetails(off, mkResult(), 'ua');
     expect(subst).toContain('критерії вимкнено');
   });
 });
