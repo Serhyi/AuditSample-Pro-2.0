@@ -32,6 +32,7 @@ export interface IpcApi {
     start: (filePath: string, config: any) => Promise<ImportMeta>;
     preview: (filePath: string) => Promise<{ headers: string[], data: any[][] }>;
     project: (filePath: string) => Promise<any>;
+    detectXlsxProject: (filePath: string) => Promise<any>;
   };
   query: {
     getRows: (table: string, limit: number, offset: number, filters?: any[]) => Promise<TransactionItem[]>;
