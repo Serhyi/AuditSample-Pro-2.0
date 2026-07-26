@@ -1,10 +1,8 @@
 import { DatabaseService } from './DatabaseService';
-import { WorkerPool } from '../core/WorkerPool';
-import * as path from 'path';
 import * as fs from 'fs';
 
 export class ExportService {
-  constructor(private db: DatabaseService, private workerPool: WorkerPool) {}
+  constructor(private db: DatabaseService) {}
 
   public async exportProject(projectPath: string, state: any): Promise<void> {
     console.log('Project export to ', projectPath);
@@ -24,17 +22,5 @@ export class ExportService {
     
     // Copy the .sqlite file to the projectPath
     fs.copyFileSync(this.db.dbPath, projectPath);
-  }
-
-  public async exportExcel(excelPath: string, dbPath: string, results: any): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.workerPool.runTask(path.join('dist', 'workers', 'ExportWorker.cjs'), {
-        excelPath,
-        dbPath,
-        results
-      })
-      .then(() => resolve())
-      .catch((e) => reject(e));
-    });
   }
 }

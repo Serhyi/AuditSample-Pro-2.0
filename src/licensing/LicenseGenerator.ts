@@ -2,8 +2,9 @@
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 
-const SECRET = process.env.VITE_LICENSE_SECRET;
-if (!SECRET) { console.error('❌ VITE_LICENSE_SECRET не вказано'); process.exit(1); }
+const secretFromEnv = process.env.VITE_LICENSE_SECRET;
+if (!secretFromEnv) { console.error('❌ VITE_LICENSE_SECRET не вказано'); process.exit(1); }
+const SECRET: string = secretFromEnv;
 
 function generateId(entityCode: string): string {
   const year = new Date().getFullYear();

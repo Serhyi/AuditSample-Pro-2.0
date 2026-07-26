@@ -19,8 +19,7 @@ contextBridge.exposeInMainWorld('api', {
     execute: (config) => ipcRenderer.invoke('sampling:execute', config)
   },
   export: {
-    project: (state) => ipcRenderer.invoke('export:project', state),
-    excel: (state) => ipcRenderer.invoke('export:excel', state)
+    project: (state) => ipcRenderer.invoke('export:project', state)
   },
   license: {
     loadFromDisk: () => ipcRenderer.invoke('license:loadFromDisk')

@@ -8,7 +8,7 @@ import { toIsoDate, normalizeCellValue } from '../../utils/cellNormalization';
 function parseAmount(val: any): number {
     if (typeof val === 'number') return val;
     if (val === null || val === undefined) return 0;
-    let str = String(val).replace(/[\s  $€£₴]/g, '').trim();
+    let str = String(val).replace(/[\s\u00A0\u202F$€£₴]/g, '').trim();
     if (!str) return 0;
     if (str.startsWith('(') && str.endsWith(')')) str = '-' + str.slice(1, -1);
     

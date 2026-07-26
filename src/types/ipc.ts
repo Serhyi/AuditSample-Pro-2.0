@@ -44,7 +44,6 @@ export interface IpcApi {
   };
   export: {
     project: (state: any) => Promise<void>;
-    excel: (state: any) => Promise<void>;
   };
   license: {
     loadFromDisk: () => Promise<string | null>;

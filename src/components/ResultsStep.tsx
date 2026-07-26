@@ -1,7 +1,6 @@
 
 // ResultsStep component
 import React, { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
-import { isElectron } from '../utils/isElectron';
 
 const SyncedScrollContainer = ({ children, setRefs, syncScrollRef }: any) => {
     const tableScrollRef = React.useRef<HTMLDivElement>(null);

@@ -6,7 +6,7 @@ export class SamplingService {
 
     private async getRandomSample(whereClause: string, params: any[], sampleSize: number): Promise<any[]> {
         // Find total matching count first
-        const countAgg = await this.db.query(`SELECT COUNT(*) as cnt FROM population WHERE ${whereClause}`, params);
+        const countAgg: { cnt: number }[] = await this.db.query(`SELECT COUNT(*) as cnt FROM population WHERE ${whereClause}`, params);
         const total = countAgg[0]?.cnt || 0;
         if (total === 0) return [];
 

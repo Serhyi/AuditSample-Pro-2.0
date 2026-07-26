@@ -2,13 +2,6 @@ import { Worker } from 'worker_threads';
 import * as path from 'path';
 
 export class WorkerPool {
-  private workers: Worker[] = [];
-  private taskQueue: any[] = []; // Simple task queue for demonstration
-
-  constructor(private poolSize: number = 4) {
-    // Basic pool init
-  }
-
   public async runTask(workerFile: string, data: any, onProgress?: (pct: number, stage: string) => void): Promise<any> {
     return new Promise((resolve, reject) => {
       // Assuming compiled worker lives in dist/workers or just next to main

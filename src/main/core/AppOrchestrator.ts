@@ -30,9 +30,9 @@ export class AppOrchestrator {
   constructor() {
     this.dbService = new DatabaseService();
     this.workerPool = new WorkerPool();
-    this.importService = new ImportService(this.dbService, this.workerPool);
+    this.importService = new ImportService(this.workerPool);
     this.samplingService = new SamplingService(this.dbService);
-    this.exportService = new ExportService(this.dbService, this.workerPool);
+    this.exportService = new ExportService(this.dbService);
   }
 
   public registerIpcHandlers() {
@@ -51,7 +51,7 @@ export class AppOrchestrator {
       return result;
     });
 
-    ipcMain.handle('import:preview', async (event, filePath) => {
+    ipcMain.handle('import:preview', async (_event, filePath) => {
       return await this.importService.previewFile(filePath);
     });
 
@@ -181,7 +181,7 @@ export class AppOrchestrator {
       }
     });
 
-    ipcMain.handle('import:project', async (event, filePath) => {
+    ipcMain.handle('import:project', async (_event, filePath) => {
       console.log('IPC import:project received', filePath);
       
       try {
@@ -233,12 +233,12 @@ export class AppOrchestrator {
       }
     });
 
-    ipcMain.handle('query:getRows', async (event, table, limit, offset) => {
+    ipcMain.handle('query:getRows', async (_event, table, limit, offset) => {
       assertTable(table);
       return await this.dbService.query(`SELECT * FROM ${table} LIMIT ? OFFSET ?`, [limit, offset]);
     });
 
-    ipcMain.handle('query:insertRows', async (event, table, rows) => {
+    ipcMain.handle('query:insertRows', async (_event, table, rows) => {
       assertTable(table);
       await this.dbService.execute(`DROP TABLE IF EXISTS ${table}`);
       await this.dbService.execute(`
@@ -268,7 +268,7 @@ export class AppOrchestrator {
       return true;
     });
 
-    ipcMain.handle('query:getAggregates', async (event, table) => {
+    ipcMain.handle('query:getAggregates', async (_event, table) => {
       assertTable(table);
       try {
         const result = await this.dbService.query<any>(`SELECT COUNT(*) as cnt, SUM(ABS(amount)) as val, MIN(amount) as min_amt, MAX(amount) as max_amt FROM ${table}`);
@@ -289,7 +289,7 @@ export class AppOrchestrator {
       });
     });
 
-    ipcMain.handle('export:project', async (event, state) => {
+    ipcMain.handle('export:project', async (_event, state) => {
       console.log('IPC export:project received');
       const methodName = state?.config?.method || 'Sample';
       const dateStr = new Date().toLocaleDateString('uk-UA').replace(/\./g, '_');
@@ -335,25 +335,6 @@ export class AppOrchestrator {
       }
       console.log('[license] no license-ASP*.asp file found');
       return null;
-    });
-
-    ipcMain.handle('export:excel', async (event, state) => {
-      console.log('IPC export:excel received');
-      const methodName = state?.config?.method || 'Sample';
-      const dateStr = new Date().toLocaleDateString('uk-UA').replace(/\./g, '_');
-      const defaultName = `Вибірка_${methodName}_${dateStr}.xlsx`;
-      
-      const { canceled, filePath: excelPath } = await dialog.showSaveDialog({
-         title: 'Експорт в Excel',
-         defaultPath: defaultName,
-         filters: [{ name: 'Excel Workbook', extensions: ['xlsx'] }]
-      });
-      if (!canceled && excelPath) {
-         const dbPath = this.dbService.dbPath;
-         if (dbPath) {
-            await this.exportService.exportExcel(excelPath, dbPath, state.results);
-         }
-      }
     });
   }
 }
