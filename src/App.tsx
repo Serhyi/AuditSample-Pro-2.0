@@ -13,6 +13,7 @@ import { useAppStorage } from './contexts/StorageContext';
 import { usePopulationAdapter } from './adapters/usePopulationAdapter';
 import { isElectron } from './utils/isElectron';
 import { DEFAULT_HOLIDAYS, sanitizeHolidays, isValidHoliday } from './utils/holidays';
+import { isMonthFirstLocale, formatIsoDate } from './utils/locale';
 import { useLicense } from './licensing/useLicense';
 import { FREE_METHODS } from './components/config/MethodSelector';
 
@@ -355,7 +356,10 @@ const App: React.FC = () => {
           if (isElectron() && currentFilePath && window.api) {
               await window.api.import.start(currentFilePath, { 
                   activeIndices: columnIndices, 
-                  startRow: currentStartRow
+                  startRow: currentStartRow,
+                  // The renderer sees the real OS locale; the main process may
+                  // resolve a different one, so send the decision along.
+                  monthFirst: isMonthFirstLocale()
               });
               await refreshStats();
           } else {
@@ -803,33 +807,10 @@ const App: React.FC = () => {
                       <button onClick={() => setShowSettingsModal(false)} className="text-slate-400 hover:text-neutral-900 p-2 hover:bg-slate-100 rounded-full transition-all"><X className="w-6 h-6" /></button>
                   </div>
                   <div className="p-8 space-y-8">
-                      <div>
-                          <label className="block text-[10px] font-black text-brand-600 mb-3 uppercase tracking-[0.15em]">{t('settingRegion', lang)}</label>
-                          <div className="grid grid-cols-3 gap-2">
-                              {(['ua', 'us', 'eu'] as const).map((r) => (
-                                  <button
-                                      key={r}
-                                      onClick={() => updateSettings({
-                                          ...settings, 
-                                          region: r, 
-                                          dateFormat: r === 'us' ? 'mm/dd/yyyy' : 'dd.mm.yyyy', 
-                                          numberSeparator: r === 'us' ? 'comma_dot' : (r === 'ua' ? 'space_comma' : 'dot_comma')
-                                      })}
-                                      className={`py-2.5 text-[11px] rounded-xl border text-center transition-all ${settings.region === r ? 'bg-brand-50 border-brand-600 text-brand-800 font-bold shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}>{r === 'ua' ? 'Ukraine' : (r === 'us' ? 'USA' : 'Europe')}</button>
-                              ))}
-                          </div>
-                      </div>
-                      <div>
-                          <label className="block text-[10px] font-black text-brand-600 mb-3 uppercase tracking-[0.15em]">{t('settingDate', lang)}</label>
-                          <select 
-                            className="w-full border border-slate-200 rounded-xl p-3.5 text-[13px] font-medium focus:ring-2 focus:ring-brand-500 outline-none transition-all bg-slate-50" 
-                            value={settings.dateFormat} 
-                            onChange={(e) => updateSettings({...settings, dateFormat: e.target.value as GlobalSettings['dateFormat']})}
-                          >
-                              <option value="dd.mm.yyyy">DD.MM.YYYY (30.09.2025)</option>
-                              <option value="mm/dd/yyyy">MM/DD/YYYY (09/30/2025)</option>
-                              <option value="yyyy-mm-dd">YYYY-MM-DD (2025-09-30)</option>
-                          </select>
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                          <p className="text-[10px] font-black text-brand-600 uppercase tracking-[0.15em] mb-1.5">{t('settingDateSystem', lang)}</p>
+                          <p className="text-[12px] font-bold text-neutral-900 font-mono">{formatIsoDate('2025-09-30')}</p>
+                          <p className="text-[11px] text-slate-400 font-medium italic mt-1.5">{t('settingDateSystemHelp', lang)}</p>
                       </div>
                       <div>
                           <label className="block text-[10px] font-black text-brand-600 mb-3 uppercase tracking-[0.15em]">{t('settingNumber', lang)}</label>

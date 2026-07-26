@@ -350,7 +350,7 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onProjectRecovere
                         if (!isAmtInvalid) content = formatMoney(parsedAmt, settings);
                     } else if (isDate) {
                         cellStyle = isDateInvalid ? "bg-red-50 text-red-600" : "text-brand-700 font-medium";
-                        if (parsedDate) content = formatDate(parsedDate, settings);
+                        if (parsedDate) content = formatDate(parsedDate);
                     } else if (isId) {
                         cellStyle = "font-medium text-slate-800 bg-slate-50";
                     }

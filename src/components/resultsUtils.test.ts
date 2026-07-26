@@ -3,7 +3,7 @@ import { getCalculationDetails } from './resultsUtils';
 import { SamplingConfig, SamplingResult, GlobalSettings } from '../types';
 
 const settings: GlobalSettings = {
-  region: 'ua', dateFormat: 'dd.mm.yyyy', numberSeparator: 'space_comma', language: 'ua', currency: 'UAH'
+  numberSeparator: 'space_comma', language: 'ua', currency: 'UAH', holidays: []
 };
 
 const mkResult = (over: Partial<SamplingResult> = {}): SamplingResult => ({

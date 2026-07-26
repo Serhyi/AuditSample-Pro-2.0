@@ -486,7 +486,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                         {sourceHeaders.map((_, i) => {
                             let content;
                             if (i === colIndices.date) {
-                                content = formatDate(item.date, settings);
+                                content = formatDate(item.date);
                             } else if (i === colIndices.id) {
                                 // For the ID/Number column, show as is (plain string or integer)
                                 content = item.originalRow[i] !== undefined && item.originalRow[i] !== null 

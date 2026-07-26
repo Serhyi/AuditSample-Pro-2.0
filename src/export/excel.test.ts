@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import ExcelJS from 'exceljs';
 import { exportToExcel } from './excel';
+import { getExcelDateFormat } from '../utils/locale';
 
 // Minimal DOM/Blob stubs so the browser-oriented exporter runs under vitest.
 let captured: Buffer | null = null;
@@ -8,15 +9,19 @@ let captured: Buffer | null = null;
 (globalThis as any).URL = { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} } as any;
 (globalThis as any).document = { createElement: () => ({ click: () => {}, set href(_v: any) {}, get href() { return ''; } }) } as any;
 
-const settings = { region: 'ua', dateFormat: 'dd.mm.yyyy', numberSeparator: 'space_comma', language: 'ua', currency: 'UAH' };
+const settings = { numberSeparator: 'space_comma', language: 'ua', currency: 'UAH', holidays: [] };
 
 const mkItem = (row: any[], amount: number) => ({
   id: row[0], amount, bookValue: amount, auditedValue: '', difference: amount, date: '2025-07-01', originalRow: row
 });
 
+// Cells arrive normalized from import (dates as ISO, numbers as numbers); the
+// raw-text cases cover files imported before normalization existed. Ambiguous
+// text like '05/07/2025' is deliberately absent: it is resolved by the OS
+// locale, which would make the expectations machine-dependent.
 const rows = [
-  ['1.0', '800.0', '01.07.2025', 'Реалізація ТБ00-01/07-01', '361.0', '007123', '1 234,56', '2025-08-24T00:00:00.000Z'],
-  ['2.0', '4514.4', '31.02.2025', '(100.50)', '1.234.567,89', '123456789012345678', '', '05/07/2025'],
+  ['1.0', '800.0', '2025-07-01', 'Реалізація ТБ00-01/07-01', '361.0', '007123', '1 234,56', '2025-08-24T00:00:00.000Z'],
+  ['2.0', '4514.4', '31.02.2025', '(100.50)', '1.234.567,89', '123456789012345678', '', '25/07/2025'],
 ];
 
 const state = {
@@ -43,8 +48,8 @@ describe('export normalization', () => {
 
     expect(v(r1,1)).toBe(1);                              // '1.0' -> number
     expect(v(r1,2)).toBe(800);
-    expect(v(r1,3)).toBeInstanceOf(Date);                 // 01.07.2025
-    expect((v(r1,3) as Date).getMonth()).toBe(6);         // July, day-first
+    expect(v(r1,3)).toBeInstanceOf(Date);                 // ISO from import
+    expect((v(r1,3) as Date).getMonth()).toBe(6);         // July
     expect((v(r1,3) as Date).getDate()).toBe(1);
     expect(v(r1,4)).toBe('Реалізація ТБ00-01/07-01');     // text stays text
     expect(v(r1,5)).toBe(361);
@@ -57,9 +62,12 @@ describe('export normalization', () => {
     expect(v(r2,5)).toBe(1234567.89);                     // dot thousands, comma decimal
     expect(v(r2,6)).toBe('123456789012345678');           // 18 digits -> text
     expect(v(r2,8)).toBeInstanceOf(Date);
-    expect((v(r2,8) as Date).getMonth()).toBe(6);         // 05/07 day-first -> July
+    // A first part above 12 is unambiguously the day in any locale.
+    expect((v(r2,8) as Date).getMonth()).toBe(6);
+    expect((v(r2,8) as Date).getDate()).toBe(25);
 
-    expect(r1.getCell(3).numFmt).toBe('dd.mm.yyyy');
+    // The date format follows the OS locale, not a setting.
+    expect(r1.getCell(3).numFmt).toBe(getExcelDateFormat());
     expect(r1.getCell(1).numFmt).toBe('#,##0');
     expect(r1.getCell(7).numFmt).toBe('#,##0.00');
   });

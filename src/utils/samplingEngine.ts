@@ -1,6 +1,7 @@
 import { TransactionItem, SamplingConfig, SamplingResult, SampledItem, GlobalSettings } from '../types';
 import { Mulberry32 } from '../statistics/prng';
 import { DEFAULT_HOLIDAYS, sanitizeHolidays, isHoliday } from '../utils/holidays';
+import { formatIsoDate } from '../utils/locale';
 import { getReliabilityFactor, getZScore, getExpansionFactor } from '../statistics/reliabilityFactor';
 
 export const methodsSupportingAnomalies = ['MUS', 'CVS', 'Random', 'FixedRandom'];
@@ -27,19 +28,10 @@ export function formatMoney(val: number, settings?: GlobalSettings): string {
     return raw.replace(/,/g, ' ');
 }
 
-export function formatDate(val: string, settings?: GlobalSettings): string {
-    if (!val) return val;
-    const parts = val.split('-');
-    if (parts.length === 3) {
-        const date = new Date(Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10)));
-        return new Intl.DateTimeFormat(settings?.region === 'us' ? 'en-US' : 'uk-UA', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            timeZone: 'UTC'
-        }).format(date);
-    }
-    return val;
+export function formatDate(val: string): string {
+    // Dates are stored as ISO and shown the way the operating system writes
+    // them, which is also the format the Excel export uses.
+    return formatIsoDate(val);
 }
 
 export function smartFormat(val: any, settings?: GlobalSettings): string {
@@ -57,7 +49,7 @@ export function smartFormat(val: any, settings?: GlobalSettings): string {
     const str = String(val);
     // Cells normalized on import store dates as ISO; show them in the user's
     // format instead of leaking the storage representation into the table.
-    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return formatDate(str, settings);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return formatDate(str);
     return str;
 }
 

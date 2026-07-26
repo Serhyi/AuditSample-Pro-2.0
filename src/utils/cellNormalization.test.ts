@@ -2,19 +2,25 @@ import { describe, it, expect } from 'vitest';
 import { normalizeCellValue, toIsoDate, parseNumericText, parseDateText } from './cellNormalization';
 
 describe('normalizeCellValue (import stage)', () => {
-  it('converts date text to ISO, day-first', () => {
-    expect(normalizeCellValue('01.07.2025')).toBe('2025-07-01');
-    expect(normalizeCellValue('2025-07-01')).toBe('2025-07-01');
-    expect(normalizeCellValue('01.07.25')).toBe('2025-07-01');
-    expect(normalizeCellValue('2025-08-24T00:00:00.000Z')).toBe('2025-08-24');
-    expect(normalizeCellValue(new Date(2025, 6, 1))).toBe('2025-07-01');
+  // Ambiguous input is resolved by the OS locale, so these tests always pass
+  // the convention explicitly instead of depending on the machine they run on.
+  const DAY_FIRST = false;
+  const MONTH_FIRST = true;
+
+  it('converts date text to ISO', () => {
+    expect(normalizeCellValue('01.07.2025', DAY_FIRST)).toBe('2025-07-01');
+    expect(normalizeCellValue('2025-07-01', DAY_FIRST)).toBe('2025-07-01');
+    expect(normalizeCellValue('01.07.25', DAY_FIRST)).toBe('2025-07-01');
+    // Unambiguous forms do not depend on the convention.
+    expect(normalizeCellValue('2025-08-24T00:00:00.000Z', MONTH_FIRST)).toBe('2025-08-24');
+    expect(normalizeCellValue(new Date(2025, 6, 1), MONTH_FIRST)).toBe('2025-07-01');
   });
 
-  it('honours the month-first setting', () => {
-    expect(normalizeCellValue('05/07/2025', true)).toBe('2025-05-07');
-    expect(normalizeCellValue('05/07/2025')).toBe('2025-07-05');
-    // A first part above 12 can only be the day, whatever the setting.
-    expect(normalizeCellValue('25/07/2025', true)).toBe('2025-07-25');
+  it('resolves ambiguous dates by the given convention', () => {
+    expect(normalizeCellValue('05/07/2025', MONTH_FIRST)).toBe('2025-05-07');
+    expect(normalizeCellValue('05/07/2025', DAY_FIRST)).toBe('2025-07-05');
+    // A first part above 12 can only be the day, whatever the convention.
+    expect(normalizeCellValue('25/07/2025', MONTH_FIRST)).toBe('2025-07-25');
   });
 
   it('converts numeric text to numbers', () => {
@@ -40,7 +46,7 @@ describe('normalizeCellValue (import stage)', () => {
   });
 
   it('unwraps ExcelJS rich-text and formula cells', () => {
-    expect(normalizeCellValue({ text: '01.07.2025' })).toBe('2025-07-01');
+    expect(normalizeCellValue({ text: '01.07.2025' }, false)).toBe('2025-07-01');
     expect(normalizeCellValue({ result: '800.5' })).toBe(800.5);
   });
 
@@ -59,7 +65,7 @@ describe('toIsoDate (date column)', () => {
   });
 
   it('accepts the text formats the importer sees', () => {
-    expect(toIsoDate('01.07.2025')).toBe('2025-07-01');
+    expect(toIsoDate('01.07.2025', false)).toBe('2025-07-01');
     expect(toIsoDate('2025-07-01')).toBe('2025-07-01');
     expect(toIsoDate(new Date(2025, 6, 1))).toBe('2025-07-01');
   });

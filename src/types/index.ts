@@ -6,8 +6,8 @@ export type Language = 'en' | 'ua';
 export type Currency = 'UAH' | 'USD' | 'EUR';
 
 export interface GlobalSettings {
-  region: 'ua' | 'us' | 'eu'; // ua = Kyiv, us = US, eu = Generic EU
-  dateFormat: 'dd.mm.yyyy' | 'mm/dd/yyyy' | 'yyyy-mm-dd';
+  // Date handling is not a setting: it follows the operating system's locale
+  // (see utils/locale.ts), so display, import and export can never disagree.
   numberSeparator: 'space_comma' | 'comma_dot' | 'dot_comma'; // 1 000,00 vs 1,000.00 vs 1.000,00
   language: Language;
   currency: Currency;

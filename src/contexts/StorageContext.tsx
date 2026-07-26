@@ -12,8 +12,6 @@ interface StorageContextType {
 }
 
 const defaultSettings: GlobalSettings = {
-  region: 'ua',
-  dateFormat: 'dd.mm.yyyy',
   numberSeparator: 'space_comma',
   language: 'ua',
   currency: 'UAH',

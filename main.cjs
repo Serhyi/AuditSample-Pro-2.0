@@ -65082,6 +65082,35 @@ var WorkerPool = class {
   }
 };
 
+// src/utils/locale.ts
+function getSystemLocale() {
+  try {
+    if (typeof navigator !== "undefined" && navigator.language) return navigator.language;
+    const resolved = new Intl.DateTimeFormat().resolvedOptions().locale;
+    if (resolved) return resolved;
+  } catch {
+  }
+  return "uk-UA";
+}
+function getDateOrder(locale = getSystemLocale()) {
+  try {
+    const parts = new Intl.DateTimeFormat(locale, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).formatToParts(new Date(2e3, 0, 2));
+    const order = parts.filter((p) => p.type === "year" || p.type === "month" || p.type === "day").map((p) => p.type);
+    if (order[0] === "year") return "ymd";
+    if (order[0] === "month") return "mdy";
+    return "dmy";
+  } catch {
+    return "dmy";
+  }
+}
+function isMonthFirstLocale(locale) {
+  return getDateOrder(locale) === "mdy";
+}
+
 // src/utils/cellNormalization.ts
 var makeIso = (y, m, d) => {
   if (m < 1 || m > 12 || d < 1 || d > 31) return null;
@@ -65090,7 +65119,7 @@ var makeIso = (y, m, d) => {
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 };
 var looksLikeDate = (str) => /^\d{1,4}[./-]\d{1,2}[./-]\d{2,4}/.test(str);
-function parseDateText(str, monthFirst = false) {
+function parseDateText(str, monthFirst = isMonthFirstLocale()) {
   const s = str.trim();
   const iso = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[T ][\d:.]+Z?)?$/);
   if (iso) return makeIso(Number(iso[1]), Number(iso[2]), Number(iso[3]));
@@ -65142,7 +65171,7 @@ function parseNumericText(str) {
   const signed = sign * num;
   return negative ? -Math.abs(signed) : signed;
 }
-function toIsoDate(raw, monthFirst = false) {
+function toIsoDate(raw, monthFirst = isMonthFirstLocale()) {
   if (raw === void 0 || raw === null || raw === "") return "";
   if (raw instanceof Date) {
     return `${raw.getFullYear()}-${String(raw.getMonth() + 1).padStart(2, "0")}-${String(raw.getDate()).padStart(2, "0")}`;
@@ -65164,7 +65193,7 @@ function toIsoDate(raw, monthFirst = false) {
   }
   return parseDateText(str, monthFirst) || "";
 }
-function normalizeCellValue(raw, monthFirst = false) {
+function normalizeCellValue(raw, monthFirst = isMonthFirstLocale()) {
   if (raw === null || raw === void 0) return "";
   if (raw instanceof Date) return toIsoDate(raw, monthFirst);
   if (typeof raw === "number") return raw;

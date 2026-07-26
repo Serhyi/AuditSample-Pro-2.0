@@ -3,6 +3,7 @@ import { Language, TransactionItem } from '../types';
 import { t } from '../utils/translations';
 import { formatMoney, methodsSupportingAnomalies, calculateExtrapolation } from '../utils/samplingEngine';
 import { parseDateText, parseNumericText, looksLikeDate } from '../utils/cellNormalization';
+import { getExcelDateFormat, isMonthFirstLocale } from '../utils/locale';
 import { METHOD_PREFIX_MAP, getStaticFormula, getCalculationDetails, getDynamicMethodName, getDynamicMethodDescription } from '../components/resultsUtils';
 
 // Hidden sheet that carries the machine-readable snapshots in client exports,
@@ -263,13 +264,8 @@ export async function exportToExcel(
   // date format. Files imported before normalization existed still carry raw
   // text, so the same parsers run as a fallback.
 
-  const DATE_NUM_FMT: Record<string, string> = {
-    'dd.mm.yyyy': 'dd.mm.yyyy',
-    'mm/dd/yyyy': 'mm/dd/yyyy',
-    'yyyy-mm-dd': 'yyyy-mm-dd'
-  };
-  const dateNumFmt = DATE_NUM_FMT[settings?.dateFormat] || 'dd.mm.yyyy';
-  const monthFirst = settings?.dateFormat === 'mm/dd/yyyy';
+  const dateNumFmt = getExcelDateFormat();
+  const monthFirst = isMonthFirstLocale();
 
   const isoToDate = (iso: string): Date => {
     const [y, m, d] = iso.split('-').map(Number);
