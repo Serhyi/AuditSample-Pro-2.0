@@ -3582,7 +3582,7 @@ var require_worksheet = __commonJS({
       // =========================================================================
       // Worksheet Protection
       protect(password, options) {
-        return new Promise((resolve2) => {
+        return new Promise((resolve) => {
           this.sheetProtection = {
             sheet: true
           };
@@ -3606,7 +3606,7 @@ var require_worksheet = __commonJS({
               delete this.sheetProtection.spinCount;
             }
           }
-          resolve2();
+          resolve();
         });
       }
       unprotect() {
@@ -6294,8 +6294,8 @@ var require_lib2 = __commonJS({
         return this;
       }
       var p = this.constructor;
-      return this.then(resolve3, reject2);
-      function resolve3(value) {
+      return this.then(resolve2, reject2);
+      function resolve2(value) {
         function yes() {
           return value;
         }
@@ -6448,8 +6448,8 @@ var require_lib2 = __commonJS({
       }
       return out;
     }
-    Promise2.resolve = resolve2;
-    function resolve2(value) {
+    Promise2.resolve = resolve;
+    function resolve(value) {
       if (value instanceof this) {
         return value;
       }
@@ -6980,10 +6980,10 @@ var require_utils = __commonJS({
       var promise = external.Promise.resolve(inputData).then(function(data) {
         var isBlob = support.blob && (data instanceof Blob || ["[object File]", "[object Blob]"].indexOf(Object.prototype.toString.call(data)) !== -1);
         if (isBlob && typeof FileReader !== "undefined") {
-          return new external.Promise(function(resolve2, reject) {
+          return new external.Promise(function(resolve, reject) {
             var reader = new FileReader();
             reader.onload = function(e) {
-              resolve2(e.target.result);
+              resolve(e.target.result);
             };
             reader.onerror = function(e) {
               reject(e.target.error);
@@ -7538,7 +7538,7 @@ var require_StreamHelper = __commonJS({
       }
     }
     function accumulate(helper, updateCallback) {
-      return new external.Promise(function(resolve2, reject) {
+      return new external.Promise(function(resolve, reject) {
         var dataArray = [];
         var chunkType = helper._internalType, resultType = helper._outputType, mimeType = helper._mimeType;
         helper.on("data", function(data, meta) {
@@ -7552,7 +7552,7 @@ var require_StreamHelper = __commonJS({
         }).on("end", function() {
           try {
             var result = transformZipOutput(resultType, concat(chunkType, dataArray), mimeType);
-            resolve2(result);
+            resolve(result);
           } catch (e) {
             reject(e);
           }
@@ -13665,7 +13665,7 @@ var require_load = __commonJS({
     var Crc32Probe = require_Crc32Probe();
     var nodejsUtils = require_nodejsUtils();
     function checkEntryCRC32(zipEntry) {
-      return new external.Promise(function(resolve2, reject) {
+      return new external.Promise(function(resolve, reject) {
         var worker = zipEntry.decompressed.getContentWorker().pipe(new Crc32Probe());
         worker.on("error", function(e) {
           reject(e);
@@ -13673,7 +13673,7 @@ var require_load = __commonJS({
           if (worker.streamInfo.crc32 !== zipEntry.decompressed.crc32) {
             reject(new Error("Corrupted zip : CRC32 mismatch"));
           } else {
-            resolve2();
+            resolve();
           }
         }).resume();
       });
@@ -15225,14 +15225,14 @@ var require_async_iterator = __commonJS({
       };
     }
     function readAndResolve(iter) {
-      var resolve2 = iter[kLastResolve];
-      if (resolve2 !== null) {
+      var resolve = iter[kLastResolve];
+      if (resolve !== null) {
         var data = iter[kStream].read();
         if (data !== null) {
           iter[kLastPromise] = null;
           iter[kLastResolve] = null;
           iter[kLastReject] = null;
-          resolve2(createIterResult(data, false));
+          resolve(createIterResult(data, false));
         }
       }
     }
@@ -15240,13 +15240,13 @@ var require_async_iterator = __commonJS({
       process.nextTick(readAndResolve, iter);
     }
     function wrapForNext(lastPromise, iter) {
-      return function(resolve2, reject) {
+      return function(resolve, reject) {
         lastPromise.then(function() {
           if (iter[kEnded]) {
-            resolve2(createIterResult(void 0, true));
+            resolve(createIterResult(void 0, true));
             return;
           }
-          iter[kHandlePromise](resolve2, reject);
+          iter[kHandlePromise](resolve, reject);
         }, reject);
       };
     }
@@ -15266,12 +15266,12 @@ var require_async_iterator = __commonJS({
           return Promise.resolve(createIterResult(void 0, true));
         }
         if (this[kStream].destroyed) {
-          return new Promise(function(resolve2, reject) {
+          return new Promise(function(resolve, reject) {
             process.nextTick(function() {
               if (_this[kError]) {
                 reject(_this[kError]);
               } else {
-                resolve2(createIterResult(void 0, true));
+                resolve(createIterResult(void 0, true));
               }
             });
           });
@@ -15294,13 +15294,13 @@ var require_async_iterator = __commonJS({
       return this;
     }), _defineProperty(_Object$setPrototypeO, "return", function _return() {
       var _this2 = this;
-      return new Promise(function(resolve2, reject) {
+      return new Promise(function(resolve, reject) {
         _this2[kStream].destroy(null, function(err) {
           if (err) {
             reject(err);
             return;
           }
-          resolve2(createIterResult(void 0, true));
+          resolve(createIterResult(void 0, true));
         });
       });
     }), _Object$setPrototypeO), AsyncIteratorPrototype);
@@ -15322,15 +15322,15 @@ var require_async_iterator = __commonJS({
         value: stream._readableState.endEmitted,
         writable: true
       }), _defineProperty(_Object$create, kHandlePromise, {
-        value: function value(resolve2, reject) {
+        value: function value(resolve, reject) {
           var data = iterator[kStream].read();
           if (data) {
             iterator[kLastPromise] = null;
             iterator[kLastResolve] = null;
             iterator[kLastReject] = null;
-            resolve2(createIterResult(data, false));
+            resolve(createIterResult(data, false));
           } else {
-            iterator[kLastResolve] = resolve2;
+            iterator[kLastResolve] = resolve;
             iterator[kLastReject] = reject;
           }
         },
@@ -15349,12 +15349,12 @@ var require_async_iterator = __commonJS({
           iterator[kError] = err;
           return;
         }
-        var resolve2 = iterator[kLastResolve];
-        if (resolve2 !== null) {
+        var resolve = iterator[kLastResolve];
+        if (resolve !== null) {
           iterator[kLastPromise] = null;
           iterator[kLastResolve] = null;
           iterator[kLastReject] = null;
-          resolve2(createIterResult(void 0, true));
+          resolve(createIterResult(void 0, true));
         }
         iterator[kEnded] = true;
       });
@@ -15369,7 +15369,7 @@ var require_async_iterator = __commonJS({
 var require_from = __commonJS({
   "node_modules/readable-stream/lib/internal/streams/from.js"(exports2, module2) {
     "use strict";
-    function asyncGeneratorStep(gen, resolve2, reject, _next, _throw, key, arg) {
+    function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
       try {
         var info = gen[key](arg);
         var value = info.value;
@@ -15378,7 +15378,7 @@ var require_from = __commonJS({
         return;
       }
       if (info.done) {
-        resolve2(value);
+        resolve(value);
       } else {
         Promise.resolve(value).then(_next, _throw);
       }
@@ -15386,13 +15386,13 @@ var require_from = __commonJS({
     function _asyncToGenerator(fn) {
       return function() {
         var self2 = this, args = arguments;
-        return new Promise(function(resolve2, reject) {
+        return new Promise(function(resolve, reject) {
           var gen = fn.apply(self2, args);
           function _next(value) {
-            asyncGeneratorStep(gen, resolve2, reject, _next, _throw, "next", value);
+            asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value);
           }
           function _throw(err) {
-            asyncGeneratorStep(gen, resolve2, reject, _next, _throw, "throw", err);
+            asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err);
           }
           _next(void 0);
         });
@@ -16479,14 +16479,14 @@ var require_utils2 = __commonJS({
       nop() {
       },
       promiseImmediate(value) {
-        return new Promise((resolve2) => {
+        return new Promise((resolve) => {
           if (global.setImmediate) {
             setImmediate(() => {
-              resolve2(value);
+              resolve(value);
             });
           } else {
             setTimeout(() => {
-              resolve2(value);
+              resolve(value);
             }, 1);
           }
         });
@@ -16586,9 +16586,9 @@ var require_utils2 = __commonJS({
       },
       fs: {
         exists(path6) {
-          return new Promise((resolve2) => {
+          return new Promise((resolve) => {
             fs4.access(path6, fs4.constants.F_OK, (err) => {
-              resolve2(!err);
+              resolve(!err);
             });
           });
         }
@@ -16811,9 +16811,9 @@ var require_stream_buf = __commonJS({
       },
       async _pipe(chunk) {
         const write = function(pipe) {
-          return new Promise((resolve2) => {
+          return new Promise((resolve) => {
             pipe.write(chunk.toBuffer(), () => {
-              resolve2();
+              resolve();
             });
           });
         };
@@ -28690,12 +28690,12 @@ var require_xlsx = __commonJS({
     var VmlNotesXform = require_vml_notes_xform();
     var theme1Xml = require_theme1();
     function fsReadFileAsync(filename, options) {
-      return new Promise((resolve2, reject) => {
+      return new Promise((resolve, reject) => {
         fs4.readFile(filename, options, (error, data) => {
           if (error) {
             reject(error);
           } else {
-            resolve2(data);
+            resolve(data);
           }
         });
       });
@@ -28822,7 +28822,7 @@ var require_xlsx = __commonJS({
         if (lastDot >= 1) {
           const extension = filename.substr(lastDot + 1);
           const name = filename.substr(0, lastDot);
-          await new Promise((resolve2, reject) => {
+          await new Promise((resolve, reject) => {
             const streamBuf = new StreamBuf();
             streamBuf.on("finish", () => {
               model.mediaIndex[filename] = model.media.length;
@@ -28834,7 +28834,7 @@ var require_xlsx = __commonJS({
                 buffer: streamBuf.toBuffer()
               };
               model.media.push(medium);
-              resolve2();
+              resolve();
             });
             entry.on("error", (error) => {
               reject(error);
@@ -28859,13 +28859,13 @@ var require_xlsx = __commonJS({
         model.vmlDrawings[`../drawings/${name}.vml`] = vmlDrawing;
       }
       async _processThemeEntry(entry, model, name) {
-        await new Promise((resolve2, reject) => {
+        await new Promise((resolve, reject) => {
           const stream = new StreamBuf();
           entry.on("error", reject);
           stream.on("error", reject);
           stream.on("finish", () => {
             model.themes[name] = stream.read().toString();
-            resolve2();
+            resolve();
           });
           entry.pipe(stream);
         });
@@ -29173,9 +29173,9 @@ var require_xlsx = __commonJS({
         });
       }
       _finalize(zip) {
-        return new Promise((resolve2, reject) => {
+        return new Promise((resolve, reject) => {
           zip.on("finish", () => {
-            resolve2(this);
+            resolve(this);
           });
           zip.on("error", reject);
           zip.finalize();
@@ -29235,9 +29235,9 @@ var require_xlsx = __commonJS({
       }
       writeFile(filename, options) {
         const stream = fs4.createWriteStream(filename);
-        return new Promise((resolve2, reject) => {
+        return new Promise((resolve, reject) => {
           stream.on("finish", () => {
-            resolve2();
+            resolve();
           });
           stream.on("error", (error) => {
             reject(error);
@@ -33362,7 +33362,7 @@ var require_csv = __commonJS({
       }
       read(stream, options) {
         options = options || {};
-        return new Promise((resolve2, reject) => {
+        return new Promise((resolve, reject) => {
           const worksheet = this.workbook.addWorksheet(options.sheetName);
           const dateFormats = options.dateFormats || [
             "YYYY-MM-DD[T]HH:mm:ssZ",
@@ -33402,7 +33402,7 @@ var require_csv = __commonJS({
           }).on("end", () => {
             csvStream.emit("worksheet", worksheet);
           });
-          csvStream.on("worksheet", resolve2).on("error", reject);
+          csvStream.on("worksheet", resolve).on("error", reject);
           stream.pipe(csvStream);
         });
       }
@@ -33415,12 +33415,12 @@ var require_csv = __commonJS({
         );
       }
       write(stream, options) {
-        return new Promise((resolve2, reject) => {
+        return new Promise((resolve, reject) => {
           options = options || {};
           const worksheet = this.workbook.getWorksheet(options.sheetName || options.sheetId);
           const csvStream = fastCsv.format(options.formatterOptions);
           stream.on("finish", () => {
-            resolve2();
+            resolve();
           });
           csvStream.on("error", reject);
           csvStream.pipe(stream);
@@ -34471,9 +34471,9 @@ var require_readdir_glob = __commonJS({
     var fs4 = require("fs");
     var { EventEmitter } = require("events");
     var { Minimatch } = require_minimatch();
-    var { resolve: resolve2 } = require("path");
+    var { resolve } = require("path");
     function readdir(dir, strict) {
-      return new Promise((resolve3, reject) => {
+      return new Promise((resolve2, reject) => {
         fs4.readdir(dir, { withFileTypes: true }, (err, files) => {
           if (err) {
             switch (err.code) {
@@ -34481,7 +34481,7 @@ var require_readdir_glob = __commonJS({
                 if (strict) {
                   reject(err);
                 } else {
-                  resolve3([]);
+                  resolve2([]);
                 }
                 break;
               case "ENOTSUP":
@@ -34491,7 +34491,7 @@ var require_readdir_glob = __commonJS({
               case "ENAMETOOLONG":
               // Filename too long
               case "UNKNOWN":
-                resolve3([]);
+                resolve2([]);
                 break;
               case "ELOOP":
               // Too many levels of symbolic links
@@ -34500,30 +34500,30 @@ var require_readdir_glob = __commonJS({
                 break;
             }
           } else {
-            resolve3(files);
+            resolve2(files);
           }
         });
       });
     }
     function stat(file, followSymlinks) {
-      return new Promise((resolve3, reject) => {
+      return new Promise((resolve2, reject) => {
         const statFunc = followSymlinks ? fs4.stat : fs4.lstat;
         statFunc(file, (err, stats) => {
           if (err) {
             switch (err.code) {
               case "ENOENT":
                 if (followSymlinks) {
-                  resolve3(stat(file, false));
+                  resolve2(stat(file, false));
                 } else {
-                  resolve3(null);
+                  resolve2(null);
                 }
                 break;
               default:
-                resolve3(null);
+                resolve2(null);
                 break;
             }
           } else {
-            resolve3(stats);
+            resolve2(stats);
           }
         });
       });
@@ -34613,7 +34613,7 @@ var require_readdir_glob = __commonJS({
             (skip) => new Minimatch(skip, { dot: true })
           );
         }
-        this.iterator = explore(resolve2(cwd || "."), this.options.follow, this.options.stat, this._shouldSkipDirectory.bind(this));
+        this.iterator = explore(resolve(cwd || "."), this.options.follow, this.options.stat, this._shouldSkipDirectory.bind(this));
         this.paused = false;
         this.inactive = false;
         this.aborted = false;
@@ -34780,10 +34780,10 @@ var require_async = __commonJS({
           if (typeof args[arity - 1] === "function") {
             return asyncFn.apply(this, args);
           }
-          return new Promise((resolve2, reject2) => {
+          return new Promise((resolve, reject2) => {
             args[arity - 1] = (err, ...cbArgs) => {
               if (err) return reject2(err);
-              resolve2(cbArgs.length > 1 ? cbArgs : cbArgs[0]);
+              resolve(cbArgs.length > 1 ? cbArgs : cbArgs[0]);
             };
             asyncFn.apply(this, args);
           });
@@ -35029,13 +35029,13 @@ var require_async = __commonJS({
       var applyEachSeries = applyEach$1(mapSeries$1);
       const PROMISE_SYMBOL = /* @__PURE__ */ Symbol("promiseCallback");
       function promiseCallback() {
-        let resolve2, reject2;
+        let resolve, reject2;
         function callback(err, ...args) {
           if (err) return reject2(err);
-          resolve2(args.length > 1 ? args : args[0]);
+          resolve(args.length > 1 ? args : args[0]);
         }
         callback[PROMISE_SYMBOL] = new Promise((res, rej) => {
-          resolve2 = res, reject2 = rej;
+          resolve = res, reject2 = rej;
         });
         return callback;
       }
@@ -35382,8 +35382,8 @@ var require_async = __commonJS({
             });
           }
           if (rejectOnError || !callback) {
-            return new Promise((resolve2, reject2) => {
-              res = resolve2;
+            return new Promise((resolve, reject2) => {
+              res = resolve;
               rej = reject2;
             });
           }
@@ -35422,10 +35422,10 @@ var require_async = __commonJS({
         }
         const eventMethod = (name) => (handler) => {
           if (!handler) {
-            return new Promise((resolve2, reject2) => {
+            return new Promise((resolve, reject2) => {
               once2(name, (err, data) => {
                 if (err) return reject2(err);
-                resolve2(data);
+                resolve(data);
               });
             });
           }
@@ -45159,11 +45159,11 @@ var require_core = __commonJS({
         this._finalize();
       }
       var self2 = this;
-      return new Promise(function(resolve2, reject) {
+      return new Promise(function(resolve, reject) {
         var errored;
         self2._module.on("end", function() {
           if (!errored) {
-            resolve2();
+            resolve();
           }
         });
         self2._module.on("error", function(err) {
@@ -48905,7 +48905,7 @@ var require_worksheet_writer = __commonJS({
       // =========================================================================
       // Worksheet Protection
       protect(password, options) {
-        return new Promise((resolve2) => {
+        return new Promise((resolve) => {
           this.sheetProtection = {
             sheet: true
           };
@@ -48929,7 +48929,7 @@ var require_worksheet_writer = __commonJS({
               delete this.sheetProtection.spinCount;
             }
           }
-          resolve2();
+          resolve();
         });
       }
       unprotect() {
@@ -49147,9 +49147,9 @@ var require_workbook_writer = __commonJS({
       _commitWorksheets() {
         const commitWorksheet = function(worksheet) {
           if (!worksheet.committed) {
-            return new Promise((resolve2) => {
+            return new Promise((resolve) => {
               worksheet.stream.on("zipped", () => {
-                resolve2();
+                resolve();
               });
               worksheet.commit();
             });
@@ -49237,19 +49237,19 @@ var require_workbook_writer = __commonJS({
         return void 0;
       }
       addStyles() {
-        return new Promise((resolve2) => {
+        return new Promise((resolve) => {
           this.zip.append(this.styles.xml, { name: "xl/styles.xml" });
-          resolve2();
+          resolve();
         });
       }
       addThemes() {
-        return new Promise((resolve2) => {
+        return new Promise((resolve) => {
           this.zip.append(theme1Xml, { name: "xl/theme/theme1.xml" });
-          resolve2();
+          resolve();
         });
       }
       addOfficeRels() {
-        return new Promise((resolve2) => {
+        return new Promise((resolve) => {
           const xform = new RelationshipsXform();
           const xml = xform.toXml([
             { Id: "rId1", Type: RelType.OfficeDocument, Target: "xl/workbook.xml" },
@@ -49257,11 +49257,11 @@ var require_workbook_writer = __commonJS({
             { Id: "rId3", Type: RelType.ExtenderProperties, Target: "docProps/app.xml" }
           ]);
           this.zip.append(xml, { name: "/_rels/.rels" });
-          resolve2();
+          resolve();
         });
       }
       addContentTypes() {
-        return new Promise((resolve2) => {
+        return new Promise((resolve) => {
           const model = {
             worksheets: this._worksheets.filter(Boolean),
             sharedStrings: this.sharedStrings,
@@ -49271,7 +49271,7 @@ var require_workbook_writer = __commonJS({
           const xform = new ContentTypesXform();
           const xml = xform.toXml(model);
           this.zip.append(xml, { name: "[Content_Types].xml" });
-          resolve2();
+          resolve();
         });
       }
       addMedia() {
@@ -49296,31 +49296,31 @@ var require_workbook_writer = __commonJS({
         );
       }
       addApp() {
-        return new Promise((resolve2) => {
+        return new Promise((resolve) => {
           const model = {
             worksheets: this._worksheets.filter(Boolean)
           };
           const xform = new AppXform();
           const xml = xform.toXml(model);
           this.zip.append(xml, { name: "docProps/app.xml" });
-          resolve2();
+          resolve();
         });
       }
       addCore() {
-        return new Promise((resolve2) => {
+        return new Promise((resolve) => {
           const coreXform = new CoreXform();
           const xml = coreXform.toXml(this);
           this.zip.append(xml, { name: "docProps/core.xml" });
-          resolve2();
+          resolve();
         });
       }
       addSharedStrings() {
         if (this.sharedStrings.count) {
-          return new Promise((resolve2) => {
+          return new Promise((resolve) => {
             const sharedStringsXform = new SharedStringsXform();
             const xml = sharedStringsXform.toXml(this.sharedStrings);
             this.zip.append(xml, { name: "/xl/sharedStrings.xml" });
-            resolve2();
+            resolve();
           });
         }
         return Promise.resolve();
@@ -49348,11 +49348,11 @@ var require_workbook_writer = __commonJS({
             });
           }
         });
-        return new Promise((resolve2) => {
+        return new Promise((resolve) => {
           const xform = new RelationshipsXform();
           const xml = xform.toXml(relationships);
           this.zip.append(xml, { name: "/xl/_rels/workbook.xml.rels" });
-          resolve2();
+          resolve();
         });
       }
       addWorkbook() {
@@ -49364,18 +49364,18 @@ var require_workbook_writer = __commonJS({
           properties: {},
           calcProperties: {}
         };
-        return new Promise((resolve2) => {
+        return new Promise((resolve) => {
           const xform = new WorkbookXform();
           xform.prepare(model);
           zip.append(xform.toXml(model), { name: "/xl/workbook.xml" });
-          resolve2();
+          resolve();
         });
       }
       _finalize() {
-        return new Promise((resolve2, reject) => {
+        return new Promise((resolve, reject) => {
           this.stream.on("error", reject);
           this.stream.on("finish", () => {
-            resolve2(this);
+            resolve(this);
           });
           this.zip.on("error", reject);
           this.zip.finalize();
@@ -51302,13 +51302,13 @@ var require_thenables = __commonJS({
         promise._captureStackTrace();
         if (context) context._popContext();
         var synchronous = true;
-        var result = util.tryCatch(then).call(x, resolve2, reject);
+        var result = util.tryCatch(then).call(x, resolve, reject);
         synchronous = false;
         if (promise && result === errorObj2) {
           promise._rejectCallback(result.e, true, true);
           promise = null;
         }
-        function resolve2(value) {
+        function resolve(value) {
           if (!promise) return;
           promise._resolveCallback(value);
           promise = null;
@@ -51843,9 +51843,9 @@ var require_debuggability = __commonJS({
         return false;
       }
       Promise2.prototype._fireEvent = defaultFireEvent;
-      Promise2.prototype._execute = function(executor, resolve2, reject) {
+      Promise2.prototype._execute = function(executor, resolve, reject) {
         try {
-          executor(resolve2, reject);
+          executor(resolve, reject);
         } catch (e) {
           return e;
         }
@@ -51868,10 +51868,10 @@ var require_debuggability = __commonJS({
         ;
         ;
       };
-      function cancellationExecute(executor, resolve2, reject) {
+      function cancellationExecute(executor, resolve, reject) {
         var promise = this;
         try {
-          executor(resolve2, reject, function(onCancel) {
+          executor(resolve, reject, function(onCancel) {
             if (typeof onCancel !== "function") {
               throw new TypeError("onCancel must be a function, got: " + util.toString(onCancel));
             }
@@ -57416,7 +57416,7 @@ var require_PullStream = __commonJS({
       };
       var rejectHandler;
       var pullStreamRejectHandler;
-      return new Promise2(function(resolve2, reject) {
+      return new Promise2(function(resolve, reject) {
         rejectHandler = reject;
         pullStreamRejectHandler = function(e) {
           self2.__emittedError = e;
@@ -57426,7 +57426,7 @@ var require_PullStream = __commonJS({
           return reject(new Error("FILE_ENDED"));
         self2.once("error", pullStreamRejectHandler);
         self2.stream(eof, includeEof).on("error", reject).pipe(concatStream).on("finish", function() {
-          resolve2(buffer);
+          resolve(buffer);
         }).on("error", reject);
       }).finally(function() {
         self2.removeListener("error", rejectHandler);
@@ -57469,10 +57469,10 @@ var require_BufferStream = __commonJS({
     if (!Stream.Writable || !Stream.Writable.prototype.destroy)
       Stream = require_readable5();
     module2.exports = function(entry) {
-      return new Promise2(function(resolve2, reject) {
+      return new Promise2(function(resolve, reject) {
         var chunks = [];
         var bufferStream = Stream.Transform().on("finish", function() {
-          resolve2(Buffer2.concat(chunks));
+          resolve(Buffer2.concat(chunks));
         }).on("error", reject);
         bufferStream._transform = function(d, e, cb) {
           chunks.push(d);
@@ -57611,8 +57611,8 @@ var require_parse = __commonJS({
             __autodraining = true;
             var draining = entry.pipe(NoopStream());
             draining.promise = function() {
-              return new Promise2(function(resolve2, reject) {
-                draining.on("finish", resolve2);
+              return new Promise2(function(resolve, reject) {
+                draining.on("finish", resolve);
                 draining.on("error", reject);
               });
             };
@@ -57667,11 +57667,11 @@ var require_parse = __commonJS({
               eof = Buffer2.alloc(4);
               eof.writeUInt32LE(134695760, 0);
             }
-            return new Promise2(function(resolve2, reject) {
+            return new Promise2(function(resolve, reject) {
               self2.stream(eof).pipe(inflater).on("error", function(err) {
                 self2.emit("error", err);
               }).pipe(entry).on("finish", function() {
-                return fileSizeKnown ? self2._readRecord().then(resolve2).catch(reject) : self2._processDataDescriptor(entry).then(resolve2).catch(reject);
+                return fileSizeKnown ? self2._readRecord().then(resolve).catch(reject) : self2._processDataDescriptor(entry).then(resolve).catch(reject);
               });
             });
           });
@@ -57713,8 +57713,8 @@ var require_parse = __commonJS({
     };
     Parse.prototype.promise = function() {
       var self2 = this;
-      return new Promise2(function(resolve2, reject) {
-        self2.on("finish", resolve2);
+      return new Promise2(function(resolve, reject) {
+        self2.on("finish", resolve);
         self2.on("error", reject);
       });
     };
@@ -61499,8 +61499,8 @@ var require_extract2 = __commonJS({
         extract.emit("close");
       });
       extract.promise = function() {
-        return new Promise2(function(resolve2, reject) {
-          extract.on("close", resolve2);
+        return new Promise2(function(resolve, reject) {
+          extract.on("close", resolve);
           extract.on("error", reject);
         });
       };
@@ -63007,8 +63007,8 @@ var require_directory = __commonJS({
                 return;
               }
               var writer = opts.getWriter ? opts.getWriter({ path: extractPath }) : Writer({ path: extractPath });
-              return new Promise2(function(resolve2, reject) {
-                entry.stream(opts.password).on("error", reject).pipe(writer).on("close", resolve2).on("error", reject);
+              return new Promise2(function(resolve, reject) {
+                entry.stream(opts.password).on("error", reject).pipe(writer).on("close", resolve).on("error", reject);
               });
             }, { concurrency: opts.concurrency > 1 ? opts.concurrency : 1 });
           });
@@ -63074,12 +63074,12 @@ var require_Open = __commonJS({
             return fs4.createReadStream(filename, { start: offset, end: length && offset + length });
           },
           size: function() {
-            return new Promise2(function(resolve2, reject) {
+            return new Promise2(function(resolve, reject) {
               fs4.stat(filename, function(err, d) {
                 if (err)
                   reject(err);
                 else
-                  resolve2(d.size);
+                  resolve(d.size);
               });
             });
           }
@@ -63100,14 +63100,14 @@ var require_Open = __commonJS({
             return request(options2);
           },
           size: function() {
-            return new Promise2(function(resolve2, reject) {
+            return new Promise2(function(resolve, reject) {
               var req = request(params);
               req.on("response", function(d) {
                 req.abort();
                 if (!d.headers["content-length"])
                   reject(new Error("Missing content length header"));
                 else
-                  resolve2(d.headers["content-length"]);
+                  resolve(d.headers["content-length"]);
               }).on("error", reject);
             });
           }
@@ -63117,12 +63117,12 @@ var require_Open = __commonJS({
       s3: function(client, params, options) {
         var source = {
           size: function() {
-            return new Promise2(function(resolve2, reject) {
+            return new Promise2(function(resolve, reject) {
               client.headObject(params, function(err, d) {
                 if (err)
                   reject(err);
                 else
-                  resolve2(d.ContentLength);
+                  resolve(d.ContentLength);
               });
             });
           },
@@ -63522,7 +63522,7 @@ var require_iterate_stream = __commonJS({
       const contents = [];
       stream.on("data", (data) => contents.push(data));
       let resolveStreamEndedPromise;
-      const streamEndedPromise = new Promise((resolve2) => resolveStreamEndedPromise = resolve2);
+      const streamEndedPromise = new Promise((resolve) => resolveStreamEndedPromise = resolve);
       let ended = false;
       stream.on("end", () => {
         ended = true;
@@ -63547,13 +63547,13 @@ var require_iterate_stream = __commonJS({
       resolveStreamEndedPromise();
     };
     function once(eventEmitter, type) {
-      return new Promise((resolve2) => {
+      return new Promise((resolve) => {
         let fired = false;
         const handler = () => {
           if (!fired) {
             fired = true;
             eventEmitter.removeListener(type, handler);
-            resolve2();
+            resolve();
           }
         };
         eventEmitter.addListener(type, handler);
@@ -64077,7 +64077,7 @@ var require_workbook_reader = __commonJS({
                 if (this.sharedStrings && this.workbookRels) {
                   yield* this._parseWorksheet(iterateStream(entry), sheetNo);
                 } else {
-                  await new Promise((resolve2, reject) => {
+                  await new Promise((resolve, reject) => {
                     tmp.file((err, path6, fd, tempFileCleanupCallback) => {
                       if (err) {
                         return reject(err);
@@ -64087,7 +64087,7 @@ var require_workbook_reader = __commonJS({
                       tempStream.on("error", reject);
                       entry.pipe(tempStream);
                       return tempStream.on("finish", () => {
-                        return resolve2();
+                        return resolve();
                       });
                     });
                   });
@@ -64330,13 +64330,19 @@ var DatabaseService = class {
   db = null;
   dbPath = null;
   SQL = null;
-  async initialize(projectId, directory) {
+  // Accept an optional pre-warmed sql.js instance so we don't pay the cold-start
+  // cost again when initialize() is called after startup warmup in index.ts.
+  async initialize(projectId, directory, prewarmedSQL) {
     try {
       this.dbPath = `${directory}/${projectId}.sqlite`;
       console.log(`[DatabaseService] Initializing dbPath: ${this.dbPath}`);
-      const initSqlJs = require("sql.js");
-      console.log(`[DatabaseService] requiring sql.js ...`);
-      this.SQL = await initSqlJs();
+      if (prewarmedSQL) {
+        this.SQL = prewarmedSQL;
+      } else {
+        const initSqlJs = require("sql.js");
+        console.log(`[DatabaseService] requiring sql.js ...`);
+        this.SQL = await initSqlJs();
+      }
       console.log(`[DatabaseService] initSqlJs() awaited successfully`);
       if (fs.existsSync(this.dbPath)) {
         console.log(`[DatabaseService] db file exists, loading from fs: ${this.dbPath}`);
@@ -64373,7 +64379,7 @@ var DatabaseService = class {
       results.push(stmt.getAsObject());
       count++;
       if (count % 5e3 === 0) {
-        await new Promise((resolve2) => setTimeout(resolve2, 0));
+        await new Promise((resolve) => setTimeout(resolve, 0));
       }
     }
     stmt.free();
@@ -64400,7 +64406,7 @@ var DatabaseService = class {
             if (pickedRowIds.length >= sampleSize || pickedRowIds.length >= 5e3) break;
           }
           count++;
-          if (count % 5e3 === 0) await new Promise((resolve2) => setTimeout(resolve2, 0));
+          if (count % 5e3 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
           if (pickedRowIds.length >= sampleSize || pickedRowIds.length >= 5e3) break;
         }
         stmt.free();
@@ -64421,7 +64427,7 @@ var DatabaseService = class {
           currentSum += absAmt;
           pickedRowIds.push(rowid);
           count++;
-          if (count % 5e3 === 0) await new Promise((resolve2) => setTimeout(resolve2, 0));
+          if (count % 5e3 === 0) await new Promise((resolve) => setTimeout(resolve, 0));
           if (pickedRowIds.length >= 5e3) break;
         }
         stmt.free();
@@ -64429,7 +64435,7 @@ var DatabaseService = class {
       }
     };
   }
-  async execute(sql) {
+  async execute(sql, params = []) {
     if (sql.trim().toUpperCase() === "CHECKPOINT") {
       if (this.dbPath) {
         const data = this.db.export();
@@ -64437,7 +64443,7 @@ var DatabaseService = class {
       }
       return;
     }
-    this.db.run(sql);
+    this.db.run(sql, params);
   }
   async close() {
     if (this.db) {
@@ -64577,7 +64583,7 @@ var SamplingService = class {
     const updateProgress = async (stage) => {
       if (onProgress) {
         onProgress(stage);
-        await new Promise((resolve2) => setTimeout(resolve2, 30));
+        await new Promise((resolve) => setTimeout(resolve, 30));
       }
     };
     if (!this.db || !this.db.isInitialized()) {
@@ -64652,7 +64658,7 @@ var SamplingService = class {
       if (closingDays > 0) {
         riskQueryConds.push(`(julianday(date(date, 'start of month', '+1 month', '-1 day')) - julianday(date)) <= ${closingDays}`);
       }
-      const riskWhereStr = riskQueryConds.length > 0 ? `(${riskQueryConds.join(" OR ")})` : "FALSE";
+      const riskWhereStr = riskQueryConds.length > 0 ? `COALESCE((${riskQueryConds.join(" OR ")}), 0)` : "0";
       const riskMatchedQuery = `
           SELECT * FROM population 
           WHERE ABS(amount) < ? AND ABS(amount) >= ? AND ${riskWhereStr}
@@ -64757,6 +64763,38 @@ var SamplingService = class {
         isSampled: true,
         selectionReason: "Grubbs Outlier"
       }));
+    } else if (config.method === "Systematic") {
+      const step = Math.max(1, Math.floor(Number(config.systematicStep) || 10));
+      const rowidRows = await this.db.query(
+        `SELECT rowid FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? ORDER BY rowid`,
+        [upperLimit, ctt]
+      );
+      const N = rowidRows.length;
+      const start = N > 0 ? Math.floor(Number(config.seed) || 0) % N + 1 : 1;
+      await updateProgress(`Systematic selection (start=${start}, k=${step})...`);
+      const pickedRowIds = [];
+      for (let i = start - 1; i < rowidRows.length; i += step) {
+        pickedRowIds.push(rowidRows[i].rowid);
+        if (pickedRowIds.length >= 5e3) break;
+      }
+      if (pickedRowIds.length > 0) {
+        const results = [];
+        const chunkSize = 500;
+        for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
+          const chunk = pickedRowIds.slice(i, i + chunkSize);
+          const chunkResults = await this.db.query(`SELECT * FROM population WHERE rowid IN (${chunk.join(",")}) ORDER BY rowid`);
+          results.push(...chunkResults);
+        }
+        sampleItems = results.map((item, idx) => ({
+          ...item,
+          bookValue: item.amount,
+          auditedValue: "",
+          difference: item.amount,
+          tainting: 1,
+          isSampled: true,
+          selectionReason: `Systematic (i=${start + idx * step})`
+        }));
+      }
     } else {
       let sampleSize = 10;
       let isMUS = false;
@@ -64883,7 +64921,7 @@ var SamplingService = class {
       const total = (results.samplingItems || []).length || 1;
       pm = errors / total * 100;
       ub = (errors + rf) / total * 100;
-    } else if (["RiskAssessment", "FixedRandom", "Pareto", "Percentile", "Grubbs", "Benford", "StopOrGo"].includes(config.method)) {
+    } else if (["RiskAssessment", "FixedRandom", "Systematic", "Pareto", "Percentile", "Grubbs", "Benford", "StopOrGo"].includes(config.method)) {
       pm = keyMisstatements + (results.samplingItems || []).reduce((acc, item) => acc + (item.difference || 0), 0);
       ub = pm;
     } else if (["Random", "CVS", "Cluster"].includes(config.method)) {
@@ -64921,20 +64959,19 @@ var ExportService = class {
     if (!this.db.dbPath) {
       throw new Error("No active database to export");
     }
-    const stateJson = JSON.stringify(state).replace(/'/g, "''");
     await this.db.execute(`DROP TABLE IF EXISTS audit_metadata`);
     await this.db.execute(`CREATE TABLE audit_metadata (data VARCHAR)`);
-    await this.db.execute(`INSERT INTO audit_metadata VALUES ('${stateJson}')`);
+    await this.db.execute(`INSERT INTO audit_metadata VALUES (?)`, [JSON.stringify(state)]);
     await this.db.execute(`CHECKPOINT`);
     fs2.copyFileSync(this.db.dbPath, projectPath);
   }
   async exportExcel(excelPath, dbPath, results) {
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve, reject) => {
       this.workerPool.runTask(path2.join("dist", "workers", "ExportWorker.cjs"), {
         excelPath,
         dbPath,
         results
-      }).then(() => resolve2()).catch((e) => reject(e));
+      }).then(() => resolve()).catch((e) => reject(e));
     });
   }
 };
@@ -64951,11 +64988,11 @@ var WorkerPool = class {
   workers = [];
   taskQueue = [];
   async runTask(workerFile, data, onProgress) {
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve, reject) => {
       const workerPath = path3.join(__dirname, workerFile);
       const worker = new import_worker_threads.Worker(workerPath, { workerData: data });
       worker.on("message", (msg) => {
-        if (msg.type === "done") resolve2(msg);
+        if (msg.type === "done") resolve(msg);
         else if (msg.type === "error") reject(new Error(msg.error));
         else if (msg.type === "progress") {
           console.log(`Worker Progress: ${msg.pct}% - ${msg.stage}`);
@@ -64973,12 +65010,20 @@ var WorkerPool = class {
 };
 
 // src/main/core/AppOrchestrator.ts
+var ALLOWED_TABLES = /* @__PURE__ */ new Set(["population", "samplingItems", "keyItems"]);
+function assertTable(table) {
+  if (!ALLOWED_TABLES.has(table)) {
+    throw new Error(`IPC: forbidden table name "${table}"`);
+  }
+}
 var AppOrchestrator = class {
   dbService;
   importService;
   samplingService;
   exportService;
   workerPool;
+  // Pre-warmed sql.js constructor passed in from index.ts startup warmup.
+  sqlJsWarmup = null;
   constructor() {
     this.dbService = new DatabaseService();
     this.workerPool = new WorkerPool();
@@ -64995,7 +65040,7 @@ var AppOrchestrator = class {
       await this.dbService.close();
       const directory = path4.dirname(result.dbPath);
       const id = path4.basename(result.dbPath, ".sqlite");
-      await this.dbService.initialize(id, directory);
+      await this.dbService.initialize(id, directory, this.sqlJsWarmup ? await this.sqlJsWarmup.catch(() => void 0) : void 0);
       return result;
     });
     import_electron.ipcMain.handle("import:preview", async (event, filePath) => {
@@ -65018,13 +65063,22 @@ var AppOrchestrator = class {
         };
         const parseAmount = (v) => {
           if (v === null || v === void 0 || v === "") return 0;
-          const s = String(v).replace(/[^\d.,-]/g, "").replace(",", ".");
+          if (typeof v === "number") return v;
+          let s = String(v).replace(/[^\d.,-]/g, "");
+          const lastComma = s.lastIndexOf(",");
+          const lastDot = s.lastIndexOf(".");
+          if (lastComma > lastDot) {
+            s = s.replace(/\./g, "").replace(/,/g, ".");
+          } else if (lastDot > lastComma) {
+            s = s.replace(/,/g, "");
+          }
           return parseFloat(s) || 0;
         };
         const extractSummaryInfo = (sheet) => {
           if (!sheet) return null;
           let populationSize = 0, populationValue = 0, projectedMisstatement = 0, upperMisstatementBound = 0, sampleSize = 0, trivialCount = 0, tolerableMisstatement = 0, confidenceLevel = 95, methodStr = "MUS";
           let configJson = null;
+          let resultsSnapshot = null;
           sheet.eachRow((row) => {
             const lbl = String(getCellValue(row.getCell(1).value) || "").trim();
             const val = getCellValue(row.getCell(2).value);
@@ -65033,6 +65087,13 @@ var AppOrchestrator = class {
                 configJson = JSON.parse(String(val));
               } catch {
                 configJson = null;
+              }
+            }
+            if (lbl === "__AUDITSAMPLE_RESULTS__" && val) {
+              try {
+                resultsSnapshot = JSON.parse(String(val));
+              } catch {
+                resultsSnapshot = null;
               }
             }
             if (lbl.includes("\u041C\u0435\u0442\u043E\u0434")) methodStr = String(val || "MUS");
@@ -65055,7 +65116,8 @@ var AppOrchestrator = class {
             tolerableMisstatement,
             confidenceLevel,
             method: methodStr,
-            config: configJson
+            config: configJson,
+            resultsSnapshot
           };
         };
         const extractSheet = (sheet) => {
@@ -65083,7 +65145,7 @@ var AppOrchestrator = class {
             const auditValRaw = audCol !== -1 ? getCellValue(row.getCell(audCol).value) : null;
             const commentsVal = commentCol !== -1 ? String(getCellValue(row.getCell(commentCol).value) || "") : "";
             const auditVal = auditValRaw !== null && auditValRaw !== "" ? parseAmount(auditValRaw) : "";
-            const diffVal = typeof auditVal === "number" ? Math.round((bookVal - auditVal) * 100) / 100 : 0;
+            const diffVal = typeof auditVal === "number" ? Math.round((bookVal - auditVal) * 100) / 100 : bookVal;
             if (bookVal === 0 && originalRow.every((v) => v === null || v === "")) continue;
             items.push({
               id: `row-${r - 1}`,
@@ -65123,12 +65185,12 @@ var AppOrchestrator = class {
         const initSqlJs = require("sql.js");
         const SQL = await initSqlJs();
         const db = new SQL.Database(fb);
-        const stateJson = await new Promise((resolve2, reject) => {
+        const stateJson = await new Promise((resolve, reject) => {
           try {
             const stmt = db.prepare("SELECT data FROM audit_metadata");
             if (stmt.step()) {
               const row = stmt.getAsObject();
-              resolve2(row.data);
+              resolve(row.data);
             } else {
               reject(new Error("Empty audit_metadata"));
             }
@@ -65145,7 +65207,7 @@ var AppOrchestrator = class {
         fs3.copyFileSync(filePath, this.dbService.dbPath);
         const directory = path4.dirname(this.dbService.dbPath);
         const id = path4.basename(this.dbService.dbPath, ".sqlite");
-        await this.dbService.initialize(id, directory);
+        await this.dbService.initialize(id, directory, this.sqlJsWarmup ? await this.sqlJsWarmup.catch(() => void 0) : void 0);
         const state = JSON.parse(stateJson);
         return state;
       } catch (e) {
@@ -65154,9 +65216,11 @@ var AppOrchestrator = class {
       }
     });
     import_electron.ipcMain.handle("query:getRows", async (event, table, limit, offset) => {
+      assertTable(table);
       return await this.dbService.query(`SELECT * FROM ${table} LIMIT ? OFFSET ?`, [limit, offset]);
     });
     import_electron.ipcMain.handle("query:insertRows", async (event, table, rows) => {
+      assertTable(table);
       await this.dbService.execute(`DROP TABLE IF EXISTS ${table}`);
       await this.dbService.execute(`
         CREATE TABLE ${table} (
@@ -65168,13 +65232,23 @@ var AppOrchestrator = class {
           difference DOUBLE
         )
       `);
-      const values = rows.map((r) => `('${r.id}', '${r.date}', ${r.amount}, ${r.bookValue || r.amount}, ${r.auditedValue !== void 0 ? r.auditedValue : "NULL"}, ${r.difference || 0})`).join(",");
-      if (values.length > 0) {
-        await this.dbService.execute(`INSERT INTO ${table} (id, date, amount, bookValue, auditedValue, difference) VALUES ${values}`);
+      for (const r of rows) {
+        await this.dbService.execute(
+          `INSERT INTO ${table} (id, date, amount, bookValue, auditedValue, difference) VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            String(r.id ?? ""),
+            String(r.date ?? ""),
+            Number(r.amount) || 0,
+            Number(r.bookValue ?? r.amount) || 0,
+            r.auditedValue != null ? Number(r.auditedValue) : null,
+            Number(r.difference) || 0
+          ]
+        );
       }
       return true;
     });
     import_electron.ipcMain.handle("query:getAggregates", async (event, table) => {
+      assertTable(table);
       try {
         const result = await this.dbService.query(`SELECT COUNT(*) as cnt, SUM(ABS(amount)) as val, MIN(amount) as min_amt, MAX(amount) as max_amt FROM ${table}`);
         const cnt = result[0]?.cnt || 0;
@@ -65207,16 +65281,26 @@ var AppOrchestrator = class {
       }
     });
     import_electron.ipcMain.handle("license:loadFromDisk", async () => {
-      try {
-        const { app: app2 } = await import("electron");
-        const searchDir = app2.isPackaged ? path4.dirname(process.execPath) : path4.resolve(__dirname, "../../..");
-        const files = fs3.readdirSync(searchDir).filter((f) => f.startsWith("license-ASP") && f.endsWith(".asp"));
-        if (files.length === 0) return null;
-        const content = fs3.readFileSync(path4.join(searchDir, files[0]), "utf-8");
-        return content;
-      } catch {
-        return null;
+      const candidates = [
+        process.env.PORTABLE_EXECUTABLE_DIR,
+        import_electron.app.isPackaged ? path4.dirname(import_electron.app.getPath("exe")) : null,
+        process.cwd(),
+        import_electron.app.isPackaged ? null : __dirname
+      ].filter((d) => !!d);
+      console.log("[license] candidates:", candidates, "| isPackaged:", import_electron.app.isPackaged);
+      for (const dir of candidates) {
+        try {
+          const files = fs3.readdirSync(dir).filter((f) => f.startsWith("license-ASP") && f.endsWith(".asp"));
+          if (files.length === 0) continue;
+          const content = fs3.readFileSync(path4.join(dir, files[0]), "utf-8");
+          console.log("[license] loaded:", files[0], "from", dir);
+          return content;
+        } catch (e) {
+          console.warn("[license] cannot read dir", dir, e);
+        }
       }
+      console.log("[license] no license-ASP*.asp file found");
+      return null;
     });
     import_electron.ipcMain.handle("export:excel", async (event, state) => {
       console.log("IPC export:excel received");
@@ -65242,7 +65326,15 @@ var AppOrchestrator = class {
 var orchestrator;
 var splash;
 var mainWindowStarted = false;
-var SPLASH_MIN_MS = 3e3;
+var SPLASH_MIN_MS = 2e3;
+var sqlJsWarmup = (async () => {
+  try {
+    const initSqlJs = require("sql.js");
+    return await initSqlJs();
+  } catch {
+    return null;
+  }
+})();
 var splashShownAt = 0;
 function createWindow() {
   splash = new import_electron2.BrowserWindow({
@@ -65290,6 +65382,7 @@ function setupMainWindow() {
     }
   });
   orchestrator = new AppOrchestrator();
+  orchestrator.sqlJsWarmup = sqlJsWarmup;
   orchestrator.registerIpcHandlers();
   if (process.env.VITE_DEV_SERVER_URL) {
     win.loadURL(process.env.VITE_DEV_SERVER_URL);
