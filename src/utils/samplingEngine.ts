@@ -1,5 +1,6 @@
 import { TransactionItem, SamplingConfig, SamplingResult, SampledItem, GlobalSettings } from '../types';
 import { Mulberry32 } from '../statistics/prng';
+import { DEFAULT_HOLIDAYS, sanitizeHolidays, isHoliday } from '../utils/holidays';
 import { getReliabilityFactor, getZScore, getExpansionFactor } from '../statistics/reliabilityFactor';
 
 export const methodsSupportingAnomalies = ['MUS', 'CVS', 'Random', 'FixedRandom'];
@@ -221,7 +222,10 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
         const closingDays = config.riskClosingDays ?? 5;
         const includeWeekend = config.riskWeekend !== false;
         
-        const UA_HOLIDAYS = new Set(['01-01', '03-08', '05-01', '05-08', '05-09', '06-28', '08-24', '10-01', '12-25']);
+        const holidayList = (() => {
+            const configured = sanitizeHolidays(config.holidays);
+            return configured.length > 0 ? configured : DEFAULT_HOLIDAYS;
+        })();
         const includeHoliday = config.riskHoliday !== false;
         
         const riskMatched: TransactionItem[] = [];
@@ -243,9 +247,8 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
                     if (dow === 0 || dow === 6) isRisk = true;
                 }
                 
-                if (!isRisk && includeHoliday) {
-                    const strMMDD = item.date.substring(5, 10);
-                    if (UA_HOLIDAYS.has(strMMDD)) isRisk = true;
+                if (!isRisk && includeHoliday && isHoliday(item.date, holidayList)) {
+                    isRisk = true;
                 }
                 
                 if (!isRisk && closingDays > 0) {

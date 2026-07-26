@@ -64580,6 +64580,54 @@ var Mulberry32 = class {
   }
 };
 
+// src/utils/holidays.ts
+var DEFAULT_HOLIDAYS = [
+  "01-01",
+  // Новий рік
+  "03-08",
+  // Міжнародний жіночий день
+  "05-01",
+  // День праці
+  "05-08",
+  // День пам'яті та перемоги
+  "05-09",
+  // День перемоги
+  "06-28",
+  // День Конституції
+  "08-24",
+  // День Незалежності
+  "10-01",
+  // День захисників і захисниць
+  "12-25"
+  // Різдво
+];
+var RECURRING = /^\d{2}-\d{2}$/;
+var SPECIFIC = /^\d{4}-\d{2}-\d{2}$/;
+function isValidHoliday(entry) {
+  const s = entry.trim();
+  if (!RECURRING.test(s) && !SPECIFIC.test(s)) return false;
+  const parts = s.split("-");
+  const [m, d] = parts.length === 3 ? [Number(parts[1]), Number(parts[2])] : [Number(parts[0]), Number(parts[1])];
+  if (m < 1 || m > 12 || d < 1 || d > 31) return false;
+  const maxDay = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+  return d <= maxDay;
+}
+function sanitizeHolidays(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const raw of list) {
+    const s = String(raw).trim();
+    if (isValidHoliday(s)) seen.add(s);
+  }
+  return Array.from(seen).sort();
+}
+function splitHolidays(list) {
+  return {
+    recurring: list.filter((h) => RECURRING.test(h)),
+    specific: list.filter((h) => SPECIFIC.test(h))
+  };
+}
+
 // src/main/services/SamplingService.ts
 var SamplingService = class {
   constructor(db) {
@@ -64689,7 +64737,15 @@ var SamplingService = class {
         riskQueryConds.push(`CAST(strftime('%w', date) AS INTEGER) IN (0, 6)`);
       }
       if (includeHoliday) {
-        riskQueryConds.push(`strftime('%m-%d', date) IN ('01-01', '03-08', '05-01', '05-08', '05-09', '06-28', '08-24', '10-01', '12-25')`);
+        const configured = sanitizeHolidays(config.holidays);
+        const holidayList = configured.length > 0 ? configured : DEFAULT_HOLIDAYS;
+        const { recurring, specific } = splitHolidays(holidayList);
+        if (recurring.length > 0) {
+          riskQueryConds.push(`strftime('%m-%d', date) IN (${recurring.map((h) => `'${h}'`).join(", ")})`);
+        }
+        if (specific.length > 0) {
+          riskQueryConds.push(`date IN (${specific.map((h) => `'${h}'`).join(", ")})`);
+        }
       }
       if (closingDays > 0) {
         riskQueryConds.push(`(julianday(date(date, 'start of month', '+1 month', '-1 day')) - julianday(date)) <= ${closingDays}`);

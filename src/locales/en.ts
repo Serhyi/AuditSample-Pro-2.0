@@ -31,6 +31,12 @@ export const en = {
   settingRegion: "Regional Standards",
   settingDate: "Date Format",
   settingNumber: "Number Format",
+  settingHolidays: "Holidays and non-working days",
+  settingHolidaysHelp: "Used by the Risk Assessment method to flag entries booked on non-working days. Format: MM-DD for a recurring date, or YYYY-MM-DD for a single date (e.g. a movable feast).",
+  settingHolidaysAdd: "Add date",
+  settingHolidaysInvalid: "Invalid format. Example: 12-25 or 2025-04-20",
+  settingHolidaysReset: "Restore default list",
+  settingHolidaysEmpty: "List is empty - the default holiday list will be used.",
   configTitle: "Sampling Parameters",
   methodLabel: "Sampling Method (ISA 530)",
 

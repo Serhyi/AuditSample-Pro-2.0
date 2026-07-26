@@ -12,6 +12,7 @@ import { t } from './utils/translations';
 import { useAppStorage } from './contexts/StorageContext';
 import { usePopulationAdapter } from './adapters/usePopulationAdapter';
 import { isElectron } from './utils/isElectron';
+import { DEFAULT_HOLIDAYS, sanitizeHolidays, isValidHoliday } from './utils/holidays';
 import { useLicense } from './licensing/useLicense';
 import { FREE_METHODS } from './components/config/MethodSelector';
 
@@ -90,6 +91,23 @@ const App: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [holidayDraft, setHolidayDraft] = useState('');
+  const [holidayError, setHolidayError] = useState('');
+
+  const addHoliday = () => {
+    const entry = holidayDraft.trim();
+    if (!entry) return;
+    if (!isValidHoliday(entry)) {
+      setHolidayError(t('settingHolidaysInvalid', lang));
+      return;
+    }
+    const current = settings.holidays || [];
+    if (!current.includes(entry)) {
+      updateSettings({ ...settings, holidays: [...current, entry].sort() });
+    }
+    setHolidayDraft('');
+    setHolidayError('');
+  };
   const [activeTab, setActiveTab] = useState<'about' | 'license'>('about');
   
   const { getFullPopulation, setPopulation, refreshStats, totalPopValue, isVirtual } = usePopulationAdapter([]);
@@ -388,6 +406,11 @@ const App: React.FC = () => {
     if (!finalConfig.tolerableMisstatement) {
         finalConfig.tolerableMisstatement = Math.floor(totalPopValue * 0.01);
     }
+    // The holiday list lives in global settings but the engines receive only the
+    // config, so copy it in. It also ends up in the exported config snapshot,
+    // which is what makes a risk-based sample reproducible later.
+    finalConfig.holidays = sanitizeHolidays(settings.holidays);
+    if (finalConfig.holidays.length === 0) finalConfig.holidays = DEFAULT_HOLIDAYS;
     if (finalConfig.clearlyTrivialThreshold === undefined || finalConfig.clearlyTrivialThreshold === null) {
         finalConfig.clearlyTrivialThreshold = Math.floor(finalConfig.tolerableMisstatement * 0.05);
     }
@@ -819,6 +842,51 @@ const App: React.FC = () => {
                               <option value="comma_dot">1,234.56</option>
                               <option value="dot_comma">1.234,56</option>
                           </select>
+                      </div>
+                      <div>
+                          <div className="flex items-baseline justify-between mb-3">
+                              <label className="block text-[10px] font-black text-brand-600 uppercase tracking-[0.15em]">{t('settingHolidays', lang)}</label>
+                              <button
+                                  onClick={() => updateSettings({ ...settings, holidays: DEFAULT_HOLIDAYS })}
+                                  className="text-[11px] font-bold text-slate-400 hover:text-brand-600 transition-colors">
+                                  {t('settingHolidaysReset', lang)}
+                              </button>
+                          </div>
+                          <p className="text-[11px] text-slate-400 font-medium italic mb-3">{t('settingHolidaysHelp', lang)}</p>
+
+                          <div className="flex flex-wrap gap-2 mb-3">
+                              {(settings.holidays || []).map((h) => (
+                                  <span key={h} className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1.5 bg-brand-50 border border-brand-100 text-brand-800 rounded-lg text-[12px] font-bold font-mono">
+                                      {h}
+                                      <button
+                                          onClick={() => updateSettings({ ...settings, holidays: (settings.holidays || []).filter(x => x !== h) })}
+                                          className="text-brand-400 hover:text-red-600 transition-colors"
+                                          aria-label={`remove ${h}`}>
+                                          <X className="w-3.5 h-3.5" />
+                                      </button>
+                                  </span>
+                              ))}
+                              {(settings.holidays || []).length === 0 && (
+                                  <span className="text-[12px] text-slate-400 font-medium italic">{t('settingHolidaysEmpty', lang)}</span>
+                              )}
+                          </div>
+
+                          <div className="flex gap-2">
+                              <input
+                                  type="text"
+                                  value={holidayDraft}
+                                  onChange={(e) => { setHolidayDraft(e.target.value); setHolidayError(''); }}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') addHoliday(); }}
+                                  placeholder="12-25 / 2025-04-20"
+                                  className="flex-1 border border-slate-200 rounded-xl p-3 text-[13px] font-mono focus:ring-2 focus:ring-brand-500 outline-none transition-all bg-slate-50"
+                              />
+                              <button
+                                  onClick={addHoliday}
+                                  className="px-5 py-2.5 bg-brand-600 text-white text-[12px] font-bold rounded-xl hover:bg-brand-700 transition-all whitespace-nowrap">
+                                  {t('settingHolidaysAdd', lang)}
+                              </button>
+                          </div>
+                          {holidayError && <p className="text-[11px] text-red-600 font-bold mt-2">{holidayError}</p>}
                       </div>
                   </div>
                   <div className="p-7 bg-slate-50/50 border-t text-right">

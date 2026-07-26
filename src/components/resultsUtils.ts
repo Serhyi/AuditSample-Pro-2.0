@@ -1,4 +1,5 @@
 import { SamplingConfig, SamplingResult, GlobalSettings, Language } from '../types';
+import { DEFAULT_HOLIDAYS, sanitizeHolidays } from '../utils/holidays';
 import { t } from '../utils/translations';
 
 export const METHOD_PREFIX_MAP: Record<string, string> = {
@@ -109,6 +110,8 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
         const includeWeekend = config.riskWeekend !== false;
         const includeHoliday = config.riskHoliday !== false;
         const randomCount = config.riskRandomCount ?? 5;
+        const configuredHolidays = sanitizeHolidays(config.holidays);
+        const holidayList = configuredHolidays.length > 0 ? configuredHolidays : DEFAULT_HOLIDAYS;
         const byCriteria = (results.samplingItems || []).filter(i => i.selectionReason === 'Risk Criteria').length;
         const byRandom = (results.samplingItems || []).filter(i => i.selectionReason === 'Random (Risk)').length;
         const yes = isUa ? 'так' : 'yes';
@@ -116,12 +119,14 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
 
         const criteria: string[] = [];
         if (includeWeekend) criteria.push(isUa ? 'вихідні дні' : 'weekends');
-        if (includeHoliday) criteria.push(isUa ? 'святкові дні' : 'public holidays');
+        if (includeHoliday) criteria.push(isUa ? `святкові дні (${holidayList.length})` : `public holidays (${holidayList.length})`);
         if (closingDays > 0) criteria.push(isUa ? `останні ${closingDays} дн. місяця` : `last ${closingDays} days of month`);
 
         vars[methodStr] = config.method;
         vars[isUa ? 'Операції у вихідні:' : 'Weekend entries:'] = includeWeekend ? yes : no;
-        vars[isUa ? 'Операції у свята:' : 'Holiday entries:'] = includeHoliday ? yes : no;
+        vars[isUa ? 'Операції у свята:' : 'Holiday entries:'] = includeHoliday
+            ? (isUa ? `${yes} (у списку днів: ${holidayList.length})` : `${yes} (${holidayList.length} days listed)`)
+            : no;
         vars[isUa ? 'Днів закриття періоду:' : 'Period closing days:'] = closingDays;
         vars[isUa ? 'Зерно генератора (Seed):' : 'Generator Seed:'] = config.seed || 0;
         vars[isUa ? 'Відібрано за критеріями ризику:' : 'Selected by risk criteria:'] = byCriteria;

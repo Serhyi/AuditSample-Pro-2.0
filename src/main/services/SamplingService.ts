@@ -1,6 +1,7 @@
 import { DatabaseService } from './DatabaseService';
 import { getReliabilityFactor, getZScore, getExpansionFactor } from '../../statistics/reliabilityFactor';
 import { Mulberry32 } from '../../statistics/prng';
+import { DEFAULT_HOLIDAYS, sanitizeHolidays, splitHolidays } from '../../utils/holidays';
 
 export class SamplingService {
   constructor(private db: DatabaseService) {}
@@ -134,7 +135,17 @@ export class SamplingService {
             riskQueryConds.push(`CAST(strftime('%w', date) AS INTEGER) IN (0, 6)`);
         }
         if (includeHoliday) {
-            riskQueryConds.push(`strftime('%m-%d', date) IN ('01-01', '03-08', '05-01', '05-08', '05-09', '06-28', '08-24', '10-01', '12-25')`);
+            // sanitizeHolidays() is what makes inlining these safe: it accepts
+            // only 'MM-DD' / 'YYYY-MM-DD', so nothing else can reach the SQL.
+            const configured = sanitizeHolidays(config.holidays);
+            const holidayList = configured.length > 0 ? configured : DEFAULT_HOLIDAYS;
+            const { recurring, specific } = splitHolidays(holidayList);
+            if (recurring.length > 0) {
+                riskQueryConds.push(`strftime('%m-%d', date) IN (${recurring.map(h => `'${h}'`).join(', ')})`);
+            }
+            if (specific.length > 0) {
+                riskQueryConds.push(`date IN (${specific.map(h => `'${h}'`).join(', ')})`);
+            }
         }
         if (closingDays > 0) {
             // SQLite last_day logic using start of next month - 1 day

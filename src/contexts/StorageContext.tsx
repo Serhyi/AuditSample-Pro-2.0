@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { storage } from '../utils/portableStorage';
 import { GlobalSettings, GoogleConfig } from '../types';
+import { DEFAULT_HOLIDAYS, sanitizeHolidays } from '../utils/holidays';
 
 interface StorageContextType {
   isReady: boolean;
@@ -15,7 +16,8 @@ const defaultSettings: GlobalSettings = {
   dateFormat: 'dd.mm.yyyy',
   numberSeparator: 'space_comma',
   language: 'ua',
-  currency: 'UAH'
+  currency: 'UAH',
+  holidays: DEFAULT_HOLIDAYS
 };
 
 const defaultGoogleConfig: GoogleConfig = {
@@ -40,7 +42,15 @@ export const StorageProvider: React.FC<{ children: ReactNode }> = ({ children })
           storage.load<GoogleConfig>('google_config', defaultGoogleConfig)
         ]);
 
-        if (loadedSettings) setSettings(loadedSettings);
+        if (loadedSettings) {
+          // Settings saved before a field existed must still get its default.
+          const holidays = sanitizeHolidays(loadedSettings.holidays);
+          setSettings({
+            ...defaultSettings,
+            ...loadedSettings,
+            holidays: holidays.length > 0 ? holidays : DEFAULT_HOLIDAYS
+          });
+        }
         if (loadedGoogle) setGoogleConfig(loadedGoogle);
       } catch (e) {
         console.error("Failed to load portable storage", e);
