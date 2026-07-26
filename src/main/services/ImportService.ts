@@ -1,10 +1,9 @@
-import { DatabaseService } from './DatabaseService';
 import { WorkerPool } from '../core/WorkerPool';
 import * as os from 'os';
 import * as path from 'path';
 
 export class ImportService {
-  constructor(private db: DatabaseService, private workerPool: WorkerPool) {}
+  constructor(private workerPool: WorkerPool) {}
 
   public async importFile(filePath: string, config: any, onProgress?: (pct: number, stage: string) => void): Promise<any> {
     console.log('ImportService starting worker for', filePath);

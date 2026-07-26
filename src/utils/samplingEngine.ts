@@ -1,4 +1,6 @@
 import { TransactionItem, SamplingConfig, SamplingResult, SampledItem, GlobalSettings } from '../types';
+import { Mulberry32 } from '../statistics/prng';
+import { getReliabilityFactor, getZScore, getExpansionFactor } from '../statistics/reliabilityFactor';
 
 export const methodsSupportingAnomalies = ['MUS', 'CVS', 'Random', 'FixedRandom'];
 
@@ -51,21 +53,22 @@ export function smartFormat(val: any, settings?: GlobalSettings): string {
         }
         return val.toFixed(2);
     }
-    return String(val);
+    const str = String(val);
+    // Cells normalized on import store dates as ISO; show them in the user's
+    // format instead of leaking the storage representation into the table.
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return formatDate(str, settings);
+    return str;
 }
 
 export function calculateExtrapolation(results: SamplingResult, config: SamplingConfig): { projected: number, ub: number } {
-    if (results.samplingInterval === 0 && (results.projectedMisstatement !== 0 || results.upperMisstatementBound !== 0)) {
-        // Fallback for imported projects where config/interval is lost but we have final numbers
+    const hasEditableItems = (results.samplingItems?.length || 0) > 0 || (results.keyItems?.length || 0) > 0;
+    if (!hasEditableItems && results.samplingInterval === 0 && (results.projectedMisstatement !== 0 || results.upperMisstatementBound !== 0)) {
+        // Fallback for imported projects where config/interval is lost AND there are no
+        // items to recompute from — show the stored final numbers as-is.
         return { projected: results.projectedMisstatement, ub: results.upperMisstatementBound };
     }
 
-    let rf = 3.0; // 95% default
-    if (config.confidenceLevel === 70) rf = 1.20;
-    else if (config.confidenceLevel === 80) rf = 1.61;
-    else if (config.confidenceLevel === 90) rf = 2.31;
-    else if (config.confidenceLevel === 95) rf = 3.00;
-    else if (config.confidenceLevel === 99) rf = 4.61;
+    const rf = getReliabilityFactor(config.confidenceLevel);
 
     let pm = 0;
     
@@ -94,13 +97,13 @@ export function calculateExtrapolation(results: SamplingResult, config: Sampling
         const total = (results.samplingItems || []).length || 1;
         pm = (errors / total) * 100;
         ub = ((errors + rf) / total) * 100;
-    } else if (config.method === 'RiskAssessment' || config.method === 'FixedRandom' || config.method === 'Pareto' || config.method === 'Percentile' || config.method === 'Grubbs' || config.method === 'Benford' || config.method === 'StopOrGo') {
+    } else if (config.method === 'RiskAssessment' || config.method === 'FixedRandom' || config.method === 'Systematic' || config.method === 'Pareto' || config.method === 'Percentile' || config.method === 'Grubbs' || config.method === 'Benford' || config.method === 'StopOrGo') {
         pm = keyMisstatements + (results.samplingItems || []).reduce((acc, item) => acc + (item.difference || 0), 0);
         ub = pm;
     } else if (config.method === 'Random' || config.method === 'CVS' || config.method === 'Cluster') {
         const sampleErrors = (results.samplingItems || []).reduce((acc, item) => acc + (item.difference || 0), 0);
         const n = results.samplingItems?.length || 1;
-        const N_rem = results.populationSize - (results.keyItems?.length || 0) - (results.trivialCount || 0);
+        const N_rem = Math.max(0, results.populationSize - (results.keyItems?.length || 0) - (results.trivialCount || 0));
         const meanDiff = sampleErrors / n;
         
         pm = keyMisstatements + (meanDiff * N_rem);
@@ -111,7 +114,7 @@ export function calculateExtrapolation(results: SamplingResult, config: Sampling
                 variance = variance / (n - 1);
             }
             const stdErr = N_rem * Math.sqrt(variance) / Math.sqrt(n);
-            const zScore = config.confidenceLevel === 70 ? 1.04 : (config.confidenceLevel === 80 ? 1.28 : (config.confidenceLevel === 90 ? 1.64 : (config.confidenceLevel === 95 ? 1.96 : (config.confidenceLevel === 99 ? 2.58 : 1.96))));
+            const zScore = getZScore(config.confidenceLevel);
             ub = pm + Math.abs(zScore * stdErr);
         } else {
             ub = pm;
@@ -144,9 +147,25 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
             trivialCount++;
             trivialValue += item.amount;
         } else if (
-            config.anomalyMethod !== 'None' && 
-            ['Random', 'FixedRandom', 'CVS', 'Cluster', 'RiskAssessment'].includes(config.method) && 
-            config.tolerableMisstatement && 
+            config.method === 'MUS' &&
+            config.tolerableMisstatement &&
+            Math.abs(item.amount) >= config.tolerableMisstatement
+        ) {
+            // ISA 530: items whose individual value ≥ PM must be audited 100%.
+            // They are separated from the probabilistic pool so the interval and
+            // sample size formula operate on the correct residual population.
+            keyItems.push({
+                ...item,
+                bookValue: item.amount,
+                auditedValue: '',
+                difference: item.amount,
+                tainting: 1,
+                isKeyItem: true
+            });
+        } else if (
+            config.anomalyMethod !== 'None' &&
+            ['Random', 'FixedRandom', 'CVS', 'Cluster', 'RiskAssessment'].includes(config.method) &&
+            config.tolerableMisstatement &&
             Math.abs(item.amount) >= config.tolerableMisstatement
         ) {
             keyItems.push({
@@ -162,16 +181,13 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
         }
     });
 
-    let rf = 3.0; // 95% default
-    if (config.confidenceLevel === 70) rf = 1.20;
-    else if (config.confidenceLevel === 80) rf = 1.61;
-    else if (config.confidenceLevel === 90) rf = 2.31;
-    else if (config.confidenceLevel === 95) rf = 3.00;
-    else if (config.confidenceLevel === 99) rf = 4.61;
+    const rf = getReliabilityFactor(config.confidenceLevel);
+
+    const rng = new Mulberry32(config.seed ?? Math.floor(Math.random() * 100000));
 
     let sampleSize = 10;
     const remPopValue = popValue - keyItems.reduce((acc, curr) => acc + Math.abs(curr.amount), 0) - Math.abs(trivialValue);
-    
+
     let sampleItems: SampledItem[] = [];
 
     const getRandomSamples = <T>(array: T[], count: number): T[] => {
@@ -179,11 +195,11 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
         const n = array.length;
         count = Math.min(count, n);
         if (count === 0) return result;
-        
+
         if (n > 10000 && count < 1000) {
             const picked = new Set<number>();
             while(picked.size < count) {
-                picked.add(Math.floor(Math.random() * n));
+                picked.add(Math.floor(rng.next() * n));
             }
             for (const idx of picked) {
                 result.push(array[idx]);
@@ -191,7 +207,7 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
         } else {
             const copy = array.slice();
             for(let i=0; i<count; i++) {
-                const r = i + Math.floor(Math.random() * (n - i));
+                const r = i + Math.floor(rng.next() * (n - i));
                 const temp = copy[i];
                 copy[i] = copy[r];
                 copy[r] = temp;
@@ -275,12 +291,21 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
     } else {
         if (config.method === 'MUS') {
             const pm = config.tolerableMisstatement || 1;
-            const interval = Math.max(pm / rf, 1);
-            sampleSize = Math.ceil((remPopValue * rf) / Math.max(pm, 0.01));
+            // ISA 530 / AICPA: знаменник зменшується на очікувані помилки,
+            // зважені expansion factor. Захищаємо від нуля/від'ємного значення
+            // (коли очікувані помилки наближаються до допустимого викривлення).
+            const expectedMisstatement = config.expectedMisstatement || 0;
+            const expansionFactor = getExpansionFactor(config.confidenceLevel);
+            const denominator = Math.max(pm - expectedMisstatement * expansionFactor, pm * 0.01);
+            sampleSize = Math.ceil((remPopValue * rf) / denominator);
             if (sampleSize > 5000) sampleSize = 5000;
 
+            // Інтервал відбору узгоджуємо з фактичним (можливо обмеженим) розміром
+            // вибірки, щоб MUS-петля давала саме sampleSize влучань.
+            const interval = sampleSize > 0 && remPopValue > 0 ? remPopValue / sampleSize : Math.max(pm / rf, 1);
+
             let runningTotal = 0;
-            let nextHit = Math.random() * interval;
+            let nextHit = rng.next() * interval;
             const picked = new Set<number>();
             
             for (let i = 0; i < regularItems.length; i++) {
@@ -307,15 +332,63 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
                 };
             });
 
+        } else if (config.method === 'Systematic') {
+            // Систематична вибірка з фіксованим кроком: i_n = старт + (n - 1) × k.
+            // Старт = (seed mod N) + 1, де N — розмір залишкової сукупності.
+            const step = Math.max(1, Math.floor(config.systematicStep || 10));
+            const N = regularItems.length;
+            const start = N > 0 ? (Math.floor(config.seed || 0) % N) + 1 : 1;
+            sampleItems = [];
+            for (let i = start - 1; i < regularItems.length; i += step) {
+                const item = regularItems[i];
+                sampleItems.push({
+                    ...item,
+                    bookValue: item.amount,
+                    auditedValue: '',
+                    difference: item.amount,
+                    tainting: 1,
+                    isSampled: true,
+                    selectionReason: `Systematic (i=${i + 1})`
+                });
+                if (sampleItems.length >= 5000) break;
+            }
+            sampleSize = sampleItems.length;
         } else {
             if (config.method === 'FixedRandom') {
                 sampleSize = config.fixedSampleSize || 10;
             } else if (config.method === 'StopOrGo') {
                 sampleSize = (config.stopOrGoInitialSize || 25) + (config.stopOrGoExpansionSize || 25);
             } else if (config.method === 'Attribute') {
-                sampleSize = 25; // simplified
+                // AICPA attribute table approximation: n ≈ -ln(alpha) / TDR
+                // where alpha = 1 − confidence, TDR = tolerable deviation rate.
+                const tdr = (config.tolerableDeviationRate ?? 5) / 100;
+                const edr = (config.expectedDeviationRate ?? 0) / 100;
+                const alphaAttr = 1 - config.confidenceLevel / 100;
+                const rfAttr = -Math.log(alphaAttr); // Poisson RF at zero expected deviations
+                const denominatorAttr = Math.max(tdr - edr, tdr * 0.01);
+                sampleSize = Math.ceil(rfAttr / denominatorAttr);
+            } else if (config.method === 'CVS' || config.method === 'Random') {
+                // Classical Variables / Random: n = (z × σ / E)² with finite-population correction.
+                // σ is the standard deviation of individual item amounts in the residual population.
+                // E (precision) ≈ PM / N_rem (mean-per-unit precision).
+                const z = getZScore(config.confidenceLevel);
+                const N_rem = regularItems.length;
+                if (N_rem > 1) {
+                    const mean = remPopValue / N_rem;
+                    const variance = regularItems.reduce((acc, it) => acc + Math.pow(Math.abs(it.amount) - mean, 2), 0) / (N_rem - 1);
+                    const sigma = Math.sqrt(variance);
+                    const pm = config.tolerableMisstatement || remPopValue * 0.01;
+                    // Desired precision = PM / sqrt(N_rem) gives a per-unit precision;
+                    // alternatively: E = PM / N_rem for total error bound.
+                    const E = pm / N_rem; // tolerable mean error per item
+                    const n0 = Math.pow(z * sigma / E, 2); // infinite-population size
+                    // Finite-population correction (FPC):
+                    sampleSize = Math.ceil(n0 / (1 + n0 / N_rem));
+                } else {
+                    sampleSize = N_rem;
+                }
             } else {
-                sampleSize = config.fixedSampleSize || 25; // fallback for others like CVS, Random
+                sampleSize = config.fixedSampleSize || 25;
             }
             
             if (sampleSize > 5000) sampleSize = 5000;
@@ -334,10 +407,6 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
     }
 
     const interval = sampleItems.length > 0 ? (remPopValue / sampleItems.length) : 1;
-    
-    // rf already defined
-
-    // rf already defined
 
     const preResult: SamplingResult = {
         populationSize: population.length,

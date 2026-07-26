@@ -2,46 +2,14 @@ import './worker-polyfill';
 import Papa from 'papaparse';
 import * as ExcelJSModule from 'exceljs';
 import { TransactionItem, ColumnIndices } from '../types';
+import { toIsoDate, normalizeCellValue } from '../utils/cellNormalization';
 
 const ExcelJS: any = (ExcelJSModule as any).default || ExcelJSModule;
 console.log('WORKER init: ExcelJS keys:', Object.keys(ExcelJSModule).join(', '));
 if (ExcelJS) console.log('WORKER init: ExcelJS is truthy, Workbook is:', typeof ExcelJS.Workbook);
 else console.log('WORKER init: ExcelJS is falsy');
 
-const parseExcelRawDate = (rawVal: any): string | null => {
-    if (rawVal === undefined || rawVal === null || rawVal === '') return null;
-    if (rawVal instanceof Date) {
-        const y = rawVal.getFullYear();
-        const m = String(rawVal.getMonth() + 1).padStart(2, '0');
-        const d = String(rawVal.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-    }
-    const numVal = Number(rawVal);
-    if (!isNaN(numVal) && typeof rawVal !== 'boolean') {
-        if (numVal > 10000 && numVal < 73050) {
-            const date = new Date((numVal - 25569) * 86400 * 1000);
-            const y = date.getUTCFullYear();
-            const m = String(date.getUTCMonth() + 1).padStart(2, '0');
-            const d = String(date.getUTCDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
-        }
-        if (numVal > 1000000000000) {
-            const date = new Date(numVal);
-            const y = date.getUTCFullYear();
-            const m = String(date.getUTCMonth() + 1).padStart(2, '0');
-            const d = String(date.getUTCDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
-        }
-    }
-    const strVal = String(rawVal).trim();
-    const ddmmyyyy = strVal.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})/);
-    if (ddmmyyyy) return `${ddmmyyyy[3]}-${String(ddmmyyyy[2]).padStart(2, '0')}-${String(ddmmyyyy[1]).padStart(2, '0')}`;
-    const yyyymmdd = strVal.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})/);
-    if (yyyymmdd) return `${yyyymmdd[1]}-${String(yyyymmdd[2]).padStart(2, '0')}-${String(yyyymmdd[3]).padStart(2, '0')}`;
-    const ddmmyy = strVal.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2})$/);
-    if (ddmmyy) return `20${ddmmyy[3]}-${String(ddmmyy[2]).padStart(2, '0')}-${String(ddmmyy[1]).padStart(2, '0')}`;
-    return null;
-};
+const parseExcelRawDate = (rawVal: any): string | null => toIsoDate(rawVal) || null;
 
 const parseAmount = (rawAmt: any): number => {
     if (typeof rawAmt === 'number') return rawAmt;
@@ -51,7 +19,7 @@ const parseAmount = (rawAmt: any): number => {
     if (str.startsWith('(') && str.endsWith(')')) str = '-' + str.slice(1, -1);
     
     // Also strip generic characters not parsing well
-    const cleanStr = str.replace(/[\s\u00A0\u200B\u202F$€£₴]/g, ''); 
+    const cleanStr = str.replace(/[\s ​ $€£₴]/g, ''); 
     if (cleanStr === '') return NaN;
     
     if (cleanStr.includes(',') && cleanStr.includes('.')) {
@@ -152,7 +120,9 @@ const doValidation = (data: any[][], sRow: number, indices: ColumnIndices) => {
         }
         
         totalVal += Math.abs(val);
-        normalized.push({ id: idStr, amount: val, date: dateStr, originalRow: row });
+        // Normalize on import: dates become ISO strings and numeric text becomes
+        // numbers, so display, sampling and export all see typed values.
+        normalized.push({ id: idStr, amount: val, date: dateStr, originalRow: row.map(c => normalizeCellValue(c)) });
     }
     return { normalized, invalidAmountRows, invalidDateRows, totalVal, negativeCount: negCount, zeroCount, duplicateCount: dupCount };
 };
@@ -204,9 +174,10 @@ self.onmessage = async (e) => {
                 }
 
                 self.postMessage({ type: 'PARSE_PROGRESS', payload: { pct: 60, stage: 'Importing...' } });
-                const results = Papa.parse(text, { 
-                    skipEmptyLines: true, 
-                    ...(detectedDelimiter ? { delimiter: detectedDelimiter } : {}) 
+                // Do NOT skip empty lines: row numbers must match the source file
+                // so the detected header row position is accurate.
+                const results = Papa.parse(text, {
+                    ...(detectedDelimiter ? { delimiter: detectedDelimiter } : {})
                 });
                 const rawResultsData = results.data as any[][];
                 if (!rawResultsData || rawResultsData.length === 0) throw new Error('errFileEmpty');
@@ -243,10 +214,12 @@ self.onmessage = async (e) => {
                 
                 const extractSummaryInfo = (sheet: any): any => {
                     let populationSize = 0, populationValue = 0, projectedMisstatement = 0, upperMisstatementBound = 0;
-                    let sampleSize = 0, trivialCount = 0;
+                    let sampleSize = 0, trivialCount = 0, tolerableMisstatement = 0, confidenceLevel = 0;
                     let methodStr = 'MUS';
-                    
-                    if (!sheet) return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount, method: methodStr };
+                    let configJson: any = null;
+                    let resultsSnapshot: any = null;
+
+                    if (!sheet) return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount, tolerableMisstatement, confidenceLevel, method: methodStr, config: configJson, resultsSnapshot };
                     
                     for (let r = 1; r <= sheet.rowCount; r++) {
                         const row = sheet.getRow(r);
@@ -258,6 +231,7 @@ self.onmessage = async (e) => {
                             if (m.includes('mus') || m.includes('монетарна')) methodStr = 'MUS';
                             else if (m.includes('attribute') || m.includes('атрибутив')) methodStr = 'Attribute';
                             else if (m.includes('cvs') || m.includes('стратиф')) methodStr = 'CVS';
+                            else if (m.includes('systematic') || m.includes('систем')) methodStr = 'Systematic';
                             else if (m.includes('random') || m.includes('випад')) methodStr = 'Random';
                             else if (m.includes('benford')) methodStr = 'Benford';
                             else if (m.includes('stop') || m.includes('зупин')) methodStr = 'StopOrGo';
@@ -281,8 +255,22 @@ self.onmessage = async (e) => {
                         if (lbl.includes('Верхня межа викривлення') || lbl.includes('Upper Misstatement Bound') || lbl.includes('Максимальна помилка')) {
                             upperMisstatementBound = parseAmount(val);
                         }
+                        if (lbl.includes('Допустиме викривлення') || lbl.includes('Tolerable Misstatement') || lbl.includes('Допустимий ступінь відхилення') || lbl.includes('Tolerable Deviation Rate')) {
+                            const pm = parseAmount(val);
+                            if (!isNaN(pm)) tolerableMisstatement = pm;
+                        }
+                        if (lbl.includes('Рівень впевненості') || lbl.includes('Confidence Level')) {
+                            const cl = parseInt(String(val).replace(/[^\d]/g, '')) || 0;
+                            if (cl > 0) confidenceLevel = cl;
+                        }
+                        if (lbl === '__AUDITSAMPLE_CONFIG__' && val) {
+                            try { configJson = JSON.parse(String(val)); } catch { configJson = null; }
+                        }
+                        if (lbl === '__AUDITSAMPLE_RESULTS__' && val) {
+                            try { resultsSnapshot = JSON.parse(String(val)); } catch { resultsSnapshot = null; }
+                        }
                     }
-                    return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount, method: methodStr };
+                    return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount, tolerableMisstatement, confidenceLevel, method: methodStr, config: configJson, resultsSnapshot };
                 };
                 
                 const sampleSheet = workbook.getWorksheet('Вибірка') || workbook.getWorksheet('Sample');
@@ -316,28 +304,21 @@ self.onmessage = async (e) => {
                         for (let r=2; r<=sheet.rowCount; r++) {
                             const row = sheet.getRow(r);
                             const originalRow = [];
-                            for(let c=1; c<=baseN; c++) originalRow.push(getCellValue(row.getCell(c).value));
+                            for(let c=1; c<=baseN; c++) originalRow.push(normalizeCellValue(getCellValue(row.getCell(c).value)));
                             
                             const bookVal = (docCol !== -1) ? parseAmount(getCellValue(row.getCell(docCol).value)) : 0;
                             const auditValRaw = (audCol !== -1) ? getCellValue(row.getCell(audCol).value) : null;
-                            const diffValRaw = (diffCol !== -1) ? getCellValue(row.getCell(diffCol).value) : null;
                             const commentsVal = (commentCol !== -1) ? String(getCellValue(row.getCell(commentCol).value) || '') : '';
                             
                             const auditVal = auditValRaw !== null && auditValRaw !== '' ? parseAmount(auditValRaw) : '';
-                            
-                            let diffVal = 0;
-                            let parsedDiff = NaN;
-                            
-                            if (diffValRaw !== null && diffValRaw !== '') {
-                                parsedDiff = parseAmount(diffValRaw);
-                            }
-                            
-                            if (!isNaN(parsedDiff)) {
-                                diffVal = parsedDiff;
-                            } else {
-                                const auditNum = typeof auditVal === 'number' ? auditVal : 0;
-                                diffVal = bookVal - auditNum;
-                            }
+
+                            // Always recalculate: the exported formula is always BookValue-AuditValue,
+                            // and ExcelJS writes formulas without a cached result so reading back gives 0.
+                            // Empty audit = treat as 0 (unaudited), so difference = full book value —
+                            // consistent with how newly-generated projects initialize their items.
+                            const diffVal = typeof auditVal === 'number'
+                                ? Math.round((bookVal - auditVal) * 100) / 100
+                                : bookVal;
 
                             items.push({
                                 id: `row-${r-1}`,

@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AuditSample Pro — License Manager</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2300854b'/%3E%3Ctext x='50' y='68' font-family='-apple-system%2CBlinkMacSystemFont%2CSegoe UI%2Csans-serif' font-size='46' font-weight='900' fill='white' text-anchor='middle' letter-spacing='-2'%3EAS%3C/text%3E%3C/svg%3E" />
+<style>
+  :root {
+    --brand: #00854b;
+    --brand-dark: #006838;
+    --brand-light: #e6f5ee;
+    --danger: #dc2626;
+    --warn: #d97706;
+    --ok: #16a34a;
+    --slate-50: #f8fafc;
+    --slate-100: #f1f5f9;
+    --slate-200: #e2e8f0;
+    --slate-400: #94a3b8;
+    --slate-600: #475569;
+    --slate-800: #1e293b;
+    --slate-900: #0f172a;
+    --radius: 14px;
+    --shadow: 0 4px 24px rgba(0,0,0,.08);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--slate-100);
+    color: var(--slate-800);
+    min-height: 100vh;
+    padding: 32px 16px;
+  }
+  .page { max-width: 900px; margin: 0 auto; }
+  header {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 32px;
+  }
+  .logo {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: var(--brand); display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 20px; color: #fff; letter-spacing: -1px; flex-shrink: 0;
+  }
+  header h1 { font-size: 22px; font-weight: 800; color: var(--slate-900); }
+  header p { font-size: 13px; color: var(--slate-400); margin-top: 2px; }
+
+  .tabs { display: flex; gap: 4px; background: var(--slate-200); padding: 4px; border-radius: var(--radius); margin-bottom: 24px; width: fit-content; }
+  .tab {
+    padding: 8px 24px; border-radius: 10px; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 700; transition: all .15s; background: transparent; color: var(--slate-400);
+  }
+  .tab.active { background: #fff; color: var(--brand); box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+
+  .card {
+    background: #fff; border-radius: var(--radius); border: 1px solid var(--slate-200);
+    padding: 28px; margin-bottom: 20px; box-shadow: var(--shadow);
+  }
+  .card h2 { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--brand); margin-bottom: 20px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media(max-width: 600px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--slate-600); }
+  input, select, textarea {
+    border: 1.5px solid var(--slate-200); border-radius: 10px;
+    padding: 10px 14px; font-size: 14px; color: var(--slate-800);
+    background: var(--slate-50); transition: border .15s; outline: none; width: 100%;
+    font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--brand); background: #fff; }
+  textarea { resize: vertical; min-height: 120px; font-size: 12px; font-family: 'Menlo', 'Consolas', monospace; }
+
+  .secret-row { display: flex; gap: 8px; align-items: flex-end; }
+  .secret-row input { flex: 1; }
+
+  .btn {
+    padding: 12px 28px; border-radius: 12px; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em;
+    transition: all .15s; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-primary { background: var(--brand); color: #fff; box-shadow: 0 4px 14px rgba(0,133,75,.25); }
+  .btn-primary:hover { background: var(--brand-dark); }
+  .btn-outline { background: var(--brand-light); color: var(--brand); border: 1.5px solid var(--brand); }
+  .btn-outline:hover { background: #d0eddf; }
+  .btn-sm { padding: 8px 16px; font-size: 11px; border-radius: 9px; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+
+  .result-box {
+    background: var(--slate-50); border: 1.5px solid var(--slate-200);
+    border-radius: var(--radius); padding: 20px; margin-top: 20px;
+  }
+  .result-box.ok { border-color: var(--ok); background: #f0fdf4; }
+  .result-box.err { border-color: var(--danger); background: #fef2f2; }
+  .result-box.warn { border-color: var(--warn); background: #fffbeb; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .06em;
+  }
+  .badge-ok { background: #dcfce7; color: var(--ok); }
+  .badge-err { background: #fee2e2; color: var(--danger); }
+  .badge-warn { background: #fef3c7; color: var(--warn); }
+  .badge-pro { background: var(--brand); color: #fff; }
+  .badge-free { background: var(--slate-200); color: var(--slate-600); }
+
+  .info-grid { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin-top: 12px; }
+  .info-key { font-size: 11px; font-weight: 700; color: var(--slate-400); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+  .info-val { font-size: 13px; font-weight: 600; color: var(--slate-800); word-break: break-all; }
+
+  .mono { font-family: 'Menlo', 'Consolas', monospace; font-size: 12px; }
+  .copy-area { position: relative; }
+  .copy-area textarea { padding-right: 80px; }
+  .copy-btn {
+    position: absolute; top: 8px; right: 8px;
+    padding: 5px 12px; background: var(--brand); color: #fff;
+    border: none; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer;
+    transition: background .15s;
+  }
+  .copy-btn:hover { background: var(--brand-dark); }
+
+  .sep { height: 1px; background: var(--slate-200); margin: 20px 0; }
+
+  .file-drop {
+    border: 2px dashed var(--slate-200); border-radius: var(--radius);
+    padding: 32px; text-align: center; cursor: pointer; transition: all .15s;
+    color: var(--slate-400);
+  }
+  .file-drop:hover, .file-drop.drag { border-color: var(--brand); background: var(--brand-light); color: var(--brand); }
+  .file-drop .icon { font-size: 32px; margin-bottom: 8px; }
+  .file-drop p { font-size: 13px; font-weight: 600; }
+  .file-drop small { font-size: 11px; opacity: .7; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="logo">AS</div>
+    <div>
+      <h1>AuditSample Pro — License Manager</h1>
+      <p>Генератор та валідатор ліцензійних файлів</p>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('gen')">Генератор</button>
+    <button class="tab" onclick="switchTab('val')">Валідатор</button>
+  </div>
+
+  <!-- ===================== GENERATOR ===================== -->
+  <div id="tab-gen">
+    <div class="card">
+      <h2>Параметри ліцензії</h2>
+      <div style="margin-bottom:16px;" class="field">
+        <label>Секретний ключ підпису (VITE_LICENSE_SECRET)</label>
+        <div class="secret-row">
+          <input type="password" id="gen-secret" placeholder="Вкажіть VITE_LICENSE_SECRET з файлу .env" required />
+          <button class="btn btn-outline btn-sm" onclick="toggleSecret('gen-secret')">Показати</button>
+        </div>
+        <small style="color:var(--danger);font-size:11px;margin-top:4px;">
+          ⚠ Обов'язкове поле. Візьми значення VITE_LICENSE_SECRET з файлу <code>.env</code> проєкту.
+        </small>
+        <span id="gen-fp" style="font-size:11px;font-family:monospace;color:var(--brand);font-weight:700;margin-top:2px;"></span>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="grid2" style="margin-bottom:16px;">
+        <div class="field">
+          <label>Назва організації / ФОП</label>
+          <input type="text" id="gen-name" placeholder="ТОВ Приклад / Іванов Іван" />
+        </div>
+        <div class="field">
+          <label>ЄДРПОУ / ІПН</label>
+          <input type="text" id="gen-code" placeholder="12345678" maxlength="12" />
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-bottom:16px;">
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="gen-email" placeholder="info@example.com" />
+        </div>
+        <div class="field">
+          <label>Тип ліцензії</label>
+          <select id="gen-tier">
+            <option value="paid">PRO — всі методи</option>
+            <option value="free">FREE — лише StopOrGo</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid3">
+        <div class="field">
+          <label>Дата початку</label>
+          <input type="date" id="gen-start" />
+        </div>
+        <div class="field">
+          <label>Термін (роки)</label>
+          <select id="gen-years">
+            <option value="1">1 рік</option>
+            <option value="2" selected>2 роки</option>
+            <option value="3">3 роки</option>
+            <option value="5">5 років</option>
+            <option value="99">Безстрокова (99 р.)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Дата закінчення</label>
+          <input type="date" id="gen-end" readonly style="background:var(--brand-light);color:var(--brand);font-weight:700;border-color:var(--brand);cursor:default;" />
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" onclick="generate()">⚡ Згенерувати ліцензію</button>
+      <button class="btn btn-outline" onclick="clearGen()">Очистити</button>
+    </div>
+
+    <div id="gen-result" class="hidden"></div>
+  </div>
+
+  <!-- ===================== VALIDATOR ===================== -->
+  <div id="tab-val" class="hidden">
+    <div class="card">
+      <h2>Перевірити файл ліцензії</h2>
+      <div class="field" style="margin-bottom:16px;">
+        <label>Секретний ключ підпису (VITE_LICENSE_SECRET)</label>
+        <div class="secret-row">
+          <input type="password" id="val-secret" placeholder="Вкажіть VITE_LICENSE_SECRET з файлу .env" required />
+          <button class="btn btn-outline btn-sm" onclick="toggleSecret('val-secret')">Показати</button>
+        </div>
+        <span id="val-fp" style="font-size:11px;font-family:monospace;color:var(--brand);font-weight:700;margin-top:4px;display:block;"></span>
+      </div>
+
+      <div class="sep"></div>
+
+      <div
+        class="file-drop" id="drop-zone"
+        onclick="document.getElementById('file-input').click()"
+        ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)"
+      >
+        <div class="icon">📄</div>
+        <p>Клікни або перетягни файл <code>.asp</code></p>
+        <small>Підтримуються файли .asp та .json</small>
+      </div>
+      <input type="file" id="file-input" accept=".asp,.json" class="hidden" onchange="fileSelected(event)" />
+
+      <div class="sep"></div>
+
+      <div class="field">
+        <label>Або вставте JSON вміст ліцензії напряму</label>
+        <textarea id="val-json" placeholder='{"payload":{...},"signature":"..."}' onpaste="setTimeout(validatePasted,50)" oninput="validatePasted()"></textarea>
+      </div>
+    </div>
+
+    <div id="val-result" class="hidden"></div>
+  </div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────
+
+// ─── Tabs ────────────────────────────────────────────────
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach((el,i) => el.classList.toggle('active', (i===0&&t==='gen')||(i===1&&t==='val')));
+  document.getElementById('tab-gen').classList.toggle('hidden', t !== 'gen');
+  document.getElementById('tab-val').classList.toggle('hidden', t !== 'val');
+}
+
+// ─── Init dates ──────────────────────────────────────────
+function initDates() {
+  const today = new Date();
+  const iso = d => d.toISOString().slice(0,10);
+  document.getElementById('gen-start').value = iso(today);
+  updateEndDate();
+}
+document.getElementById('gen-years').addEventListener('change', updateEndDate);
+document.getElementById('gen-start').addEventListener('input', updateEndDate);
+document.getElementById('gen-start').addEventListener('change', updateEndDate);
+function updateEndDate() {
+  const s = document.getElementById('gen-start').value;
+  const y = parseInt(document.getElementById('gen-years').value);
+  if (!s) return;
+  const d = new Date(s);
+  d.setFullYear(d.getFullYear() + y);
+  d.setDate(d.getDate() - 1);
+  document.getElementById('gen-end').value = d.toISOString().slice(0,10);
+}
+initDates();
+
+// ─── Utils ───────────────────────────────────────────────
+function toggleSecret(id) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+function getSecret(inputId) {
+  return document.getElementById(inputId).value.trim();
+}
+
+function requireSecret(inputId) {
+  const s = getSecret(inputId);
+  if (!s) {
+    const el = document.getElementById(inputId);
+    el.style.borderColor = 'var(--danger)';
+    el.focus();
+    el.addEventListener('input', () => el.style.borderColor = '', { once: true });
+    return null;
+  }
+  return s;
+}
+
+async function hmacHex(secret, data) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(data));
+  return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function generateId(code, secret, year) {
+  // We'll sign the checksum server-side style using sync fallback (show async in generate())
+  const short = (code || 'XXXX').replace(/\D/g,'').slice(0,4).padStart(4,'0') ||
+                (code || 'XXXX').slice(0,4).toUpperCase().padEnd(4,'X');
+  const digits = String(Math.floor(Math.random() * 99999)).padStart(5,'0');
+  return { short, digits };
+}
+
+function fmtDate(iso) {
+  return new Date(iso).toLocaleDateString('uk-UA', {day:'2-digit',month:'2-digit',year:'numeric'});
+}
+
+// ─── Generator ───────────────────────────────────────────
+async function generate() {
+  const name = document.getElementById('gen-name').value.trim();
+  const code = document.getElementById('gen-code').value.trim();
+  const email = document.getElementById('gen-email').value.trim();
+  const tier = document.getElementById('gen-tier').value;
+  const start = document.getElementById('gen-start').value;
+  const end = document.getElementById('gen-end').value;
+  const secret = requireSecret('gen-secret');
+
+  if (!secret) {
+    showGenResult(`<div class="result-box err"><b style="color:var(--danger)">⚠ Вкажіть секретний ключ підпису (VITE_LICENSE_SECRET).</b></div>`);
+    return;
+  }
+  if (!name || !code || !email) {
+    showGenResult(`<div class="result-box err"><b style="color:var(--danger)">⚠ Заповніть усі обов'язкові поля:</b> назва, код, email.</div>`);
+    return;
+  }
+
+  const year = new Date().getFullYear();
+  const codeShort = code.replace(/\D/g,'').slice(0,4).padStart(4,'0') || code.slice(0,4).toUpperCase().padEnd(4,'X');
+  const digits = String(Math.floor(Math.random() * 99999)).padStart(5,'0');
+  const rawId = `${year}${codeShort}${digits}`;
+  const checksum = (await hmacHex(secret, rawId)).slice(0,4);
+  const licenseId = `ASP-${year}-${codeShort}-${digits}-${checksum}`;
+
+  const methods = tier === 'paid' ? ['All'] : ['StopOrGo'];
+
+  const payload = {
+    licenseId,
+    entityName: name,
+    entityCode: code,
+    email,
+    issuedAt: new Date(start).toISOString(),
+    expiresAt: new Date(end + 'T23:59:59').toISOString(),
+    methods,
+    version: '1'
+  };
+
+  const signature = await hmacHex(secret, JSON.stringify(payload));
+  const licenseFile = { payload, signature };
+  const json = JSON.stringify(licenseFile, null, 2);
+
+  const isPaid = tier === 'paid';
+  showGenResult(`
+    <div class="result-box ok">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <span style="font-size:20px;">✅</span>
+        <div>
+          <div style="font-weight:800;font-size:15px;color:var(--ok);">Ліцензію згенеровано</div>
+        </div>
+        <span class="badge ${isPaid ? 'badge-pro' : 'badge-free'}" style="margin-left:auto;">${isPaid ? 'PRO' : 'FREE'}</span>
+      </div>
+      <div class="info-grid">
+        <span class="info-key">License ID</span><span class="info-val mono">${licenseId}</span>
+        <span class="info-key">Організація</span><span class="info-val">${name}</span>
+        <span class="info-key">Код</span><span class="info-val mono">${code}</span>
+        <span class="info-key">Email</span><span class="info-val">${email}</span>
+        <span class="info-key">Дійсна</span><span class="info-val">${fmtDate(payload.issuedAt)} — ${fmtDate(payload.expiresAt)}</span>
+        <span class="info-key">Методи</span><span class="info-val">${methods.join(', ')}</span>
+        <span class="info-key">Підпис</span><span class="info-val mono" style="font-size:10px;">${signature}</span>
+      </div>
+      <div class="sep"></div>
+      <div class="copy-area">
+        <textarea id="gen-output" rows="14" readonly>${json}</textarea>
+        <button class="copy-btn" onclick="copyJson()">Копіювати</button>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" onclick="downloadLicense('${licenseId}')">⬇ Завантажити .asp</button>
+        <button class="btn btn-outline btn-sm" onclick="copyJson()">📋 Копіювати JSON</button>
+      </div>
+    </div>
+  `);
+
+  // Store for download
+  window._lastLicenseJson = json;
+  window._lastLicenseId = licenseId;
+}
+
+function showGenResult(html) {
+  const el = document.getElementById('gen-result');
+  el.innerHTML = html;
+  el.classList.remove('hidden');
+  el.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function copyJson() {
+  const t = document.getElementById('gen-output');
+  t.select();
+  document.execCommand('copy');
+  const btn = document.querySelector('.copy-btn');
+  if (btn) { btn.textContent = 'Скопійовано!'; setTimeout(() => btn.textContent = 'Копіювати', 2000); }
+}
+
+function downloadLicense(id) {
+  const blob = new Blob([window._lastLicenseJson], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `license-${id}.asp`;
+  a.click();
+}
+
+function clearGen() {
+  ['gen-name','gen-code','gen-email','gen-secret'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('gen-tier').value = 'paid';
+  document.getElementById('gen-years').value = '2';
+  initDates();
+  document.getElementById('gen-result').classList.add('hidden');
+}
+
+// ─── Validator ───────────────────────────────────────────
+function dragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag'); }
+function dragLeave(e) { document.getElementById('drop-zone').classList.remove('drag'); }
+function dropFile(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) readFile(f);
+}
+function fileSelected(e) {
+  const f = e.target.files[0];
+  if (f) readFile(f);
+}
+function readFile(f) {
+  const r = new FileReader();
+  r.onload = ev => {
+    document.getElementById('val-json').value = ev.target.result;
+    validatePasted();
+  };
+  r.readAsText(f);
+}
+async function validatePasted() {
+  const raw = document.getElementById('val-json').value.trim();
+  if (!raw) { document.getElementById('val-result').classList.add('hidden'); return; }
+  const secret = getSecret('val-secret');
+  if (!secret) {
+    document.getElementById('val-result').innerHTML = `<div class="result-box err"><b style="color:var(--danger)">⚠ Вкажіть секретний ключ підпису (VITE_LICENSE_SECRET).</b></div>`;
+    document.getElementById('val-result').classList.remove('hidden');
+    document.getElementById('val-secret').style.borderColor = 'var(--danger)';
+    document.getElementById('val-secret').focus();
+    document.getElementById('val-secret').addEventListener('input', () => {
+      document.getElementById('val-secret').style.borderColor = '';
+      validatePasted();
+    }, { once: true });
+    return;
+  }
+  await validate(raw, secret);
+}
+
+async function validate(raw, secret) {
+  const out = document.getElementById('val-result');
+  out.classList.remove('hidden');
+
+  let file;
+  try { file = JSON.parse(raw); } catch(e) {
+    out.innerHTML = `<div class="result-box err"><b style="color:var(--danger)">⚠ JSON невалідний:</b> ${e.message}</div>`;
+    return;
+  }
+
+  if (!file.payload || !file.signature) {
+    out.innerHTML = `<div class="result-box err"><b style="color:var(--danger)">⚠ Невірна структура:</b> відсутній payload або signature.</div>`;
+    return;
+  }
+
+  const p = file.payload;
+  const expected = await hmacHex(secret, JSON.stringify(p));
+  const sigOk = expected === file.signature;
+
+  const now = new Date();
+  const expires = new Date(p.expiresAt);
+  const expired = now > expires;
+  const daysLeft = Math.ceil((expires - now) / 86400000);
+
+  const isPaid = (p.methods || []).includes('All') || (p.methods || []).length > 1;
+  if (!sigOk) {
+    out.innerHTML = `
+      <div class="result-box err">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <span style="font-size:20px;">❌</span>
+          <div style="font-weight:800;font-size:15px;color:var(--danger);">Підпис недійсний</div>
+        </div>
+        <p style="font-size:13px;color:var(--slate-600);">
+          Файл ліцензії пошкоджений або підписаний іншим ключем. Перевір правильність VITE_LICENSE_SECRET.
+        </p>
+        <div class="sep"></div>
+        <div class="info-grid">
+          <span class="info-key">Очікуваний підпис</span><span class="info-val mono" style="font-size:10px;">${expected}</span>
+          <span class="info-key">Фактичний підпис</span><span class="info-val mono" style="font-size:10px;color:var(--danger);">${file.signature}</span>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const statusClass = expired ? 'err' : (daysLeft < 30 ? 'warn' : 'ok');
+  const statusIcon = expired ? '❌' : (daysLeft < 30 ? '⚠️' : '✅');
+  const statusText = expired ? 'Ліцензія прострочена' : `Ліцензія дійсна (${daysLeft} дн.)`;
+  const statusColor = expired ? 'var(--danger)' : (daysLeft < 30 ? 'var(--warn)' : 'var(--ok)');
+
+  out.innerHTML = `
+    <div class="result-box ${statusClass}">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <span style="font-size:20px;">${statusIcon}</span>
+        <div>
+          <div style="font-weight:800;font-size:15px;color:${statusColor};">${statusText}</div>
+          <div style="font-size:12px;color:var(--slate-400);margin-top:2px;">Підпис ✓</div>
+        </div>
+        <span class="badge ${isPaid ? 'badge-pro' : 'badge-free'}" style="margin-left:auto;">${isPaid ? 'PRO' : 'FREE'}</span>
+      </div>
+      <div class="info-grid">
+        <span class="info-key">License ID</span><span class="info-val mono">${p.licenseId || '—'}</span>
+        <span class="info-key">Організація</span><span class="info-val">${p.entityName || '—'}</span>
+        <span class="info-key">Код</span><span class="info-val mono">${p.entityCode || '—'}</span>
+        <span class="info-key">Email</span><span class="info-val">${p.email || '—'}</span>
+        <span class="info-key">Видана</span><span class="info-val">${fmtDate(p.issuedAt)}</span>
+        <span class="info-key">Дійсна до</span><span class="info-val" style="color:${expired ? 'var(--danger)' : 'inherit'}">${fmtDate(p.expiresAt)}</span>
+        <span class="info-key">Методи</span><span class="info-val">${(p.methods || []).join(', ')}</span>
+        <span class="info-key">Версія</span><span class="info-val mono">v${p.version || '1'}</span>
+        <span class="info-key">Підпис</span><span class="info-val mono" style="font-size:10px;">${file.signature}</span>
+      </div>
+    </div>`;
+}
+
+// ─── Key fingerprint ─────────────────────────────────────
+async function showFingerprint(secretInputId, displayId) {
+  const secret = document.getElementById(secretInputId).value.trim();
+  const el = document.getElementById(displayId);
+  if (!el) return;
+  if (!secret) { el.textContent = ''; return; }
+  const fp = (await hmacHex(secret, 'asp-fingerprint-v1')).slice(0, 8);
+  el.textContent = `Відбиток ключа: [${fp}]`;
+}
+
+document.getElementById('gen-secret').addEventListener('input', () => showFingerprint('gen-secret', 'gen-fp'));
+document.getElementById('val-secret').addEventListener('input', () => {
+  showFingerprint('val-secret', 'val-fp');
+  const raw = document.getElementById('val-json').value.trim();
+  if (raw) validatePasted();
+});
+</script>
+</body>
+</html>

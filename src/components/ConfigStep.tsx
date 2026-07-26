@@ -5,6 +5,7 @@ import { Settings, Info, Dices, Zap, Check } from 'lucide-react';
 import { t } from '../utils/translations';
 import { formatMoney } from '../utils/samplingEngine';
 import { MethodSelector } from './config/MethodSelector';
+import { LicenseState } from '../licensing/LicenseTypes';
 
 interface ConfigStepProps {
   config: SamplingConfig;
@@ -12,6 +13,8 @@ interface ConfigStepProps {
   totalPopulationValue: number;
   lang: Language;
   settings: GlobalSettings;
+  licenseState?: LicenseState;
+  onLockedMethodClick?: () => void;
 }
 
 interface NumberInputProps {
@@ -26,7 +29,7 @@ interface NumberInputProps {
 const getMethodName = (method: string, lang: Language) => {
     const map: Record<string, string> = {
         'MUS': 'musName', 'Random': 'randomName', 'Attribute': 'attrName', 'StopOrGo': 'stopOrGoName',
-        'FixedRandom': 'fixedRandomName', 'Cluster': 'clusterName', 'CVS': 'cvsName', 'Benford': 'benfordName',
+        'FixedRandom': 'fixedRandomName', 'Systematic': 'systematicName', 'Cluster': 'clusterName', 'CVS': 'cvsName', 'Benford': 'benfordName',
         'Pareto': 'paretoName', 'Percentile': 'percentileName', 'Grubbs': 'grubbsName', 'RiskAssessment': 'riskAssessmentName'
     };
     const key = map[method] || method;
@@ -44,26 +47,37 @@ const NumberInput: React.FC<NumberInputProps> = ({ value, onChange, placeholder,
         if (str === '') onChange(0); 
         else { const num = parseFloat(str); if (!isNaN(num)) onChange(num); }
     };
+    // Show placeholder only when field is empty string (not when user typed '0').
+    const isEmpty = localVal === '' && value === 0 && placeholder;
     return (
-        <input type="number" className={`${className} font-mono text-[13px]`} placeholder={placeholder} value={localVal === '0' && value === 0 && placeholder ? '' : localVal} onChange={handleChange} min={min} max={max} />
+        <input
+            type="number"
+            className={`${className} font-mono text-[13px] ${isEmpty ? 'text-slate-400' : ''}`}
+            placeholder={placeholder}
+            value={isEmpty ? '' : localVal}
+            onChange={handleChange}
+            min={min}
+            max={max}
+        />
     );
 };
 
-const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulationValue, lang, settings }) => {
+const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulationValue, lang, settings, licenseState, onLockedMethodClick }) => {
   const handleChange = (key: keyof SamplingConfig, value: any) => { setConfig({ ...config, [key]: value }); };
   const suggestedPM = Math.floor(totalPopulationValue * 0.01);
   const suggestedTrivial = Math.floor(suggestedPM * 0.05); 
 
   const getAnomalyDesc = () => { switch (config.anomalyMethod) { case 'ModifiedZ': return t('anomDescModZ', lang); case 'None': return t('anomDescNone', lang); default: return ''; } };
 
-  const showSeed = ['StopOrGo', 'MUS', 'CVS', 'Cluster', 'Random', 'FixedRandom', 'Attribute', 'RiskAssessment'].includes(config.method);
+  const showSeed = ['StopOrGo', 'MUS', 'CVS', 'Cluster', 'Random', 'FixedRandom', 'Systematic', 'Attribute', 'RiskAssessment'].includes(config.method);
   const showPM = ['MUS', 'CVS', 'Cluster', 'Random', 'FixedRandom'].includes(config.method);
-  const showTrivial = ['StopOrGo', 'MUS', 'CVS', 'Cluster', 'Random', 'FixedRandom', 'RiskAssessment'].includes(config.method);
+  const showTrivial = ['StopOrGo', 'MUS', 'CVS', 'Cluster', 'Random', 'FixedRandom', 'Systematic', 'RiskAssessment'].includes(config.method);
   const showAnomalySelect = ['CVS', 'Cluster', 'Random', 'FixedRandom'].includes(config.method);
   const showConfidence = config.method === 'MUS' || config.method === 'CVS' || config.method === 'Random';
   const showStopOrGoParams = config.method === 'StopOrGo';
   const showAttributeParams = config.method === 'Attribute';
   const showFixedSize = config.method === 'FixedRandom';
+  const showSystematic = config.method === 'Systematic';
   const showRiskParams = config.method === 'RiskAssessment';
   
   const showPareto = config.method === 'Pareto';
@@ -87,7 +101,7 @@ const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulat
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-stretch">
         <div className="lg:col-span-5 bg-white rounded-[2.5rem] pt-8 pb-8 px-4 lg:pt-10 lg:pb-10 lg:px-6 border border-slate-200 shadow-sm flex flex-col lg:h-[887px] overflow-hidden">
-            <MethodSelector currentMethod={config.method} onSelect={(id) => handleChange('method', id)} lang={lang} />
+            <MethodSelector currentMethod={config.method} onSelect={(id) => handleChange('method', id)} lang={lang} licenseTier={licenseState?.tier} onLockedClick={onLockedMethodClick} />
         </div>
 
         <div className="lg:col-span-7 bg-white rounded-[2.5rem] p-8 lg:p-10 border border-slate-200 shadow-sm flex flex-col pt-8 lg:pt-10 lg:h-[887px] overflow-y-auto custom-scrollbar">
@@ -141,6 +155,17 @@ const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulat
                     <p className="text-[12px] font-medium text-slate-400 mt-2.5 flex items-start gap-2 italic">
                         <Info className="w-4 h-4 flex-shrink-0 text-brand-400" />
                         {t('fixedSizeDesc', lang)}
+                    </p>
+                </div>
+            )}
+
+            {showSystematic && (
+                <div className="animate-fade-in">
+                    <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">{t('systematicStepLabel', lang)}</label>
+                    <NumberInput min={1} value={config.systematicStep || 10} onChange={(val) => handleChange('systematicStep', Math.max(1, val))} className="w-full px-5 py-3 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-bold text-[13px]" />
+                    <p className="text-[12px] font-medium text-slate-400 mt-2.5 flex items-start gap-2 italic">
+                        <Info className="w-4 h-4 flex-shrink-0 text-brand-400" />
+                        {t('systematicStepDesc', lang)}
                     </p>
                 </div>
             )}
@@ -298,7 +323,7 @@ const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulat
             {showTrivial && (
                 <div className="animate-fade-in">
                     <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">{t('trivialLabel', lang)}</label>
-                    <NumberInput value={config.clearlyTrivialThreshold} onChange={(val) => handleChange('clearlyTrivialThreshold', val)} className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-black text-[15px]" placeholder={formatMoney(suggestedTrivial, settings)} />
+                    <NumberInput min={0} value={config.clearlyTrivialThreshold} onChange={(val) => handleChange('clearlyTrivialThreshold', val)} className="w-full px-5 py-3.5 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-black text-[15px]" placeholder={formatMoney(suggestedTrivial, settings)} />
                     <p className="text-[12px] font-medium text-slate-400 mt-2.5 flex items-start gap-2 italic">
                         <Info className="w-4 h-4 flex-shrink-0 text-brand-400" />
                         {t('trivialDesc', lang)}

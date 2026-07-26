@@ -1,5 +1,5 @@
 
-export type SamplingMethod = 'StopOrGo' | 'MUS' | 'Attribute' | 'Random' | 'FixedRandom' | 'Cluster' | 'CVS' | 'Benford' | 'Pareto' | 'Percentile' | 'Grubbs' | 'RiskAssessment';
+export type SamplingMethod = 'StopOrGo' | 'MUS' | 'Attribute' | 'Random' | 'FixedRandom' | 'Systematic' | 'Cluster' | 'CVS' | 'Benford' | 'Pareto' | 'Percentile' | 'Grubbs' | 'RiskAssessment';
 export type CVSSubMethod = 'MeanPerUnit' | 'Difference' | 'Ratio';
 export type AnomalyMethod = 'ModifiedZ' | 'None';
 export type Language = 'en' | 'ua';
@@ -55,6 +55,7 @@ export interface SamplingConfig {
   
   // New Params for additional methods
   fixedSampleSize?: number; // For Fixed Random
+  systematicStep?: number; // For Systematic: step k between selected items; start derives from seed
   percentileCount?: number; // e.g. 5 for Top 5% / Bottom 5%
   paretoCoverage?: number; // e.g. 80 for Pareto
   grubbsAlpha?: number; // e.g. 0.05

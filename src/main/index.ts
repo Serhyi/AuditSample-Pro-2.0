@@ -4,14 +4,32 @@ import { AppOrchestrator } from './core/AppOrchestrator';
 
 let orchestrator: AppOrchestrator;
 let splash: BrowserWindow | null;
+let mainWindowStarted = false;
+const SPLASH_MIN_MS = 2000; // мінімальний час показу splash (скорочено з 3000)
+
+// Починаємо прогрів sql.js одразу при старті процесу — паралельно зі
+// створенням BrowserWindow і завантаженням рендерера. Це економить ~300-500 ms,
+// які інакше витрачались би синхронно під час першого виклику initialize().
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const sqlJsWarmup: Promise<any> = (async () => {
+  try {
+    const initSqlJs = require('sql.js');
+    return await initSqlJs();
+  } catch {
+    return null;
+  }
+})();
+let splashShownAt = 0;
 
 function createWindow() {
   splash = new BrowserWindow({
     width: 600,
     height: 400,
-    transparent: true,
     frame: false,
     alwaysOnTop: true,
+    resizable: false,
+    show: false, // показуємо тільки коли вміст готовий, щоб не блимало порожнє вікно
+    backgroundColor: '#ffffff', // непрозорий фон малюється миттєво (без композитора)
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true
@@ -20,10 +38,33 @@ function createWindow() {
 
   splash.loadFile(path.join(__dirname, 'splash.html'));
 
+  // Показуємо splash одразу, щойно його HTML готовий до показу.
+  splash.once('ready-to-show', () => {
+    splash?.show();
+    splashShownAt = Date.now();
+  });
+
+  // Важку роботу (створення головного вікна, завантаження великого бандла та
+  // ініціалізація сервісів) відкладаємо до того, як splash реально намалюється.
+  // Інакше головний потік був би зайнятий завантаженням бандла, і splash
+  // з'являвся б пізно та на дуже короткий час.
+  splash.webContents.once('did-finish-load', () => {
+    setupMainWindow();
+  });
+
+  // Запобіжник: якщо splash чомусь не завантажився, усе одно стартуємо.
+  setTimeout(() => setupMainWindow(), 1500);
+}
+
+function setupMainWindow() {
+  if (mainWindowStarted) return;
+  mainWindowStarted = true;
+
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
     show: false, // Don't show the main window immediately
+    backgroundColor: '#f8fafc', // уникаємо білого спалаху при показі
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -35,6 +76,7 @@ function createWindow() {
   });
 
   orchestrator = new AppOrchestrator();
+  orchestrator.sqlJsWarmup = sqlJsWarmup;
   orchestrator.registerIpcHandlers();
 
   if (process.env.VITE_DEV_SERVER_URL) {
@@ -44,20 +86,24 @@ function createWindow() {
     win.loadFile(path.join(__dirname, 'dist', 'index.html'));
   }
 
-  // Show main window and close splash screen when ready
+  // Показуємо головне вікно і закриваємо splash, коли вміст готовий.
   win.once('ready-to-show', () => {
-    setTimeout(() => {
-      if (splash) {
-        splash.close();
-        splash = null;
-      }
-      try {
-        win.maximize(); // Optional: open in max mode
-        win.show();
-      } catch (e) {
-        console.error('Failed to maximize or show window', e);
-      }
-    }, 50); // fast splash screen duration
+    try {
+      win.maximize(); // Optional: open in max mode
+      win.show();
+    } catch (e) {
+      console.error('Failed to maximize or show window', e);
+    }
+    if (splash) {
+      const elapsed = Date.now() - (splashShownAt || Date.now());
+      const remaining = Math.max(0, SPLASH_MIN_MS - elapsed);
+      setTimeout(() => {
+        if (splash) {
+          splash.close();
+          splash = null;
+        }
+      }, remaining);
+    }
   });
 }
 

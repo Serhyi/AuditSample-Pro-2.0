@@ -1,15 +1,19 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { ChevronRight, Check, Globe, Info, X, Settings as SettingsIcon, Loader2, Award, BookOpen, AlertCircle, Save, FolderOpen } from 'lucide-react';
+import { ChevronRight, Check, Globe, Info, X, Settings as SettingsIcon, Loader2, Award, BookOpen, AlertCircle, Save, FolderOpen, KeyRound } from 'lucide-react';
 import ImportStep from './components/ImportStep';
 import ConfigStep from './components/ConfigStep';
 import ResultsStep from './components/ResultsStep';
-import { TransactionItem, SamplingConfig, SamplingResult, Currency, ColumnIndices, GlobalSettings } from './types';
+import { LicenseActivationModal } from './components/LicenseActivationModal';
+import { UpgradeModal } from './components/UpgradeModal';
+import { TransactionItem, SamplingConfig, SamplingResult, Currency, ColumnIndices, GlobalSettings, Language } from './types';
 import { runSampling } from './utils/samplingEngine';
 import { t } from './utils/translations';
 import { useAppStorage } from './contexts/StorageContext';
 import { usePopulationAdapter } from './adapters/usePopulationAdapter';
 import { isElectron } from './utils/isElectron';
+import { useLicense } from './licensing/useLicense';
+import { FREE_METHODS } from './components/config/MethodSelector';
 
 const LogoFull = ({ height = 40 }: { height?: number }) => {
   return (
@@ -38,11 +42,50 @@ const LogoMark = ({ size = 32 }: { size?: number }) => (
   <LogoFull height={size} />
 );
 
+const translateStage = (stage: string, l: Language): string => {
+    if (l === 'en') return stage;
+    return stage
+        .replace('Reading project file...', 'Зчитування файлу...')
+        .replace('Opening project DB...', 'Відкриття БД проєкту...')
+        .replace('Parsing project JSON...', 'Обробка проєкту...')
+        .replace('Loading project data...', 'Завантаження даних...')
+        .replace('Loading population...', 'Завантаження вибірки...')
+        .replace('Reading file...', 'Зчитування файлу...')
+        .replace('Validating data...', 'Валідація даних...')
+        .replace('Opening file...', 'Відкриття файлу...')
+        .replace('Importing Excel...', 'Імпортування Excel...')
+        .replace('Reading exported project...', 'Зчитування експортованого проєкту...')
+        .replace('Importing...', 'Імпорт...')
+        .replace('Creating schema...', 'Створення структури...')
+        .replace('Loading JSON/CSV...', 'Завантаження...')
+        .replace(/Parsing (\d+) rows\.\.\./, 'Обробка $1 рядків...')
+        .replace(/Creating indices \((.*?)\)\.\.\./, 'Створення індексів ($1)...')
+        // Sampling progress (emitted by SamplingService in canonical English)
+        .replace('Preparing database...', 'Підготовка бази даних...')
+        .replace('Computing population...', 'Обчислення генеральної сукупності...')
+        .replace('Selecting trivial items...', 'Відбір тривіальних елементів...')
+        .replace('Selecting key items...', 'Відбір ключових елементів...')
+        .replace('Applying sampling method...', 'Застосування методу відбору...')
+        .replace('Analyzing Pareto distribution...', 'Аналіз розподілу Парето (визначення 80% вартості)...')
+        .replace('Selecting largest items...', 'Вибір найбільших елементів таблиці...')
+        .replace(/Fetching selected items \((\d+)\)\.\.\./, 'Отримання даних вибраних елементів ($1)...')
+        .replace('Calculating MUS interval...', 'Розрахунок інтервалу для Монетарної вибірки...')
+        .replace(/Applying interval \((.*?)\)\.\.\./, 'Застосування інтервалу ($1)...')
+        .replace(/Performing random selection \((\d+) items\)\.\.\./, 'Виконання випадкового вибору ($1 елементів)...')
+        .replace('Building results...', 'Формування результатів...')
+        .replace('Complete', 'Готово')
+        .replace('Parsing...', 'Обробка...');
+};
+
 const App: React.FC = () => {
   const { settings, updateSettings, isReady } = useAppStorage();
-  
+
   const lang = settings.language;
   const currency = settings.currency;
+
+  const { licenseState, activateLicense } = useLicense();
+  const [showLicenseModal, setShowLicenseModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -54,7 +97,7 @@ const App: React.FC = () => {
   const [columnIndices, setColumnIndices] = useState<ColumnIndices>({id: -1, date: -1, amount: -1});
 
   const [config, setConfig] = useState<SamplingConfig>({
-    method: 'MUS',
+    method: 'StopOrGo',
     confidenceLevel: 90,
     tolerableMisstatement: 0,
     expectedMisstatement: 0,
@@ -72,6 +115,13 @@ const App: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [samplingError, setSamplingError] = useState<string | null>(null);
 
+  // Reset method to StopOrGo if free tier has a locked method saved in config
+  useEffect(() => {
+    if (licenseState.tier === 'free') {
+      setConfig(prev => !FREE_METHODS.includes(prev.method) ? { ...prev, method: 'StopOrGo' } : prev);
+    }
+  }, [licenseState.tier]);
+
   const steps = [t('step1', lang), t('step2', lang), t('step3', lang)];
 
   const exportProject = async () => {
@@ -88,13 +138,13 @@ const App: React.FC = () => {
       columnIndices,
       config,
       results,
-      settings
+      settings,
+      license: licenseState.license
     };
-    
+
     if (isElectron() && window.api && isVirtual) {
         try {
             await window.api.export.project(projectData);
-            alert(t('msgProjectSaved', lang));
         } catch (e: any) {
             console.error(e);
             alert(t('errSaveError', lang) + e.message);
@@ -151,7 +201,6 @@ const App: React.FC = () => {
             
             setImportProgress({ pct: 100, stage: t('msgComplete', lang) });
             setTimeout(() => {
-                alert(t('msgProjectOpened', lang));
                 setIsProcessing(false);
                 setImportProgress(null);
             }, 300);
@@ -189,7 +238,6 @@ const App: React.FC = () => {
                 
                 setImportProgress({ pct: 100, stage: t('msgComplete', lang) });
                 setTimeout(() => {
-                    alert(t('msgProjectOpened', lang));
                     setIsProcessing(false);
                     setImportProgress(null);
                 }, 300);
@@ -316,11 +364,6 @@ const App: React.FC = () => {
   };
 
 
-  useEffect(() => {
-    if (totalPopValue > 0 && config.tolerableMisstatement === 0) {
-        setConfig(prev => ({ ...prev, tolerableMisstatement: Math.floor(totalPopValue * 0.01) }));
-    }
-  }, [totalPopValue, config.tolerableMisstatement]);
 
   const handleRunSampling = async () => {
     setIsProcessing(true);
@@ -338,10 +381,14 @@ const App: React.FC = () => {
     await new Promise(resolve => setTimeout(resolve, 50));
     
     const finalConfig = { ...config };
+    // Enforce free-tier restriction at execution level, not just UI
+    if (licenseState.tier === 'free' && !FREE_METHODS.includes(finalConfig.method)) {
+        finalConfig.method = 'StopOrGo';
+    }
     if (!finalConfig.tolerableMisstatement) {
         finalConfig.tolerableMisstatement = Math.floor(totalPopValue * 0.01);
     }
-    if (!finalConfig.clearlyTrivialThreshold) {
+    if (finalConfig.clearlyTrivialThreshold === undefined || finalConfig.clearlyTrivialThreshold === null) {
         finalConfig.clearlyTrivialThreshold = Math.floor(finalConfig.tolerableMisstatement * 0.05);
     }
 
@@ -412,28 +459,6 @@ const App: React.FC = () => {
     );
   }
 
-  const translateStage = (stage: string, l: Language) => {
-      if (l === 'en') return stage;
-      return stage
-          .replace('Reading project file...', 'Зчитування файлу...')
-          .replace('Opening project DB...', 'Відкриття БД проєкту...')
-          .replace('Parsing project JSON...', 'Обробка проєкту...')
-          .replace('Loading project data...', 'Завантаження даних...')
-          .replace('Loading population...', 'Завантаження вибірки...')
-          .replace('Reading file...', 'Зчитування файлу...')
-          .replace('Validating data...', 'Валідація даних...')
-          .replace('Opening file...', 'Відкриття файлу...')
-          .replace('Importing Excel...', 'Імпортування Excel...')
-          .replace('Reading exported project...', 'Зчитування експортованого проєкту...')
-          .replace('Importing...', 'Імпорт...')
-          .replace('Creating schema...', 'Створення структури...')
-          .replace('Loading JSON/CSV...', 'Завантаження...')
-          .replace(/Parsing (\d+) rows\.\.\./, 'Обробка $1 рядків...')
-          .replace(/Creating indices \((.*?)\)\.\.\./, 'Створення індексів ($1)...')
-          .replace('Complete', 'Готово')
-          .replace('Parsing...', 'Обробка...');
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 text-neutral-900 flex flex-col selection:bg-brand-100">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
@@ -463,6 +488,11 @@ const App: React.FC = () => {
 
              <button onClick={() => setShowSettingsModal(true)} title={t('settingsTitle', lang)} className="p-2 text-slate-500 hover:text-brand-600 hover:bg-slate-50 rounded-full transition-all"><SettingsIcon className="w-5 h-5" /></button>
              <button onClick={() => setShowInfoModal(true)} title={t('aboutBtn', lang)} className="p-2 text-slate-500 hover:text-brand-600 hover:bg-slate-50 rounded-full transition-all"><Info className="w-5 h-5" /></button>
+             <button onClick={() => setShowLicenseModal(true)} title="Ліцензія" className="flex items-center gap-2 text-[11px] font-black border px-3 py-1.5 rounded-full uppercase tracking-tighter shadow-sm transition-all bg-white hover:border-brand-300 hover:text-brand-600 text-slate-600 border-slate-200">
+               <KeyRound className="w-3.5 h-3.5 text-brand-500" />
+               {licenseState.tier === 'paid' ? 'PRO' : 'FREE'}
+               <span className={`w-2 h-2 rounded-full ${licenseState.tier === 'paid' ? 'bg-brand-500' : 'bg-slate-300'}`} />
+             </button>
              <button onClick={toggleLanguage} className="flex items-center gap-2 text-[11px] font-black text-slate-600 hover:text-brand-600 transition-all bg-white border border-slate-200 hover:border-brand-300 px-4 py-1.5 rounded-full uppercase tracking-tighter shadow-sm"><Globe className="w-3.5 h-3.5 text-brand-500" />{lang === 'en' ? 'UA' : 'EN'}</button>
           </div>
         </div>
@@ -489,7 +519,7 @@ const App: React.FC = () => {
                   }`}>
                     {currentStep > idx ? <Check className="w-4 h-4 stroke-[3px]" /> : <span className="text-xs font-black">{idx + 1}</span>}
                   </div>
-                  <span className={`ml-3 text-[13px] font-bold tracking-tight ${currentStep === idx ? 'text-neutral-900' : 'text-slate-400'}`}>
+                  <span className={`ml-3 font-bold tracking-tight transition-all duration-300 ${currentStep === idx ? 'text-neutral-900 text-[20px]' : 'text-slate-400 text-[13px]'}`}>
                     {step}
                   </span>
                 </div>
@@ -555,20 +585,22 @@ const App: React.FC = () => {
 
           {currentStep === 1 && (
             <div className="space-y-8">
-                <ConfigStep 
-                    config={config} 
-                    setConfig={setConfig} 
+                <ConfigStep
+                    config={config}
+                    setConfig={setConfig}
                     totalPopulationValue={totalPopValue}
                     lang={lang}
                     settings={settings}
+                    licenseState={licenseState}
+                    onLockedMethodClick={() => setShowUpgradeModal(true)}
                 />
                 <div className="flex justify-between">
-                     <button onClick={() => setCurrentStep(0)} className="text-brand-600 bg-white border border-brand-200 hover:bg-brand-50 px-10 py-3.5 rounded-xl text-sm font-bold transition-all shadow-sm">{t('back', lang)}</button>
+                     <button onClick={() => { setConfig(prev => ({ ...prev, tolerableMisstatement: 0, clearlyTrivialThreshold: 0 })); setCurrentStep(0); }} className="text-brand-600 bg-white border border-brand-200 hover:bg-brand-50 px-10 py-3.5 rounded-xl text-sm font-bold transition-all shadow-sm">{t('back', lang)}</button>
                     <button onClick={handleRunSampling} disabled={isProcessing} className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-12 py-3.5 rounded-xl text-sm font-bold transition-all shadow-[0_4px_12px_rgba(0,133,75,0.25)] disabled:opacity-70">
                       {isProcessing ? (
                           <>
                               <Loader2 className="w-5 h-5 animate-spin" />
-                              {samplingProgressStage ? samplingProgressStage : t('processing', lang)}
+                              {samplingProgressStage ? translateStage(samplingProgressStage, lang) : t('processing', lang)}
                           </>
                       ) : t('run', lang)}
                     </button>
@@ -588,6 +620,7 @@ const App: React.FC = () => {
                   colIndices={columnIndices}
                   getFullPopulation={getFullPopulation}
                   settings={settings}
+                  license={licenseState.license}
                 />
                 <div className="flex justify-start">
                      <button onClick={() => setCurrentStep(1)} className="text-white bg-brand-600 hover:bg-brand-700 px-10 py-3.5 rounded-xl text-sm font-bold transition-all shadow-[0_4px_12px_rgba(0,133,75,0.25)]">{t('restart', lang)}</button>
@@ -638,6 +671,7 @@ const App: React.FC = () => {
 
             <div className="flex-1 overflow-y-auto p-9 custom-scrollbar bg-white">
                {activeTab === 'about' ? (
+
                  <div className="space-y-12 animate-fade-in">
                     <section>
                       <div className="flex items-center gap-3 mb-6">
@@ -671,12 +705,62 @@ const App: React.FC = () => {
                     </div>
                  </div>
                ) : (
-                 <div className="animate-fade-in space-y-8">
-                    <div className="bg-brand-50/50 border border-brand-100 p-8 rounded-2xl text-brand-900 shadow-sm">
-                       <h3 className="font-bold text-brand-800 uppercase text-[11px] tracking-widest mb-6 border-b border-brand-100 pb-3">{t('licenseTermsLabel', lang)}</h3>
-                       <p className="text-[13px] font-medium whitespace-pre-wrap leading-relaxed opacity-80">{t('licenseContent', lang)}</p>
-                    </div>
-                    <p className="text-[11px] text-slate-400 text-center font-bold uppercase tracking-[0.2em] pt-4">{t('copyright', lang)}</p>
+                 <div className="animate-fade-in space-y-6">
+                   {/* Status badge */}
+                   <div className={`flex items-center justify-between p-5 rounded-2xl border ${licenseState.tier === 'paid' ? 'bg-brand-50 border-brand-200' : 'bg-amber-50 border-amber-200'}`}>
+                     <div className="flex items-center gap-3">
+                       <div className={`w-3 h-3 rounded-full ${licenseState.tier === 'paid' ? 'bg-brand-500' : 'bg-amber-400'}`} />
+                       <span className={`text-[12px] font-black uppercase tracking-widest ${licenseState.tier === 'paid' ? 'text-brand-700' : 'text-amber-700'}`}>
+                         {licenseState.tier === 'paid' ? t('licenseProBadge', lang) : t('licenseFreeBadge', lang)}
+                       </span>
+                     </div>
+                     <button
+                       onClick={() => { setShowInfoModal(false); setShowLicenseModal(true); }}
+                       className={`text-[11px] font-bold px-4 py-2 rounded-xl transition-all ${licenseState.tier === 'paid' ? 'bg-white border border-brand-200 text-brand-600 hover:bg-brand-50' : 'bg-brand-600 text-white hover:bg-brand-700 shadow-sm'}`}
+                     >
+                       {licenseState.tier === 'paid' ? t('licenseReplace', lang) : t('licenseActivate', lang)}
+                     </button>
+                   </div>
+
+                   {/* FREE notice */}
+                   {licenseState.tier === 'free' && (
+                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-[12px] text-amber-800 font-medium">
+                       ⚠ {t('licenseFreeNotice', lang)}
+                     </div>
+                   )}
+
+                   {/* PRO license holder info */}
+                   {licenseState.tier === 'paid' && licenseState.license && (
+                     <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                       <h4 className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-4">{t('licensedTo', lang)}</h4>
+                       <div className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">
+                         {[
+                           [t('licensedTo', lang), licenseState.license.entityName],
+                           ['ЄДРПОУ / ІПН', licenseState.license.entityCode],
+                           ['Email', licenseState.license.email],
+                           [t('licenseIssued', lang), new Date(licenseState.license.issuedAt).toLocaleDateString('uk-UA')],
+                           [t('licenseExpires', lang), new Date(licenseState.license.expiresAt).toLocaleDateString('uk-UA')],
+                           [t('licenseId', lang), licenseState.license.licenseId],
+                           [t('licenseMethods', lang), licenseState.license.methods.join(', ')],
+                         ].map(([label, value]) => (
+                           <React.Fragment key={label}>
+                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide whitespace-nowrap">{label}</span>
+                             <span className="text-[12px] font-semibold text-slate-800 font-mono break-all">{value}</span>
+                           </React.Fragment>
+                         ))}
+                       </div>
+                     </div>
+                   )}
+
+                   {/* License text */}
+                   <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6">
+                     <h3 className="font-bold text-slate-500 uppercase text-[10px] tracking-widest mb-4 border-b border-slate-200 pb-3">{t('licenseTermsLabel', lang)}</h3>
+                     <p className="text-[12px] font-medium whitespace-pre-wrap leading-relaxed text-slate-600">
+                       {licenseState.tier === 'paid' ? t('licenseContentPro', lang) : t('licenseContentFree', lang)}
+                     </p>
+                   </div>
+
+                   <p className="text-[11px] text-slate-400 text-center font-bold uppercase tracking-[0.2em] pt-2">{t('copyright', lang)}</p>
                  </div>
                )}
             </div>
@@ -742,6 +826,20 @@ const App: React.FC = () => {
                   </div>
               </div>
           </div>
+      )}
+
+      {showLicenseModal && (
+        <LicenseActivationModal
+          onActivate={activateLicense}
+          onClose={() => setShowLicenseModal(false)}
+        />
+      )}
+
+      {showUpgradeModal && (
+        <UpgradeModal
+          onActivate={() => setShowLicenseModal(true)}
+          onClose={() => setShowUpgradeModal(false)}
+        />
       )}
 
       {/* Global Processing Overlay */}

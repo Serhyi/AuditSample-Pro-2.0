@@ -6,6 +6,7 @@ export const METHOD_PREFIX_MAP: Record<string, string> = {
   RiskAssessment: 'riskAssessment',
   Random: 'random',
   FixedRandom: 'fixedRandom',
+  Systematic: 'systematic',
   CVS: 'cvs',
   Attribute: 'attr',
   StopOrGo: 'stopOrGo',
@@ -38,15 +39,11 @@ export function getDynamicMethodDescription(config: SamplingConfig, lang: Langua
 
 
 import { formatMoney } from '../utils/samplingEngine';
+import { getReliabilityFactor, getExpansionFactor } from '../statistics/reliabilityFactor';
 
 export function getCalculationDetails(config: SamplingConfig, results: SamplingResult, settings: GlobalSettings, lang: string): { vars: Record<string, string|number>, subst: string } {
     const isUa = lang === 'ua';
-    let rf = 3.0; // 95%
-    if (config.confidenceLevel === 70) rf = 1.20;
-    else if (config.confidenceLevel === 80) rf = 1.61;
-    else if (config.confidenceLevel === 90) rf = 2.31;
-    else if (config.confidenceLevel === 95) rf = 3.00;
-    else if (config.confidenceLevel === 99) rf = 4.61;
+    const rf = getReliabilityFactor(config.confidenceLevel);
     
     // Remaining population value (Book Value - Key Items - Trivial)
     const bv = results.populationValue - results.keyItems.reduce((acc, curr) => acc + Math.abs(curr.amount), 0) - results.trivialValue;
@@ -61,12 +58,24 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
     const confLevelStr = isUa ? 'Рівень впевненості:' : 'Confidence Level:';
     
     if (config.method === 'MUS') {
+        const expectedMisstatement = config.expectedMisstatement || 0;
+        const expansionFactor = getExpansionFactor(config.confidenceLevel);
+        const denominator = Math.max(pm - expectedMisstatement * expansionFactor, pm * 0.01);
+        const denomStr = formatMoney(denominator, settings);
+
         vars[isUa ? 'Залишкова сукупність (BV):' : 'Residual Book Value (BV):'] = bvStr;
         vars[isUa ? `Коефіцієнт RF (${config.confidenceLevel}%):` : `Reliability Factor RF (${config.confidenceLevel}%):`] = rf;
         vars[isUa ? 'Допустиме викривлення (PM):' : 'Tolerable Misstatement (PM):'] = pmStr;
-        
-        const calcN = Math.ceil((bv * rf) / pm);
-        subst = `n = (${bvStr} × ${rf}) / ${pmStr}\nn = ${calcN}`;
+
+        const calcN = Math.ceil((bv * rf) / denominator);
+        if (expectedMisstatement > 0) {
+            const eeStr = formatMoney(expectedMisstatement, settings);
+            vars[isUa ? 'Очікуване викривлення (EM):' : 'Expected Misstatement (EM):'] = eeStr;
+            vars[isUa ? `Коефіцієнт розширення (EF):` : `Expansion Factor (EF):`] = expansionFactor;
+            subst = `n = (${bvStr} × ${rf}) / (${pmStr} − ${eeStr} × ${expansionFactor})\nn = (${bvStr} × ${rf}) / ${denomStr}\nn = ${calcN}`;
+        } else {
+            subst = `n = (${bvStr} × ${rf}) / ${pmStr}\nn = ${calcN}`;
+        }
     } else if (config.method === 'Random' || config.method === 'FixedRandom') {
         vars[methodStr] = config.method;
         if (config.method === 'Random') {
@@ -75,6 +84,17 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
         }
         vars[isUa ? 'Кількість відібраних елементів (n):' : 'Sample Size (n):'] = results.samplingItems.length;
         subst = `n = ${results.samplingItems.length}`;
+    } else if (config.method === 'Systematic') {
+        const sysStep = Math.max(1, Math.floor(config.systematicStep || 10));
+        const sysN = Math.max(1, results.populationSize - results.trivialCount - (results.keyItems?.length || 0));
+        const sysStart = (Math.floor(config.seed || 0) % sysN) + 1;
+        vars[methodStr] = config.method;
+        vars[isUa ? 'Зерно генератора (Seed):' : 'Seed:'] = config.seed || 0;
+        vars[isUa ? 'Залишкова сукупність (N):' : 'Residual Population (N):'] = sysN;
+        vars[isUa ? 'Початковий елемент (старт = seed mod N + 1):' : 'Starting Item (start = seed mod N + 1):'] = sysStart;
+        vars[isUa ? 'Крок відбору (k):' : 'Selection Step (k):'] = sysStep;
+        vars[isUa ? 'Кількість відібраних елементів (n):' : 'Sample Size (n):'] = results.samplingItems.length;
+        subst = `start = ${config.seed || 0} mod ${sysN} + 1 = ${sysStart}\niₙ = ${sysStart} + (n − 1) × ${sysStep}\nn = ${results.samplingItems.length}`;
     } else if (config.method === 'CVS') {
         vars[isUa ? 'Залишкова сукупність (BV):' : 'Residual Book Value (BV):'] = bvStr;
         vars[confLevelStr] = `${config.confidenceLevel}%`;
@@ -124,9 +144,10 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
 export function getStaticFormula(method: string, lang: string = 'en'): string {
     const isUa = lang === 'ua';
     switch(method) {
-        case 'MUS': return 'n = (BV × RF) / PM';
+        case 'MUS': return 'n = (BV × RF) / (PM − EM × EF)';
         case 'Random': return 'n = (N × Z² × p × (1-p)) / (E²)';
         case 'FixedRandom': return 'n = const';
+        case 'Systematic': return 'iₙ = start + (n − 1) × k';
         case 'CVS': return 'n = ((N × Z × σ) / PM)²';
         case 'Attribute': return 'n = AICPA_Table(ROR, TDR, EDR)';
         case 'StopOrGo': return 'n = n1 + n2';

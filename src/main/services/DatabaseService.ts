@@ -5,14 +5,20 @@ export class DatabaseService {
   public dbPath: string | null = null;
   private SQL: any = null;
 
-  public async initialize(projectId: string, directory: string): Promise<void> {
+  // Accept an optional pre-warmed sql.js instance so we don't pay the cold-start
+  // cost again when initialize() is called after startup warmup in index.ts.
+  public async initialize(projectId: string, directory: string, prewarmedSQL?: any): Promise<void> {
     try {
       this.dbPath = `${directory}/${projectId}.sqlite`;
       console.log(`[DatabaseService] Initializing dbPath: ${this.dbPath}`);
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const initSqlJs = require('sql.js');
-      console.log(`[DatabaseService] requiring sql.js ...`);
-      this.SQL = await initSqlJs();
+      if (prewarmedSQL) {
+        this.SQL = prewarmedSQL;
+      } else {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const initSqlJs = require('sql.js');
+        console.log(`[DatabaseService] requiring sql.js ...`);
+        this.SQL = await initSqlJs();
+      }
       console.log(`[DatabaseService] initSqlJs() awaited successfully`);
       if (fs.existsSync(this.dbPath)) {
         console.log(`[DatabaseService] db file exists, loading from fs: ${this.dbPath}`);
@@ -122,7 +128,7 @@ export class DatabaseService {
     };
   }
 
-  public async execute(sql: string): Promise<void> {
+  public async execute(sql: string, params: any[] = []): Promise<void> {
     if (sql.trim().toUpperCase() === 'CHECKPOINT') {
       if (this.dbPath) {
         const data = this.db.export();
@@ -130,7 +136,7 @@ export class DatabaseService {
       }
       return;
     }
-    this.db.run(sql);
+    this.db.run(sql, params);
   }
 
   public async close(): Promise<void> {

@@ -1,60 +1,39 @@
 
 // ResultsStep component
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { isElectron } from '../utils/isElectron';
+import React, { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
 
-const SyncedScrollContainer = ({ children, setRefs }: any) => {
-    const topScrollRef = React.useRef<HTMLDivElement>(null);
+const SyncedScrollContainer = ({ children, setRefs, syncScrollRef }: any) => {
     const tableScrollRef = React.useRef<HTMLDivElement>(null);
-    const contentRef = React.useRef<HTMLDivElement>(null);
-    const [width, setWidth] = React.useState(0);
 
     React.useEffect(() => {
         if (setRefs && tableScrollRef.current) {
             setRefs(tableScrollRef.current);
         }
-        
-        if (!contentRef.current) return;
-        const ro = new ResizeObserver((entries) => {
-            setWidth(entries[0].target.scrollWidth);
-        });
-        ro.observe(contentRef.current);
-        return () => ro.disconnect();
     }, [setRefs]);
 
-    const onTopScroll = () => {
-        if (tableScrollRef.current && topScrollRef.current) tableScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
-    };
-    const onTableScroll = () => {
-        if (tableScrollRef.current && topScrollRef.current) topScrollRef.current.scrollLeft = tableScrollRef.current.scrollLeft;
+    const onScroll = () => {
+        if (syncScrollRef?.current && tableScrollRef.current) {
+            syncScrollRef.current.scrollLeft = tableScrollRef.current.scrollLeft;
+        }
     };
 
     return (
-        <div className="flex flex-col w-full relative">
-            <div 
-                ref={topScrollRef} 
-                onScroll={onTopScroll} 
-                className="overflow-x-auto top-scrollbar-sync w-full sticky top-0 z-50 bg-slate-50 border-b border-slate-200"
-                style={{ marginBottom: '-1px' }}
-            >
-                <div style={{ width, height: '1px' }} />
-            </div>
-            <div 
-                ref={tableScrollRef} 
-                onScroll={onTableScroll} 
-                className="overflow-x-auto custom-scrollbar w-full"
-            >
-                <div ref={contentRef} className="min-w-max w-full">
-                    {children}
-                </div>
+        <div
+            ref={tableScrollRef}
+            onScroll={onScroll}
+            className="overflow-x-auto custom-scrollbar w-full"
+        >
+            <div className="min-w-max w-full">
+                {children}
             </div>
         </div>
     );
 };
 
 import { SampledItem, SamplingResult, SamplingConfig, Language, Currency, ColumnIndices, TransactionItem, GlobalSettings } from '../types';
+import { LicensePayload } from '../licensing/LicenseTypes';
 import { calculateExtrapolation, formatMoney, formatDate, smartFormat, methodsSupportingAnomalies } from '../utils/samplingEngine';
-import { Upload, Download, CheckCircle2, AlertCircle, ShieldCheck, BookOpen, Sigma, PlayCircle, StopCircle, Calculator, Database, Info, Layers, Target } from 'lucide-react';
+import { Upload, CheckCircle2, AlertCircle, ShieldCheck, BookOpen, Sigma, PlayCircle, StopCircle, Calculator, Database, Info, Layers, Target } from 'lucide-react';
 import { t } from '../utils/translations';
 import { exportToExcel } from '../export/excel';
 import { getCalculationDetails, getStaticFormula, METHOD_PREFIX_MAP, getDynamicMethodName, getDynamicMethodDescription } from './resultsUtils';
@@ -69,25 +48,9 @@ interface ResultsStepProps {
   colIndices: ColumnIndices;
   getFullPopulation: () => TransactionItem[];
   settings: GlobalSettings;
+  license?: LicensePayload | null;
 }
 
-interface SectionProps {
-    title: string;
-    children?: React.ReactNode;
-    icon?: any;
-}
-
-const Section = ({ title, children, icon: Icon }: SectionProps) => (
-    <div className="space-y-2 border-b border-slate-100 pb-5 last:border-0">
-        <h4 className="text-[10px] font-black text-brand-600 uppercase tracking-widest flex items-center gap-2">
-            {Icon && <Icon className="w-3.5 h-3.5" />}
-            {title}
-        </h4>
-        <div className="text-[12px] text-slate-700 leading-relaxed font-medium">
-            {children}
-        </div>
-    </div>
-);
 
 const DistributionGraphic: React.FC<{ items: SampledItem[], keys: SampledItem[] }> = ({ items, keys }) => {
     const all = [...items, ...keys];
@@ -143,48 +106,15 @@ const MoneyInput: React.FC<{
 
 
 
-const TablePagination: React.FC<{ items: SampledItem[], title?: string, isKey?: boolean, renderTable: (items: SampledItem[], title?: string, isKey?: boolean) => React.ReactNode }> = ({ items, title, isKey, renderTable }) => {
-   const [page, setPage] = useState(0);
-   const PAGE_SIZE = 50;
-   
-   React.useEffect(() => { setPage(0); }, [items.length, title]);
-
-   const paginated = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-   const totalPages = Math.ceil(items.length / PAGE_SIZE);
-
+const TablePagination = memo<{ items: SampledItem[], title?: string, isKey?: boolean, renderTable: (items: SampledItem[], title?: string, isKey?: boolean) => React.ReactNode }>(({ items, title, isKey, renderTable }) => {
    return (
-       <div className="flex flex-col h-full relative space-y-4 pb-4">
-          <div className="flex-1">
-              {renderTable(paginated, title, isKey)}
-          </div>
-          {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 bg-white border border-slate-200 shadow-sm rounded-xl mx-6 mt-4">
-                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                      Page {page + 1} of {totalPages} <span className="mx-2">|</span> {items.length} items total
-                  </span>
-                  <div className="flex items-center gap-2">
-                      <button 
-                         disabled={page === 0} 
-                         onClick={() => setPage(p => p - 1)}
-                         className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 text-[11px] font-bold hover:bg-slate-50 disabled:opacity-50 transition-colors"
-                      >
-                         &larr; Prev
-                      </button>
-                      <button 
-                         disabled={page >= totalPages - 1} 
-                         onClick={() => setPage(p => p + 1)}
-                         className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 text-[11px] font-bold hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200 disabled:opacity-50 transition-colors"
-                      >
-                         Next &rarr;
-                      </button>
-                  </div>
-              </div>
-          )}
+       <div className="flex flex-col h-full relative pb-4">
+           {renderTable(items, title, isKey)}
        </div>
    );
-};
+});
 
-const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onResultsUpdate, config, lang, currency, sourceHeaders, colIndices, getFullPopulation, settings }) => {
+const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onResultsUpdate, config, lang, currency, sourceHeaders, colIndices, getFullPopulation, settings, license }) => {
   const [activeTab, setActiveTab] = useState<'sample' | 'key'>('sample');
 
   const extrapolation = useMemo(() => calculateExtrapolation(currentResults, config), [currentResults, config]);
@@ -212,7 +142,12 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
   const stage2Audited = useMemo(() => stage2Items.filter(i => i.auditedValue !== ''), [stage2Items]);
   const stage2Errors = useMemo(() => stage2Audited.filter(i => Math.abs(i.difference) > 0.001).length, [stage2Audited]);
 
-  const handleAuditValueChange = (id: string | number, isKey: boolean, rawValue: string | number) => {
+  // Keep a ref to currentResults so stable callbacks can always read the latest value
+  const currentResultsRef = useRef(currentResults);
+  useEffect(() => { currentResultsRef.current = currentResults; }, [currentResults]);
+
+  const handleAuditValueChange = useCallback((id: string | number, isKey: boolean, rawValue: string | number) => {
+    const curr = currentResultsRef.current;
     const listKey = isKey ? 'keyItems' : 'samplingItems';
     let clean = String(rawValue).replace(/[\s\u00A0]/g, '');
     const lastComma = clean.lastIndexOf(','), lastDot = clean.lastIndexOf('.');
@@ -221,30 +156,31 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
     else if (lastComma !== -1) clean = clean.replace(',', '.');
     const parsedVal = parseFloat(clean);
     const finalVal: number | '' = isNaN(parsedVal) ? '' : parsedVal;
-    
-    const list = [...(currentResults[listKey] || [])];
+
+    const list = [...(curr[listKey] || [])];
     const index = list.findIndex(i => String(i.id) === String(id));
     if (index === -1) return;
-    
+
     const item: SampledItem = { ...list[index], auditedValue: finalVal };
     const auditActual = (item.auditedValue === '' || item.auditedValue === undefined) ? 0 : Number(item.auditedValue);
     item.difference = Math.round((item.bookValue - auditActual) * 100) / 100;
     item.tainting = item.bookValue !== 0 ? item.difference / item.bookValue : 0;
     list[index] = item;
-    
-    onResultsUpdate({ ...currentResults, [listKey]: [...list] });
-  };
 
-  const fillAllVisible = (isKey: boolean) => {
+    onResultsUpdate({ ...curr, [listKey]: [...list] });
+  }, [onResultsUpdate]);
+
+  const fillAllVisible = useCallback((isKey: boolean) => {
+    const curr = currentResultsRef.current;
     const listKey = isKey ? 'keyItems' : 'samplingItems';
-    const newList = [...(currentResults[listKey] || [])];
+    const newList = [...(curr[listKey] || [])];
     let changed = false;
-    
+
     newList.forEach((it, index) => {
         if (it.auditedValue === '') {
             const finalVal = it.bookValue;
             const item: SampledItem = { ...it, auditedValue: finalVal };
-            const auditActual = Number(finalVal) || 0; // if finalVal is empty string, this will be 0
+            const auditActual = Number(finalVal) || 0;
             item.difference = Math.round((item.bookValue - auditActual) * 100) / 100;
             item.tainting = item.bookValue !== 0 ? item.difference / item.bookValue : 0;
             newList[index] = item;
@@ -253,18 +189,34 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
     });
 
     if (changed) {
-        onResultsUpdate({ ...currentResults, [listKey]: newList });
+        onResultsUpdate({ ...curr, [listKey]: newList });
     }
-  };
+  }, [onResultsUpdate]);
 
-  const handleGridKeyDown = (e: React.KeyboardEvent, list: SampledItem[], index: number, isKey: boolean) => {
+  const handleCommentChange = useCallback((id: string | number, isKey: boolean, value: string) => {
+    const curr = currentResultsRef.current;
+    const listKey = isKey ? 'keyItems' : 'samplingItems';
+    const list = [...(curr[listKey] || [])];
+    const index = list.findIndex(i => String(i.id) === String(id));
+    if (index === -1) return;
+    list[index] = { ...list[index], comments: value };
+    onResultsUpdate({ ...curr, [listKey]: list });
+  }, [onResultsUpdate]);
+
+  const handleGridKeyDown = useCallback((e: React.KeyboardEvent, list: SampledItem[], index: number, isKey: boolean) => {
     if (e.key === 'Enter') {
-      e.preventDefault(); handleAuditValueChange(list[index].id, isKey, list[index].bookValue);
+      e.preventDefault();
+      handleAuditValueChange(list[index].id, isKey, list[index].bookValue);
       const nextId = list[index + 1]?.id;
       if (nextId) document.getElementById(`audit-input-${nextId}`)?.focus();
-    } else if (e.key === 'ArrowDown' && list[index+1]) { e.preventDefault(); document.getElementById(`audit-input-${list[index+1].id}`)?.focus(); }
-    else if (e.key === 'ArrowUp' && list[index-1]) { e.preventDefault(); document.getElementById(`audit-input-${list[index-1].id}`)?.focus(); }
-  };
+    } else if (e.key === 'ArrowDown' && list[index+1]) {
+      e.preventDefault();
+      document.getElementById(`audit-input-${list[index+1].id}`)?.focus();
+    } else if (e.key === 'ArrowUp' && list[index-1]) {
+      e.preventDefault();
+      document.getElementById(`audit-input-${list[index-1].id}`)?.focus();
+    }
+  }, [handleAuditValueChange]);
 
   const handleExport = async () => {
     const pop = getFullPopulation();
@@ -278,63 +230,32 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         columnIndices: colIndices,
         config,
         results: currentResults,
-        settings
+        settings,
+        license
     };
-
-    if (isElectron() && window.api) {
-        // Assume virtual if in Electron with API for excel export
-        try {
-            await (window as any).api.export.excel(fullState);
-        } catch (e) {
-            console.error(e);
-        }
-        return;
-    }
 
     const dateStr = new Date().toLocaleDateString('uk-UA').replace(/\./g, '_');
     exportToExcel(fullState, `Вибірка_${config.method}_Робоча_${dateStr}.xlsx`, false, lang);
   };
 
   const handleExportClient = async () => {
+    const pop = getFullPopulation();
+
     const clientState = {
         version: "2.0",
         timestamp: Date.now(),
         currentStep: 2,
+        population: pop,
         sourceHeaders,
         columnIndices: colIndices,
         config,
         results: currentResults,
-        settings
+        settings,
+        license
     };
-
-    if (isElectron() && window.api) {
-        try {
-            await (window as any).api.export.excel(clientState);
-        } catch (e) {
-            console.error(e);
-        }
-        return;
-    }
 
     const dateStr = new Date().toLocaleDateString('uk-UA').replace(/\./g, '_');
     exportToExcel(clientState, `Вибірка_${config.method}_Клієнту_${dateStr}.xlsx`, true, lang);
-  };
-
-  const handleImportClient = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      try {
-          const { mergeExcelResults } = await import('../export/excelMerge');
-          const newResults = await mergeExcelResults(file, currentResults, sourceHeaders.length, colIndices.id);
-          const updatedCount = (newResults as any)._importUpdatedCount || 0;
-          onResultsUpdate(newResults);
-          alert(t('msgImportSuccess', lang).replace('{0}', updatedCount.toString()));
-      } catch (err: any) {
-          console.error(err);
-          alert(t('errImportClient', lang) + err.message);
-      }
-      e.target.value = '';
   };
 
 
@@ -362,136 +283,176 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
     }
 
     return (
-        <div className="bg-white p-7 rounded-[2rem] border border-slate-200 shadow-sm space-y-8 animate-fade-in h-full overflow-y-auto custom-scrollbar">
-            <h3 className="text-lg font-display text-neutral-900 flex items-center gap-3 border-b border-slate-100 pb-5">
-              <BookOpen className="w-5 h-5 text-brand-600" />
-              {t('methodNote', lang)}
-            </h3>
+        <div className="animate-fade-in space-y-4">
+            <div className="flex items-center gap-3 px-1 pb-1">
+                <BookOpen className="w-4 h-4 text-brand-600" />
+                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">{t('methodNote', lang)}</h3>
+            </div>
 
-            <Section title={t('methodUsed', lang)}>
-                <div className="text-brand-900 font-bold text-[14px] mb-2">{getDynamicMethodName(config, lang)}</div>
-                <DistributionGraphic items={currentResults.samplingItems || []} keys={currentResults.keyItems || []} />
-            </Section>
-
-            <Section title={t('mnPurpose', lang)} icon={Target}>
-                {t(mPrefix + 'PurposeText', lang)}
-            </Section>
-
-            <Section title={t('mnDescription', lang)} icon={Info}>
-                {getDynamicMethodDescription(config, lang)}
-            </Section>
-
-            <Section title={t('tabKey', lang)} icon={Layers}>
-                <div className="space-y-3">
-                    <p className="italic text-slate-500 text-[11px] leading-snug">
-                        {t('keyItemsNote', lang)}
-                    </p>
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-2">
-                        <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                            <span className="text-[10px] text-slate-400 font-bold uppercase">{t('anomalyDetection', lang)}</span>
-                            <span className="text-neutral-900 font-bold text-[11px]">{anomalyAlg}</span>
+            {/* Ряд 1: Метод+Ціль(1) | Опис(1) | Аналіз покриття(1) | Графік(1) */}
+            <div className="grid grid-cols-4 gap-3 auto-rows-[200px]">
+                {/* Метод + Ціль застосування */}
+                <div className="bg-white p-4 rounded-[1.5rem] border border-brand-200 bg-brand-50/30 shadow-sm hover:shadow-md transition-all flex flex-col gap-3 overflow-hidden">
+                    <div>
+                        <div className="text-brand-600 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2 mb-1">
+                            <BookOpen className="w-3 h-3" />
+                            {t('methodUsed', lang)}
                         </div>
-                        <div className="text-[11px] text-slate-600 leading-snug">{anomalyDesc}</div>
-                        <div className="flex justify-between items-center pt-1">
-                            <span className="text-[10px] text-slate-400 font-bold uppercase">{t('keyItemsCount', lang)}</span>
-                            <span className="text-brand-600 font-mono font-bold">{(currentResults.keyItems || []).length} {t('items', lang)}</span>
+                        <div className="text-brand-900 font-bold text-[13px] leading-tight">{getDynamicMethodName(config, lang)}</div>
+                    </div>
+                    <div className="border-t border-brand-100 pt-3">
+                        <div className="text-brand-600 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2 mb-1">
+                            <Target className="w-3 h-3" />
+                            {t('mnPurpose', lang)}
+                        </div>
+                        <div className="text-[10px] text-slate-700 leading-snug line-clamp-4">{t(mPrefix + 'PurposeText', lang)}</div>
+                    </div>
+                </div>
+
+                {/* Опис методу */}
+                <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
+                    <div className="text-brand-600 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Info className="w-3 h-3" />
+                        {t('mnDescription', lang)}
+                    </div>
+                    <div className="text-[10px] text-slate-700 leading-snug line-clamp-6">{getDynamicMethodDescription(config, lang)}</div>
+                </div>
+
+                {/* Аналіз покриття */}
+                <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
+                    <div className="text-brand-600 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Sigma className="w-3 h-3" />
+                        {t('coverageAnalysis', lang)}
+                    </div>
+                    <div className="text-[24px] font-mono font-black text-brand-600 text-right">{coveragePercent.toFixed(1)}%</div>
+                    <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                        <div className="bg-brand-500 h-full rounded-full shadow-[0_0_8px_rgba(0,133,75,0.3)] transition-all duration-1000" style={{ width: `${Math.min(100, coveragePercent)}%` }} />
+                    </div>
+                    <p className="text-[9px] text-slate-500 leading-snug mt-auto line-clamp-3">{t('coverageDesc', lang)}</p>
+                </div>
+
+                {/* Графік розподілу */}
+                <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
+                    <div className="text-brand-600 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Layers className="w-3 h-3" />
+                        {lang === 'ua' ? 'Розподіл вибірки' : 'Sample Distribution'}
+                    </div>
+                    <div className="flex-1 flex flex-col justify-center">
+                        <DistributionGraphic items={currentResults.samplingItems || []} keys={currentResults.keyItems || []} />
+                    </div>
+                    <div className="flex items-center justify-center gap-4 pt-1 border-t border-slate-100">
+                        <span className="flex items-center gap-1 text-[9px] text-slate-500 font-bold uppercase tracking-widest">
+                            <span className="w-2 h-2 rounded-sm bg-brand-300 inline-block" />{t('tabSample', lang)}
+                        </span>
+                        <span className="flex items-center gap-1 text-[9px] text-slate-500 font-bold uppercase tracking-widest">
+                            <span className="w-2 h-2 rounded-sm bg-brand-600 inline-block" />{t('tabKey', lang)}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Ряд 2: Ключові(1) | ВНС(1) | Розрахунок вибірки(1) | Формула+Підстановка(1) */}
+            <div className="grid grid-cols-4 gap-3 auto-rows-[200px]">
+                {/* Ключові елементи */}
+                <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
+                    <div className="text-brand-600 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Layers className="w-3 h-3" />
+                        {t('tabKey', lang)}
+                    </div>
+                    <p className="italic text-slate-500 text-[9px] leading-snug line-clamp-2">{t('keyItemsNote', lang)}</p>
+                    <div className="mt-auto space-y-1">
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-1">
+                            <span className="text-[9px] text-slate-400 font-bold uppercase">{t('anomalyDetection', lang)}</span>
+                            <span className="text-neutral-900 font-bold text-[9px]">{anomalyAlg}</span>
+                        </div>
+                        <div className="text-[9px] text-slate-600 leading-snug line-clamp-2">{anomalyDesc}</div>
+                        <div className="flex justify-between items-center pt-0.5">
+                            <span className="text-[9px] text-slate-400 font-bold uppercase">{t('keyItemsCount', lang)}</span>
+                            <span className="text-brand-600 font-mono font-bold text-[10px]">{(currentResults.keyItems || []).length} {t('items', lang)}</span>
                         </div>
                     </div>
                 </div>
-            </Section>
 
-            <Section title={t('trivialLabel', lang)} icon={Database}>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 space-y-2">
-                    <div className="flex justify-between items-center border-b border-slate-200 pb-2">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase">{t('cttThreshold', lang)}</span>
-                        <span className="text-neutral-900 font-bold">{formatMoney(config.clearlyTrivialThreshold, settings)}</span>
+                {/* Вочевидь незначні суми (ВНС) */}
+                <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
+                    <div className="text-brand-600 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Database className="w-3 h-3" />
+                        {t('trivialLabel', lang)}
                     </div>
-                    <div className="text-[11px] text-slate-600 leading-snug">{trivialActionDesc}</div>
-                    <div className="flex justify-between items-center pt-1">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase">{t('trivialCount', lang)}</span>
-                        <span className="text-slate-600 font-mono font-bold">{currentResults.trivialCount} {t('items', lang)}</span>
+                    <div className="mt-auto space-y-1">
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-1">
+                            <span className="text-[9px] text-slate-400 font-bold uppercase">{t('cttThreshold', lang)}</span>
+                            <span className="text-neutral-900 font-bold text-[10px]">{formatMoney(config.clearlyTrivialThreshold, settings)}</span>
+                        </div>
+                        <div className="text-[9px] text-slate-600 leading-snug line-clamp-2">{trivialActionDesc}</div>
+                        <div className="flex justify-between items-center pt-0.5">
+                            <span className="text-[9px] text-slate-400 font-bold uppercase">{t('trivialCount', lang)}</span>
+                            <span className="text-slate-600 font-mono font-bold text-[10px]">{currentResults.trivialCount} {t('items', lang)}</span>
+                        </div>
                     </div>
                 </div>
-            </Section>
 
-            <Section title={t('calcTitle', lang)} icon={Calculator}>
-                <div className="space-y-4">
-                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-2">
+                {/* Розрахунок вибірки — змінні */}
+                <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
+                    <div className="text-brand-600 text-[9px] font-black uppercase tracking-[0.15em] flex items-center gap-2">
+                        <Calculator className="w-3 h-3" />
+                        {t('calcTitle', lang)}
+                    </div>
+                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-2 space-y-1 flex-1 overflow-hidden">
                         {Object.entries(calcDetails.vars).map(([key, val]) => (
-                            <div key={key} className="flex justify-between items-baseline border-b border-slate-100 last:border-0 pb-1.5 last:pb-0">
+                            <div key={key} className="flex justify-between items-baseline border-b border-slate-100 last:border-0 pb-0.5 last:pb-0">
                                 <span className="text-slate-500 text-[9px] font-bold uppercase tracking-tighter">{key}</span>
-                                <span className="font-mono text-neutral-900 font-bold text-[10px]">{val}</span>
+                                <span className="font-mono text-neutral-900 font-bold text-[9px]">{val}</span>
                             </div>
                         ))}
                     </div>
-                    <div className="space-y-1">
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('mnFormula', lang)}</div>
-                        <div className="font-mono text-[11px] text-brand-700 bg-brand-50/50 p-3 rounded-xl border border-brand-100/50 text-center shadow-inner italic">
-                          {getStaticFormula(config.method, lang)}
-                        </div>
-                    </div>
-                    <div className="space-y-1">
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('mnSubstitution', lang)}</div>
-                        <div className="font-mono text-[11px] text-neutral-900 bg-white p-3 rounded-xl border border-slate-200 text-center whitespace-pre-wrap shadow-sm">
-                          {calcDetails.subst}
-                        </div>
-                    </div>
                 </div>
-            </Section>
 
-            <Section title={t('coverageAnalysis', lang)} icon={Sigma}>
-                <div className="space-y-3">
-                   <p className="text-[11px] text-slate-600 leading-snug">
-                       {t('coverageDesc', lang)}
-                   </p>
-                   <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-inner">
-                      <div className="w-3/4 bg-slate-200 rounded-full h-2.5 overflow-hidden">
-                        <div className="bg-brand-500 h-full shadow-[0_0_8px_rgba(0,133,75,0.3)] transition-all duration-1000" style={{ width: `${Math.min(100, coveragePercent)}%` }}></div>
-                      </div>
-                      <span className="text-[16px] font-mono font-black text-brand-600">{coveragePercent.toFixed(1)}%</span>
-                   </div>
+                {/* Формула + Підстановка */}
+                <div className="bg-white p-4 rounded-[1.5rem] border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col gap-2 overflow-hidden">
+                    <div className="space-y-1">
+                        <div className="text-[9px] font-black text-brand-600 uppercase tracking-widest">{t('mnFormula', lang)}</div>
+                        <div className="font-mono text-[9px] text-brand-700 bg-brand-50/50 p-2 rounded-xl border border-brand-100/50 text-center shadow-inner italic">
+                            {getStaticFormula(config.method, lang)}
+                        </div>
+                    </div>
+                    <div className="space-y-1 mt-auto">
+                        <div className="text-[9px] font-black text-brand-600 uppercase tracking-widest">{t('mnSubstitution', lang)}</div>
+                        <div className="font-mono text-[9px] text-neutral-900 bg-white p-2 rounded-xl border border-slate-200 text-center whitespace-pre-wrap shadow-sm">
+                            {calcDetails.subst}
+                        </div>
+                    </div>
                 </div>
-            </Section>
+            </div>
         </div>
     );
   };
 
-  const tableContainerRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const tableContainerRefs = useRef<Set<HTMLDivElement>>(new Set());
+  const cardSyncScrollRef = useRef<HTMLDivElement>(null);
 
   const samplingItemsLength = (currentResults.samplingItems || []).length;
   const keyItemsLength = (currentResults.keyItems || []).length;
 
   useEffect(() => {
-    // Scroll all table containers to the right when component mounts or updates
-    tableContainerRefs.current.forEach(container => {
-      if (container) {
-        container.scrollLeft = container.scrollWidth;
-      }
-    });
-    
-    // Add another try after a short delay to account for rendering tab switch
+    tableContainerRefs.current.forEach(c => { c.scrollLeft = c.scrollWidth; });
     const timer = setTimeout(() => {
-      tableContainerRefs.current.forEach(container => {
-        if (container) {
-          container.scrollLeft = container.scrollWidth;
-        }
-      });
+      tableContainerRefs.current.forEach(c => { c.scrollLeft = c.scrollWidth; });
     }, 50);
     return () => clearTimeout(timer);
   }, [samplingItemsLength, keyItemsLength, activeTab]);
 
-  const renderTable = (items: SampledItem[], title?: string, isKey: boolean = false) => (
+  const renderTable = useCallback((items: SampledItem[], title?: string, isKey: boolean = false) => (
     <div className="mb-10">
       {title && <div className="px-7 py-4 bg-slate-50 border-y border-slate-200 text-[10px] font-black uppercase text-slate-500 tracking-[0.2em] flex items-center gap-3 sticky left-0 shadow-sm z-10">
         <div className={`w-2 h-2 rounded-full ${isKey ? 'bg-brand-600' : 'bg-brand-300'}`} />
         {title}
       </div>}
-      <SyncedScrollContainer 
-        setRefs={(el: any) => {
-            if (el && !tableContainerRefs.current.includes(el)) {
-                tableContainerRefs.current.push(el);
-            }
+      <SyncedScrollContainer
+        setRefs={(el: HTMLDivElement | null) => {
+            if (el) tableContainerRefs.current.add(el);
         }}
+        syncScrollRef={cardSyncScrollRef}
       >
         <table className="min-w-max w-full text-[12px] border-collapse table-auto">
             <thead className="bg-white sticky top-0 z-20 border-b border-slate-200 shadow-sm text-slate-400 font-black">
@@ -513,7 +474,13 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
             {items.map((item, idx) => {
-                const hasDiff = Math.abs(item.difference) > 0.001;
+                // Always recompute the difference live: Book - Audit.
+                // Empty audit value is treated as 0, so Різниця = bookValue.
+                const auditNum = (item.auditedValue === '' || item.auditedValue === undefined || item.auditedValue === null)
+                    ? 0
+                    : Number(item.auditedValue);
+                const liveDiff = Math.round((item.bookValue - auditNum) * 100) / 100;
+                const liveHasDiff = Math.abs(liveDiff) > 0.001;
                 return (
                     <tr key={item.id} className="hover:bg-brand-50/10 group transition-all data-table-row">
                         {sourceHeaders.map((_, i) => {
@@ -523,7 +490,11 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                             } else if (i === colIndices.id) {
                                 // For the ID/Number column, show as is (plain string or integer)
                                 content = item.originalRow[i] !== undefined && item.originalRow[i] !== null 
-                                    ? String(item.originalRow[i]).replace('.0', '') 
+                                    // Normalized IDs are already numbers; the trailing
+                                    // ".0" strip only still applies to rows loaded from
+                                    // projects saved before normalization. Anchored so
+                                    // "1.05" does not become "1.5".
+                                    ? String(item.originalRow[i]).replace(/\.0$/, '')
                                     : '';
                             } else {
                                 content = smartFormat(item.originalRow[i], settings);
@@ -538,17 +509,11 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                         <td className="px-6 py-4 bg-brand-50/30 group-hover:bg-brand-50/50 border-x border-brand-100/50 transition-colors">
                             <MoneyInput id={item.id} value={item.auditedValue} settings={settings} onChange={v => handleAuditValueChange(item.id, isKey, v)} onQuickFill={() => handleAuditValueChange(item.id, isKey, item.bookValue)} onKeyDown={e => handleGridKeyDown(e, items, idx, isKey)} />
                         </td>
-                        <td className={`px-6 py-4 text-right font-mono font-bold whitespace-nowrap border-r border-slate-50 transition-colors ${hasDiff ? 'text-red-600' : 'text-slate-300 opacity-60'}`}>
-                            {formatMoney(item.difference, settings)}
+                        <td className={`px-6 py-4 text-right font-mono font-bold whitespace-nowrap border-r border-slate-50 transition-colors ${liveHasDiff ? 'text-red-600' : 'text-slate-300 opacity-60'}`}>
+                            {formatMoney(liveDiff, settings)}
                         </td>
                         <td className="px-6 py-4">
-                            <input type="text" value={item.comments || ''} onChange={(e) => {
-                                const listKey = isKey ? 'keyItems' : 'samplingItems';
-                                const list = [...currentResults[listKey]];
-                                const index = list.findIndex(i => String(i.id) === String(item.id));
-                                list[index] = { ...list[index], comments: e.target.value };
-                                onResultsUpdate({ ...currentResults, [listKey]: list });
-                            }} className="w-full bg-transparent border-b border-transparent focus:border-brand-400 focus:outline-none text-[12px] text-slate-600 placeholder:text-slate-200 transition-colors" placeholder="..." />
+                            <input type="text" value={item.comments || ''} onChange={(e) => handleCommentChange(item.id, isKey, e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-brand-400 focus:outline-none text-[12px] text-slate-600 placeholder:text-slate-200 transition-colors" placeholder="..." />
                         </td>
                     </tr>
                 );
@@ -557,7 +522,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         </table>
       </SyncedScrollContainer>
     </div>
-  );
+  ), [sourceHeaders, colIndices, settings, lang, handleAuditValueChange, handleGridKeyDown, fillAllVisible, handleCommentChange]);
 
   return (
     <div className="space-y-8 animate-fade-in pb-12">
@@ -565,7 +530,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         <StatCard label={t('totalPop', lang)} value={`${currentResults.populationSize} ${t('items', lang)}`} subValue={`${formatMoney(currentResults.populationValue, settings)} ${currency}`} icon={<Database className="w-4 h-4" />} />
         
         <div className="bg-white p-6 rounded-[1.5rem] border border-slate-200 shadow-sm flex flex-col relative overflow-hidden group hover:shadow-md transition-all">
-          <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
+          <div className="text-brand-600 text-[10px] font-black uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-brand-600" />
             {t('sampleSize', lang)}
           </div>
@@ -638,39 +603,82 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <div className="lg:col-span-3 bg-white rounded-[2rem] shadow-sm border border-slate-200 flex flex-col h-[1050px] overflow-hidden transition-all hover:shadow-md">
-          <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
-            <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
-              <button onClick={() => setActiveTab('sample')} className={`px-6 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'sample' ? 'bg-white text-brand-600 shadow-md shadow-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>{t('tabSample', lang)} {(currentResults.samplingItems || []).length}</button>
-              <button onClick={() => setActiveTab('key')} className={`px-6 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'key' ? 'bg-white text-brand-600 shadow-md shadow-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>{t('tabKey', lang)} {(currentResults.keyItems || []).length}</button>
-            </div>
-            <div className="flex gap-2">
-                <label className="flex items-center gap-3 text-[11px] text-brand-700 font-black uppercase tracking-widest bg-brand-100 border border-brand-300 hover:bg-brand-200 px-7 py-3 rounded-xl transition-all active:scale-95 cursor-pointer">
-                    <Download className="w-4 h-4 stroke-[3px]"/> 
-                    {t('btnImportClient', lang)}
-                    <input type="file" accept=".xlsx" className="hidden" onChange={handleImportClient} />
-                </label>
-                <button onClick={handleExportClient} className="flex items-center gap-3 text-[11px] text-brand-600 font-black uppercase tracking-widest bg-brand-50 border border-brand-200 hover:bg-brand-100 px-7 py-3 rounded-xl transition-all active:scale-95"><Upload className="w-4 h-4 stroke-[3px]"/> {t('btnExportClient', lang)}</button>
-                <button onClick={handleExport} className="flex items-center gap-3 text-[11px] text-white font-black uppercase tracking-widest bg-brand-600 hover:bg-brand-700 px-7 py-3 rounded-xl shadow-[0_4px_12px_rgba(0,133,75,0.25)] transition-all active:scale-95"><Upload className="w-4 h-4 stroke-[3px]"/> {t('exportBtn', lang)}</button>
-            </div>
-          </div>
-          <div className="flex-1 overflow-auto custom-scrollbar">
-            {activeTab === 'key' ? 
-                <TablePagination items={currentResults.keyItems || []} title={t('tabKey', lang)} isKey={true} renderTable={renderTable} /> : 
-                (config.method === 'StopOrGo' ? <StopOrGoView currentResults={currentResults} lang={lang} renderTable={renderTable} /> : <TablePagination items={currentResults.samplingItems || []} renderTable={renderTable} />)
-            }
-          </div>
-        </div>
-        <div className="lg:col-span-1 h-[1050px]">{renderMethodologyNote()}</div>
+      <div className="flex flex-col gap-8">
+        <TableCard
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          currentResults={currentResults}
+          lang={lang}
+          renderTable={renderTable}
+          tableContainerRefs={tableContainerRefs}
+          syncScrollRef={cardSyncScrollRef}
+          handleExportClient={handleExportClient}
+          handleExport={handleExport}
+          samplingItemsLength={samplingItemsLength}
+          keyItemsLength={keyItemsLength}
+          fillAllVisible={fillAllVisible}
+          config={config}
+        />
+        <div className="w-full">{renderMethodologyNote()}</div>
       </div>
     </div>
   );
 };
 
+const TableCard = ({ activeTab, setActiveTab, currentResults, lang, renderTable, tableContainerRefs, syncScrollRef, handleExportClient, handleExport, samplingItemsLength, config }: any) => {
+    const [contentWidth, setContentWidth] = React.useState(0);
+
+    const onSyncScroll = () => {
+        tableContainerRefs.current.forEach((c: HTMLDivElement) => {
+            if (syncScrollRef.current) c.scrollLeft = syncScrollRef.current.scrollLeft;
+        });
+    };
+
+    React.useEffect(() => {
+        const update = () => {
+            const first = [...tableContainerRefs.current][0] as HTMLDivElement | undefined;
+            if (first) setContentWidth(first.scrollWidth);
+        };
+        update();
+        const id = setInterval(update, 300);
+        return () => clearInterval(id);
+    }, [tableContainerRefs, samplingItemsLength, activeTab]);
+
+    return (
+        <div className="w-full bg-white rounded-[2rem] shadow-sm border border-slate-200 flex flex-col min-h-[200px] overflow-hidden transition-all hover:shadow-md">
+            {/* Header: tabs + export buttons */}
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0">
+                <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+                    <button onClick={() => setActiveTab('sample')} className={`px-6 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'sample' ? 'bg-white text-brand-600 shadow-md shadow-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>{lang === 'ua' ? 'Відібрані елементи' : 'Sample'} {samplingItemsLength}</button>
+                    <button onClick={() => setActiveTab('key')} className={`px-6 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'key' ? 'bg-white text-brand-600 shadow-md shadow-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>{lang === 'ua' ? 'Ключові елементи' : 'Key Items'} {(currentResults.keyItems || []).length}</button>
+                </div>
+                <div className="flex gap-2">
+                    <button onClick={handleExportClient} className="flex items-center gap-3 text-[11px] text-brand-600 font-black uppercase tracking-widest bg-brand-50 border border-brand-200 hover:bg-brand-100 px-7 py-3 rounded-xl transition-all active:scale-95"><Upload className="w-4 h-4 stroke-[3px]"/> {lang === 'ua' ? 'Експорт для клієнта' : 'Export for Client'}</button>
+                    <button onClick={handleExport} className="flex items-center gap-3 text-[11px] text-white font-black uppercase tracking-widest bg-brand-600 hover:bg-brand-700 px-7 py-3 rounded-xl shadow-[0_4px_12px_rgba(0,133,75,0.25)] transition-all active:scale-95"><Upload className="w-4 h-4 stroke-[3px]"/> {lang === 'ua' ? 'Експорт XLSX' : 'Export XLSX'}</button>
+                </div>
+            </div>
+            {/* Sync scrollbar — full card width, outside vertical scroll area */}
+            <div
+                ref={syncScrollRef}
+                onScroll={onSyncScroll}
+                className="overflow-x-auto flex-shrink-0 bg-slate-50 border-b border-slate-200 top-scrollbar-sync"
+            >
+                <div style={{ width: contentWidth, height: '1px' }} />
+            </div>
+            {/* Vertical scroll area only — capped at ~50 rows */}
+            <div className="overflow-y-auto overflow-x-hidden custom-scrollbar max-h-[2200px]">
+                {activeTab === 'key' ?
+                    <TablePagination items={currentResults.keyItems || []} title={lang === 'ua' ? 'Ключові елементи' : 'Key Items'} isKey={true} renderTable={renderTable} /> :
+                    (config.method === 'StopOrGo' ? <StopOrGoView currentResults={currentResults} lang={lang} renderTable={renderTable} /> : <TablePagination items={currentResults.samplingItems || []} renderTable={renderTable} />)
+                }
+            </div>
+        </div>
+    );
+};
+
 const StatCard = ({ label, value, subValue, icon, currency }: { label: string, value: string | number, subValue: string, icon: React.ReactNode, currency?: string }) => (
     <div className="bg-white p-6 rounded-[1.5rem] border border-slate-200 shadow-sm flex flex-col relative overflow-hidden group hover:shadow-md transition-all">
-      <div className="text-slate-400 text-[10px] font-black uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
+      <div className="text-brand-600 text-[10px] font-black uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
         {icon}
         {label}
       </div>

@@ -1,7 +1,8 @@
-import ExcelJS from 'exceljs';
+import type ExcelJSType from 'exceljs';
 import { Language, TransactionItem } from '../types';
 import { t } from '../utils/translations';
 import { formatMoney, methodsSupportingAnomalies, calculateExtrapolation } from '../utils/samplingEngine';
+import { parseDateText, parseNumericText, looksLikeDate } from '../utils/cellNormalization';
 import { METHOD_PREFIX_MAP, getStaticFormula, getCalculationDetails, getDynamicMethodName, getDynamicMethodDescription } from '../components/resultsUtils';
 
 export async function exportToExcel(
@@ -10,8 +11,11 @@ export async function exportToExcel(
   isClientVersion: boolean,
   lang: Language
 ): Promise<void> {
+  // Lazily load ExcelJS so it is split into its own chunk and only fetched
+  // when the user actually exports, keeping the main bundle small.
+  const ExcelJS = (await import('exceljs')).default as typeof ExcelJSType;
   const workbook = new ExcelJS.Workbook();
-  const { results, sourceHeaders, config, settings, population } = fullState;
+  const { results, sourceHeaders, config, settings, population, license } = fullState;
   
   const isUa = lang === 'ua';
 
@@ -48,6 +52,16 @@ export async function exportToExcel(
 
     // Main header
     addSectionHeader(isUa ? 'Опис та результат' : 'Description and Result', colorGreen);
+
+    // Licensee — license requisites are included in every export.
+    addSectionHeader(isUa ? 'Власник ліцензії (Аудитор)' : 'Licensee (Auditor)', colorDarkBlue);
+    if (license && license.entityName) {
+      addDetailRow(isUa ? 'Ліцензіат' : 'Licensee', license.entityName);
+      if (license.licenseId) addDetailRow(isUa ? 'Номер ліцензії' : 'License ID', license.licenseId);
+    } else {
+      addDetailRow(isUa ? 'Ліцензія' : 'License', isUa ? 'Незареєстрована (безкоштовна) версія AuditSample Pro' : 'Unregistered (free) version of AuditSample Pro');
+    }
+    sheet.addRow([]);
 
     // Method
     addSectionHeader(isUa ? 'Метод відбору' : 'Sampling Method', colorDarkBlue);
@@ -188,12 +202,93 @@ export async function exportToExcel(
     cr.getCell(2).font = { color: { argb: textColor }, bold: true };
     cr.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
     cr.getCell(2).alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
-    
+
     sheet.addRow([]);
+
+    // Machine-readable config snapshot for lossless project recovery on re-import.
+    // Stored in a hidden row so it does not clutter the human-readable report.
+    try {
+      const metaRow = sheet.addRow(['__AUDITSAMPLE_CONFIG__', JSON.stringify(config)]);
+      metaRow.hidden = true;
+      metaRow.getCell(1).font = { color: { argb: 'FFCBD5E1' } };
+      metaRow.getCell(2).font = { color: { argb: 'FFCBD5E1' } };
+    } catch {
+      // If config cannot be serialized, the text-based recovery still applies.
+    }
+
+    // Machine-readable results snapshot: exact numbers needed to recompute
+    // projected misstatement / upper bound after the client fills audit values
+    // and the file is re-imported (samplingInterval, trivialValue etc. cannot
+    // be reliably reverse-engineered from the formatted text labels).
+    try {
+      const resultsSnapshot = {
+        populationSize: results.populationSize,
+        populationValue: results.populationValue,
+        trivialCount: results.trivialCount,
+        trivialValue: results.trivialValue,
+        areTrivialExcluded: results.areTrivialExcluded,
+        sampleSize: results.sampleSize,
+        sampleValue: results.sampleValue,
+        samplingInterval: results.samplingInterval
+      };
+      const resRow = sheet.addRow(['__AUDITSAMPLE_RESULTS__', JSON.stringify(resultsSnapshot)]);
+      resRow.hidden = true;
+      resRow.getCell(1).font = { color: { argb: 'FFCBD5E1' } };
+      resRow.getCell(2).font = { color: { argb: 'FFCBD5E1' } };
+    } catch {
+      // Text-based recovery still applies.
+    }
   };
 
   // Create summary sheet
   addSummarySheet();
+
+  // --- Source cell presentation --------------------------------------------
+  // Cells are normalized on import (utils/cellNormalization): numbers are
+  // numbers and dates are ISO 'YYYY-MM-DD' strings. Here they only need the
+  // Excel representation: an ISO string becomes a real Date with the user's
+  // date format. Files imported before normalization existed still carry raw
+  // text, so the same parsers run as a fallback.
+
+  const DATE_NUM_FMT: Record<string, string> = {
+    'dd.mm.yyyy': 'dd.mm.yyyy',
+    'mm/dd/yyyy': 'mm/dd/yyyy',
+    'yyyy-mm-dd': 'yyyy-mm-dd'
+  };
+  const dateNumFmt = DATE_NUM_FMT[settings?.dateFormat] || 'dd.mm.yyyy';
+  const monthFirst = settings?.dateFormat === 'mm/dd/yyyy';
+
+  const isoToDate = (iso: string): Date => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  };
+
+  // Returns the value to write plus the number format it needs (if any).
+  const normalizeCell = (raw: any): { value: any; numFmt?: string } => {
+    if (raw instanceof Date) return { value: raw, numFmt: dateNumFmt };
+    if (typeof raw === 'number') {
+      // Integers keep an integer format so IDs and account codes do not gain
+      // a misleading ",00" tail.
+      return { value: raw, numFmt: Number.isInteger(raw) ? '#,##0' : '#,##0.00' };
+    }
+    if (raw === null || raw === undefined) return { value: raw };
+    if (typeof raw !== 'string') return { value: raw };
+
+    const str = raw.trim();
+    if (str === '') return { value: raw };
+
+    const iso = parseDateText(str, monthFirst);
+    if (iso) return { value: isoToDate(iso), numFmt: dateNumFmt };
+
+    if (looksLikeDate(str)) return { value: raw };
+
+    const asNumber = parseNumericText(str);
+    if (asNumber !== null) {
+      return { value: asNumber, numFmt: Number.isInteger(asNumber) ? '#,##0' : '#,##0.00' };
+    }
+
+    return { value: raw };
+  };
 
   // Helper for column name
   const sheetLetter = (index: number) => {
@@ -243,8 +338,11 @@ export async function exportToExcel(
 
     // Add Data
     items.forEach((item, idx) => {
-      const rowData = [...(item.originalRow || [])];
-      
+      // Normalize the source cells so dates and amounts are written as real
+      // Excel values instead of text.
+      const sourceCells = (item.originalRow || []).map(normalizeCell);
+      const rowData: any[] = sourceCells.map((c: { value: any }) => c.value);
+
       while (rowData.length < (sourceHeaders?.length || 0)) {
         rowData.push('');
       }
@@ -258,8 +356,17 @@ export async function exportToExcel(
       } else {
           auditValNum = null; // Blank cell if not audited yet
       }
-      
-      diffValObj = { formula: `${bookColName}${targetRowIdx}-${auditColName}${targetRowIdx}` };
+
+      // Always use a formula so Excel can recalculate live.
+      // Use IF so that rows without an audit value stay blank rather than showing BookValue.
+      // Cache `result` so Excel shows the correct value immediately (without needing to recalculate).
+      const diffResult = typeof auditValNum === 'number'
+          ? Math.round((item.bookValue - auditValNum) * 100) / 100
+          : null;
+      diffValObj = {
+          formula: `IF(${auditColName}${targetRowIdx}="","",${bookColName}${targetRowIdx}-${auditColName}${targetRowIdx})`,
+          result: diffResult ?? '',
+      };
 
       rowData.push(
         item.bookValue,
@@ -268,8 +375,11 @@ export async function exportToExcel(
       );
       
       rowData.push(!isClientVersion ? (item.comments || '') : '');
-      
-      sheet.addRow(rowData);
+
+      const addedRow = sheet.addRow(rowData);
+      sourceCells.forEach((cell: { numFmt?: string }, colIdx: number) => {
+        if (cell.numFmt) addedRow.getCell(colIdx + 1).numFmt = cell.numFmt;
+      });
     });
 
     // Formatting
@@ -278,7 +388,10 @@ export async function exportToExcel(
       column.eachCell!({ includeEmpty: true }, (cell) => {
         if (cell.value) {
             let strVal = '';
-            if (typeof cell.value === 'object' && 'result' in cell.value) {
+            if (cell.value instanceof Date) {
+                // toString() would be the full locale timestamp and blow up the width.
+                strVal = '00.00.0000';
+            } else if (typeof cell.value === 'object' && 'result' in cell.value) {
                 strVal = String(cell.value.result);
             } else {
                 strVal = cell.value.toString();
@@ -320,12 +433,16 @@ export async function exportToExcel(
     };
     
     population.forEach((item: TransactionItem) => {
-      const rowData = [...(item.originalRow || [])];
+      const sourceCells = (item.originalRow || []).map(normalizeCell);
+      const rowData: any[] = sourceCells.map((c: { value: any }) => c.value);
       while (rowData.length < (sourceHeaders?.length || 0)) {
         rowData.push('');
       }
       rowData.push(item.amount);
-      sheet.addRow(rowData);
+      const addedRow = sheet.addRow(rowData);
+      sourceCells.forEach((cell: { numFmt?: string }, colIdx: number) => {
+        if (cell.numFmt) addedRow.getCell(colIdx + 1).numFmt = cell.numFmt;
+      });
     });
 
     sheet.columns.forEach((column, i) => {

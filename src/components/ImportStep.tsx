@@ -231,9 +231,23 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onProjectRecovere
 
     if (isElectron && window.api && filePathStr) {
         try {
-            if (onLoadingStateChange) onLoadingStateChange(true, { pct: 50, stage: 'Importing...' });
+            if (onLoadingStateChange) onLoadingStateChange(true, { pct: 30, stage: 'Importing...' });
             const filePath = filePathStr;
             setCurrentFile(filePath);
+
+            // Check if this xlsx is an exported AuditSample project
+            if (filePath.toLowerCase().endsWith('.xlsx') && window.api.import.detectXlsxProject) {
+                const projectPayload = await window.api.import.detectXlsxProject(filePath);
+                if (projectPayload) {
+                    setRawData([]);
+                    setIsLoadingFile(false);
+                    if (onLoadingStateChange) onLoadingStateChange(false, null);
+                    if (onProjectRecovered) onProjectRecovered(projectPayload);
+                    return;
+                }
+            }
+
+            if (onLoadingStateChange) onLoadingStateChange(true, { pct: 50, stage: 'Importing...' });
             const { data } = await window.api.import.preview(filePath);
             
             if (!data || data.length === 0) throw new Error(t('errFileEmpty', lang));
@@ -274,6 +288,7 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onProjectRecovere
                     onLoadingStateChange(true, msgEvent.data.payload);
                 }
             } else if (msgEvent.data.type === 'PARSE_RECOVERED_PROJECT') {
+                setRawData([]); // prevent validation effect from firing with stale data
                 setIsLoadingFile(false);
                 if (onLoadingStateChange) onLoadingStateChange(false, null);
                 if (onProjectRecovered) onProjectRecovered(msgEvent.data.payload);
@@ -530,8 +545,8 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onProjectRecovere
               {t('liveDataPreview', lang)} {startRow})
             </h4>
           </div>
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden max-h-[450px] overflow-y-auto custom-scrollbar">
-            <table className="w-full text-left border-collapse">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-auto max-h-[450px] custom-scrollbar">
+            <table className="min-w-max text-left border-collapse">
               <thead className="bg-slate-50/90 backdrop-blur sticky top-0 border-b z-10 shadow-sm">
                 <tr>
                   <th className="px-4 py-4 text-[9px] font-black uppercase text-slate-400 w-10">#</th>

@@ -5,3 +5,11 @@ release/
 .env.local
 coverage/
 *.log
+# Ignore local Claude Code state, but keep shared skills in the repo.
+# Must exclude the contents (.claude/*) rather than the directory itself —
+# git cannot re-include a path inside an excluded directory.
+.claude/*
+!.claude/skills/
+
+# License files
+*.asp
