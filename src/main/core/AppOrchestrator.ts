@@ -66,11 +66,13 @@ export class AppOrchestrator {
         const sampleSheet = workbook.getWorksheet('Вибірка') || workbook.getWorksheet('Sample');
         if (!sampleSheet) return null;
 
-        // Client exports carry no summary sheet; their snapshots live on the
-        // hidden meta sheet instead.
-        const summarySheet = workbook.getWorksheet('Опис та результат')
-          || workbook.getWorksheet('Description and Result')
-          || workbook.getWorksheet('__AuditSampleData');
+        // Human-readable figures live on the summary sheet, the machine-readable
+        // snapshots on the hidden meta sheet; both are scanned.
+        const summarySheets = [
+          workbook.getWorksheet('Опис та результат'),
+          workbook.getWorksheet('Description and Result'),
+          workbook.getWorksheet('__AuditSampleData')
+        ].filter(Boolean);
 
         const getCellValue = (v: any): any => {
           if (v === null || v === undefined) return null;
@@ -96,14 +98,14 @@ export class AppOrchestrator {
         };
 
         // Extract summary info
-        const extractSummaryInfo = (sheet: any) => {
-          if (!sheet) return null;
+        const extractSummaryInfo = (sheets: any[]) => {
+          if (!sheets.length) return null;
           let populationSize = 0, populationValue = 0, projectedMisstatement = 0,
               upperMisstatementBound = 0, sampleSize = 0, trivialCount = 0,
               tolerableMisstatement = 0, confidenceLevel = 95, methodStr = 'MUS';
           let configJson: any = null;
           let resultsSnapshot: any = null;
-          sheet.eachRow((row: any) => {
+          for (const sheet of sheets) sheet.eachRow((row: any) => {
             const lbl = String(getCellValue(row.getCell(1).value) || '').trim();
             const val = getCellValue(row.getCell(2).value);
             if (lbl === '__AUDITSAMPLE_CONFIG__' && val) {
@@ -165,7 +167,7 @@ export class AppOrchestrator {
           return { items, headers: sourceHeaders };
         };
 
-        const summaryData = extractSummaryInfo(summarySheet);
+        const summaryData = extractSummaryInfo(summarySheets);
         const sampleData = extractSheet(sampleSheet);
         const keySheet = workbook.getWorksheet('Ключові') || workbook.getWorksheet('Key');
         const keyData = extractSheet(keySheet);

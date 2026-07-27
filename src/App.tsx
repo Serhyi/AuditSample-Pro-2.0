@@ -643,7 +643,6 @@ const App: React.FC = () => {
                   currency={currency}
                   sourceHeaders={sourceHeaders}
                   colIndices={columnIndices}
-                  getFullPopulation={getFullPopulation}
                   settings={settings}
                   license={licenseState.license}
                 />

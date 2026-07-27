@@ -1,26 +1,25 @@
 import type ExcelJSType from 'exceljs';
-import { Language, TransactionItem } from '../types';
+import { Language } from '../types';
 import { t } from '../utils/translations';
 import { formatMoney, methodsSupportingAnomalies, calculateExtrapolation } from '../utils/samplingEngine';
 import { parseDateText, parseNumericText, looksLikeDate } from '../utils/cellNormalization';
 import { getExcelDateFormat, isMonthFirstLocale } from '../utils/locale';
 import { METHOD_PREFIX_MAP, getStaticFormula, getCalculationDetails, getDynamicMethodName, getDynamicMethodDescription } from '../components/resultsUtils';
 
-// Hidden sheet that carries the machine-readable snapshots in client exports,
-// which have no summary sheet to host them.
+// Hidden sheet that carries the machine-readable snapshots. It is the only
+// place service data lives, so nothing technical shows up in the visible sheets.
 export const META_SHEET_NAME = '__AuditSampleData';
 
 export async function exportToExcel(
   fullState: any,
   filename: string,
-  isClientVersion: boolean,
   lang: Language
 ): Promise<void> {
   // Lazily load ExcelJS so it is split into its own chunk and only fetched
   // when the user actually exports, keeping the main bundle small.
   const ExcelJS = (await import('exceljs')).default as typeof ExcelJSType;
   const workbook = new ExcelJS.Workbook();
-  const { results, sourceHeaders, config, population, license } = fullState;
+  const { results, sourceHeaders, config, license } = fullState;
   
   const isUa = lang === 'ua';
 
@@ -28,7 +27,11 @@ export async function exportToExcel(
   const colorGreen = 'FF00854B';
   const colorDarkBlue = 'FF1E293B';
   const colorRowBg = 'FFF8FAFC';
-  
+  // Yellow highlight for the reserved population-file link row.
+  const colorHighlight = 'FFFFF3B0';
+  const colorHighlightEdge = 'FFE0B411';
+  const colorHighlightText = 'FF854D0E';
+
   // Machine-readable snapshots for lossless project recovery on re-import.
   // Written as hidden rows: the config restores the sampling parameters, and
   // the results snapshot carries the exact samplingInterval / trivialValue
@@ -85,6 +88,31 @@ export async function exportToExcel(
         r.getCell(2).numFmt = numFmt;
       }
     };
+
+    // Reserved first row: the auditor pastes here the path or hyperlink to the
+    // file holding the population. The population itself is not exported, so
+    // this is the audit trail back to the tested data.
+    const linkRow = sheet.addRow([
+      isUa ? 'Файл генеральної сукупності:' : 'Population file:',
+      isUa
+        ? '⟵ вкажіть тут посилання або шлях до файлу з генеральною сукупністю'
+        : '⟵ enter here the link or path to the file holding the population'
+    ]);
+    linkRow.height = 24;
+    ['A', 'B'].forEach((col) => {
+      const cell = sheet.getCell(`${col}${linkRow.number}`);
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorHighlight } };
+      cell.border = {
+        top: { style: 'thin', color: { argb: colorHighlightEdge } },
+        bottom: { style: 'thin', color: { argb: colorHighlightEdge } },
+        left: { style: 'thin', color: { argb: colorHighlightEdge } },
+        right: { style: 'thin', color: { argb: colorHighlightEdge } }
+      };
+      cell.alignment = { vertical: 'middle', horizontal: 'left' };
+    });
+    linkRow.getCell(1).font = { bold: true, color: { argb: colorHighlightText } };
+    linkRow.getCell(2).font = { italic: true, color: { argb: 'FFA1741B' } };
+    sheet.addRow([]);
 
     // Main header
     addSectionHeader(isUa ? 'Опис та результат' : 'Description and Result', colorGreen);
@@ -241,21 +269,15 @@ export async function exportToExcel(
     cr.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
     cr.getCell(2).alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
 
-    sheet.addRow([]);
-
-    addMachineReadableRows(sheet);
   };
 
-  // The client receives only the selected items: no methodology, no
-  // conclusion, no population. The snapshots still travel with the file on a
-  // hidden sheet so the returned workbook re-imports losslessly.
-  if (isClientVersion) {
-    const metaSheet = workbook.addWorksheet(META_SHEET_NAME);
-    metaSheet.state = 'veryHidden';
-    addMachineReadableRows(metaSheet);
-  } else {
-    addSummarySheet();
-  }
+  addSummarySheet();
+
+  // Service data for recalculation and re-import lives only on the hidden
+  // sheet, so the visible sheets stay clean.
+  const metaSheet = workbook.addWorksheet(META_SHEET_NAME);
+  metaSheet.state = 'veryHidden';
+  addMachineReadableRows(metaSheet);
 
   // --- Source cell presentation --------------------------------------------
   // Cells are normalized on import (utils/cellNormalization): numbers are
@@ -320,11 +342,7 @@ export async function exportToExcel(
     isUa ? 'Різниця' : 'Difference'
   );
   
-  if (!isClientVersion) {
-      baseHeaders.push(isUa ? 'Коментарі аудитора' : 'Auditor Comments');
-  } else {
-      baseHeaders.push(isUa ? 'Коментарі' : 'Comments');
-  }
+  baseHeaders.push(isUa ? 'Коментарі' : 'Comments');
 
   const addItemsToSheet = (sheetName: string, items: any[]) => {
     if (!items || items.length === 0) return;
@@ -383,7 +401,7 @@ export async function exportToExcel(
         diffValObj
       );
       
-      rowData.push(!isClientVersion ? (item.comments || '') : '');
+      rowData.push(item.comments || '');
 
       const addedRow = sheet.addRow(rowData);
       sourceCells.forEach((cell: { numFmt?: string }, colIdx: number) => {
@@ -426,44 +444,6 @@ export async function exportToExcel(
   if (results.keyItems && results.keyItems.length > 0) {
     addItemsToSheet(isUa ? 'Ключові' : 'Key', results.keyItems);
   }
-
-  if (!isClientVersion && population && population.length > 0 && population.length <= 150000) {
-    // Also include a population sheet without audit values, just book values
-    const sheetName = isUa ? 'Генеральна сукупність' : 'Population';
-    const sheet = workbook.addWorksheet(sheetName);
-    const popHeaders = [...(sourceHeaders || []), isUa ? 'Облікова сума' : 'Book Value'];
-    
-    const headerRow = sheet.addRow(popHeaders);
-    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    headerRow.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: colorDarkBlue }
-    };
-    
-    population.forEach((item: TransactionItem) => {
-      const sourceCells = (item.originalRow || []).map(normalizeCell);
-      const rowData: any[] = sourceCells.map((c: { value: any }) => c.value);
-      while (rowData.length < (sourceHeaders?.length || 0)) {
-        rowData.push('');
-      }
-      rowData.push(item.amount);
-      const addedRow = sheet.addRow(rowData);
-      sourceCells.forEach((cell: { numFmt?: string }, colIdx: number) => {
-        if (cell.numFmt) addedRow.getCell(colIdx + 1).numFmt = cell.numFmt;
-      });
-    });
-
-    sheet.columns.forEach((column, i) => {
-      column.width = 15;
-      if (i === (sourceHeaders?.length || 0)) {
-        column.numFmt = '#,##0.00';
-      }
-    });
-    sheet.views = [{ state: 'frozen', ySplit: 1 }];
-  }
-
-  // Removed _metadata sheet as it's no longer used for project state loading (now using .audsmpl)
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer as any], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
