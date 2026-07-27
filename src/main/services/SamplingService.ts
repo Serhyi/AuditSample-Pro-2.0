@@ -7,6 +7,75 @@ import { allocateRiskSample, autoRandomCount, riskReasonLabel, RiskFlags, RiskCo
 export class SamplingService {
   constructor(private db: DatabaseService) {}
 
+  /**
+   * SQL for the risk criteria, one condition per criterion. Shared by the run
+   * and by the settings preview so the counts shown before running are the
+   * counts the run will use.
+   */
+  static buildRiskConditions(config: any) {
+    const closingDays = config.riskClosingDays ?? 5;
+    const includeWeekend = config.riskWeekend !== false;
+    const includeHoliday = config.riskHoliday !== false;
+
+    const riskQueryConds: string[] = [];
+    const weekendCond = `CAST(strftime('%w', date) AS INTEGER) IN (0, 6)`;
+    const holidayConds: string[] = [];
+    let closingCond = '';
+
+    if (includeWeekend) riskQueryConds.push(weekendCond);
+    if (includeHoliday) {
+      // sanitizeHolidays() is what makes inlining these safe: it accepts only
+      // 'MM-DD' / 'YYYY-MM-DD', so nothing else can reach the SQL.
+      const configured = sanitizeHolidays(config.holidays);
+      const holidayList = configured.length > 0 ? configured : DEFAULT_HOLIDAYS;
+      const { recurring, specific } = splitHolidays(holidayList);
+      if (recurring.length > 0) {
+        holidayConds.push(`strftime('%m-%d', date) IN (${recurring.map(h => `'${h}'`).join(', ')})`);
+      }
+      if (specific.length > 0) {
+        holidayConds.push(`date IN (${specific.map(h => `'${h}'`).join(', ')})`);
+      }
+      riskQueryConds.push(...holidayConds);
+    }
+    if (closingDays > 0) {
+      // SQLite last_day logic using start of next month - 1 day. "Last N days"
+      // means exactly N days, so the comparison is strict.
+      closingCond = `(julianday(date(date, 'start of month', '+1 month', '-1 day')) - julianday(date)) < ${closingDays}`;
+      riskQueryConds.push(closingCond);
+    }
+
+    // COALESCE: strftime/julianday return NULL for unparseable dates; such rows
+    // must count as non-risk (eligible for the random pick), otherwise both
+    // NULL and NOT NULL filter them out and the sample comes back empty.
+    const riskWhereStr = riskQueryConds.length > 0 ? `COALESCE((${riskQueryConds.join(' OR ')}), 0)` : '0';
+    return { weekendCond, holidayConds, closingCond, riskWhereStr, includeWeekend };
+  }
+
+  /** Criteria hit counts for the settings screen; selects no rows. */
+  async previewRisk(config: any): Promise<{ eligible: number; matched: number; hits: { weekend: number; holiday: number; closing: number } }> {
+    const ctt = Number(config.clearlyTrivialThreshold) || 0;
+    const { weekendCond, holidayConds, closingCond, riskWhereStr, includeWeekend } = SamplingService.buildRiskConditions(config);
+
+    const countWhere = async (cond: string): Promise<number> => {
+      if (!cond) return 0;
+      const rows: { cnt: number }[] = await this.db.query(
+        `SELECT COUNT(*) as cnt FROM population WHERE ABS(amount) >= ? AND COALESCE((${cond}), 0)`, [ctt]);
+      return rows[0]?.cnt || 0;
+    };
+    const eligibleRows: { cnt: number }[] = await this.db.query(
+      `SELECT COUNT(*) as cnt FROM population WHERE ABS(amount) >= ?`, [ctt]);
+
+    return {
+      eligible: eligibleRows[0]?.cnt || 0,
+      matched: await countWhere(riskWhereStr),
+      hits: {
+        weekend: includeWeekend ? await countWhere(weekendCond) : 0,
+        holiday: holidayConds.length > 0 ? await countWhere(holidayConds.join(' OR ')) : 0,
+        closing: await countWhere(closingCond)
+      }
+    };
+  }
+
     /**
      * Draws `sampleSize` items at random from the rows matching `whereClause`.
      * Seeded from config.seed via Mulberry32 so a sample can be reproduced and
@@ -133,46 +202,8 @@ export class SamplingService {
     
     await updateProgress('Applying sampling method...');
     if (config.method === 'RiskAssessment') {
-        const closingDays = config.riskClosingDays ?? 5;
-        const includeWeekend = config.riskWeekend !== false;
-        const includeHoliday = config.riskHoliday !== false;
-        
-        const riskQueryConds = [];
-        // Kept per criterion as well, so each one's hit count can be reported
-        // as evidence that the description matches the selection.
-        const weekendCond = `CAST(strftime('%w', date) AS INTEGER) IN (0, 6)`;
-        const holidayConds: string[] = [];
-        let closingCond = '';
-        if (includeWeekend) {
-            riskQueryConds.push(weekendCond);
-        }
-        if (includeHoliday) {
-            // sanitizeHolidays() is what makes inlining these safe: it accepts
-            // only 'MM-DD' / 'YYYY-MM-DD', so nothing else can reach the SQL.
-            const configured = sanitizeHolidays(config.holidays);
-            const holidayList = configured.length > 0 ? configured : DEFAULT_HOLIDAYS;
-            const { recurring, specific } = splitHolidays(holidayList);
-            if (recurring.length > 0) {
-                holidayConds.push(`strftime('%m-%d', date) IN (${recurring.map(h => `'${h}'`).join(', ')})`);
-            }
-            if (specific.length > 0) {
-                holidayConds.push(`date IN (${specific.map(h => `'${h}'`).join(', ')})`);
-            }
-            riskQueryConds.push(...holidayConds);
-        }
-        if (closingDays > 0) {
-            // SQLite last_day logic using start of next month - 1 day
-            // "Last N days" means exactly N days, so the comparison is strict:
-            // with N=2 only the last two dates of the month qualify.
-            closingCond = `(julianday(date(date, 'start of month', '+1 month', '-1 day')) - julianday(date)) < ${closingDays}`;
-            riskQueryConds.push(closingCond);
-        }
-        
-        // COALESCE: strftime/julianday return NULL for unparseable dates; such
-        // rows must count as non-risk (eligible for the random pick), otherwise
-        // both NULL and NOT NULL filter them out and the sample comes back empty.
-        const riskWhereStr = riskQueryConds.length > 0 ? `COALESCE((${riskQueryConds.join(' OR ')}), 0)` : '0';
-        
+        const { weekendCond, holidayConds, closingCond, riskWhereStr, includeWeekend } = SamplingService.buildRiskConditions(config);
+
         // Fetch only the ids and the per-criterion flags first: the selection
         // is then capped and drawn in JS, shared with the in-memory engine, so
         // both produce the same sample from the same seed.

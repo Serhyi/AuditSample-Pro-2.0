@@ -64708,11 +64708,70 @@ function riskReasonLabel(flags) {
 }
 
 // src/main/services/SamplingService.ts
-var SamplingService = class {
+var SamplingService = class _SamplingService {
   constructor(db) {
     this.db = db;
   }
   db;
+  /**
+   * SQL for the risk criteria, one condition per criterion. Shared by the run
+   * and by the settings preview so the counts shown before running are the
+   * counts the run will use.
+   */
+  static buildRiskConditions(config) {
+    const closingDays = config.riskClosingDays ?? 5;
+    const includeWeekend = config.riskWeekend !== false;
+    const includeHoliday = config.riskHoliday !== false;
+    const riskQueryConds = [];
+    const weekendCond = `CAST(strftime('%w', date) AS INTEGER) IN (0, 6)`;
+    const holidayConds = [];
+    let closingCond = "";
+    if (includeWeekend) riskQueryConds.push(weekendCond);
+    if (includeHoliday) {
+      const configured = sanitizeHolidays(config.holidays);
+      const holidayList = configured.length > 0 ? configured : DEFAULT_HOLIDAYS;
+      const { recurring, specific } = splitHolidays(holidayList);
+      if (recurring.length > 0) {
+        holidayConds.push(`strftime('%m-%d', date) IN (${recurring.map((h) => `'${h}'`).join(", ")})`);
+      }
+      if (specific.length > 0) {
+        holidayConds.push(`date IN (${specific.map((h) => `'${h}'`).join(", ")})`);
+      }
+      riskQueryConds.push(...holidayConds);
+    }
+    if (closingDays > 0) {
+      closingCond = `(julianday(date(date, 'start of month', '+1 month', '-1 day')) - julianday(date)) < ${closingDays}`;
+      riskQueryConds.push(closingCond);
+    }
+    const riskWhereStr = riskQueryConds.length > 0 ? `COALESCE((${riskQueryConds.join(" OR ")}), 0)` : "0";
+    return { weekendCond, holidayConds, closingCond, riskWhereStr, includeWeekend };
+  }
+  /** Criteria hit counts for the settings screen; selects no rows. */
+  async previewRisk(config) {
+    const ctt = Number(config.clearlyTrivialThreshold) || 0;
+    const { weekendCond, holidayConds, closingCond, riskWhereStr, includeWeekend } = _SamplingService.buildRiskConditions(config);
+    const countWhere = async (cond) => {
+      if (!cond) return 0;
+      const rows = await this.db.query(
+        `SELECT COUNT(*) as cnt FROM population WHERE ABS(amount) >= ? AND COALESCE((${cond}), 0)`,
+        [ctt]
+      );
+      return rows[0]?.cnt || 0;
+    };
+    const eligibleRows = await this.db.query(
+      `SELECT COUNT(*) as cnt FROM population WHERE ABS(amount) >= ?`,
+      [ctt]
+    );
+    return {
+      eligible: eligibleRows[0]?.cnt || 0,
+      matched: await countWhere(riskWhereStr),
+      hits: {
+        weekend: includeWeekend ? await countWhere(weekendCond) : 0,
+        holiday: holidayConds.length > 0 ? await countWhere(holidayConds.join(" OR ")) : 0,
+        closing: await countWhere(closingCond)
+      }
+    };
+  }
   /**
    * Draws `sampleSize` items at random from the rows matching `whereClause`.
    * Seeded from config.seed via Mulberry32 so a sample can be reproduced and
@@ -64811,33 +64870,7 @@ var SamplingService = class {
     let riskMatchedTotal;
     await updateProgress("Applying sampling method...");
     if (config.method === "RiskAssessment") {
-      const closingDays = config.riskClosingDays ?? 5;
-      const includeWeekend = config.riskWeekend !== false;
-      const includeHoliday = config.riskHoliday !== false;
-      const riskQueryConds = [];
-      const weekendCond = `CAST(strftime('%w', date) AS INTEGER) IN (0, 6)`;
-      const holidayConds = [];
-      let closingCond = "";
-      if (includeWeekend) {
-        riskQueryConds.push(weekendCond);
-      }
-      if (includeHoliday) {
-        const configured = sanitizeHolidays(config.holidays);
-        const holidayList = configured.length > 0 ? configured : DEFAULT_HOLIDAYS;
-        const { recurring, specific } = splitHolidays(holidayList);
-        if (recurring.length > 0) {
-          holidayConds.push(`strftime('%m-%d', date) IN (${recurring.map((h) => `'${h}'`).join(", ")})`);
-        }
-        if (specific.length > 0) {
-          holidayConds.push(`date IN (${specific.map((h) => `'${h}'`).join(", ")})`);
-        }
-        riskQueryConds.push(...holidayConds);
-      }
-      if (closingDays > 0) {
-        closingCond = `(julianday(date(date, 'start of month', '+1 month', '-1 day')) - julianday(date)) < ${closingDays}`;
-        riskQueryConds.push(closingCond);
-      }
-      const riskWhereStr = riskQueryConds.length > 0 ? `COALESCE((${riskQueryConds.join(" OR ")}), 0)` : "0";
+      const { weekendCond, holidayConds, closingCond, riskWhereStr, includeWeekend } = _SamplingService.buildRiskConditions(config);
       const flagRows = await this.db.query(`
           SELECT rowid AS rid,
                  ${includeWeekend ? `COALESCE((${weekendCond}), 0)` : "0"} AS w,
@@ -65588,6 +65621,9 @@ var AppOrchestrator = class {
       return await this.samplingService.runSampling(config, (stage) => {
         event.sender.send("sampling:progress", stage);
       });
+    });
+    import_electron.ipcMain.handle("sampling:previewRisk", async (_event, config) => {
+      return await this.samplingService.previewRisk(config);
     });
     import_electron.ipcMain.handle("export:project", async (_event, state) => {
       console.log("IPC export:project received");

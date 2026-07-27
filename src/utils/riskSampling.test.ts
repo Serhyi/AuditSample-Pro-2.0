@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { runSampling } from './samplingEngine';
 import { getCalculationDetails } from '../components/resultsUtils';
 import { SamplingConfig, TransactionItem } from '../types';
+import { previewRiskMatches, riskCriteriaOptions } from './riskSelection';
 
 // July 2025: 05/06, 12/13, 19/20, 26/27 are weekends; 30 and 31 are the last
 // two days of the month; 26 and 27 are both (weekend and closing).
@@ -100,5 +101,24 @@ describe('key items and the trivial cut', () => {
     const r = runSampling(withAmounts, cfg);
     expect(r.samplingItems.map(i => i.id)).not.toContain('small');
     expect(r.trivialCount).toBe(1);
+  });
+});
+
+describe('settings preview', () => {
+  const opts = riskCriteriaOptions({ ...base, riskWeekend: true } as any);
+
+  it('predicts exactly what the run will match', () => {
+    const preview = previewRiskMatches(population, opts, 0);
+    const run = runSampling(population, { ...base, riskWeekend: true, riskMaxByCriteria: 0 });
+
+    expect(preview.matched).toBe(run.riskMatchedTotal);
+    expect(preview.hits).toEqual(run.riskCriteriaHits);
+    expect(preview.eligible).toBe(31);
+  });
+
+  it('leaves out amounts the trivial threshold will drop', () => {
+    const withSmall = [...population, { id: 'x', date: '2025-07-05', amount: 10, originalRow: [] }] as any;
+    expect(previewRiskMatches(withSmall, opts, 100).eligible).toBe(31);
+    expect(previewRiskMatches(withSmall, opts, 0).eligible).toBe(32);
   });
 });

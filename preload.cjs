@@ -16,7 +16,8 @@ contextBridge.exposeInMainWorld('api', {
     insertRows: (table, rows) => ipcRenderer.invoke('query:insertRows', table, rows)
   },
   sampling: {
-    execute: (config) => ipcRenderer.invoke('sampling:execute', config)
+    execute: (config) => ipcRenderer.invoke('sampling:execute', config),
+    previewRisk: (config) => ipcRenderer.invoke('sampling:previewRisk', config)
   },
   export: {
     project: (state) => ipcRenderer.invoke('export:project', state)
