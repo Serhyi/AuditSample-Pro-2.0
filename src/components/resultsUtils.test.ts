@@ -15,7 +15,8 @@ describe('getCalculationDetails: RiskAssessment', () => {
     // Left over from another method — must not surface in this card.
     tolerableMisstatement: 43585, riskFactor: 'Moderate',
     expectedMisstatement: 0, clearlyTrivialThreshold: 0,
-    seed: 7, riskClosingDays: 5, riskWeekend: true, riskHoliday: false, riskRandomCount: 5
+    seed: 7, riskClosingDays: 5, riskWeekend: true, riskHoliday: false,
+    riskRandomCount: 5, riskRandomAuto: false
   } as unknown as SamplingConfig;
 
   const results = mkResult({
@@ -41,6 +42,25 @@ describe('getCalculationDetails: RiskAssessment', () => {
     expect(vars['Відібрано за критеріями ризику:']).toBe(2);
     expect(vars['Додано випадкових (контроль):']).toBe('1 / 5');
     expect(vars['Кількість відібраних елементів (n):']).toBe(3);
+    // Not configured here, so it must not be reported as a parameter.
+    expect(keys.some(k => k.includes('Поріг ключових'))).toBe(false);
+  });
+
+  it('reports coverage when the criteria selection was capped', () => {
+    const capped = { ...config, riskMaxByCriteria: 2 } as SamplingConfig;
+    const withHits = mkResult({
+      samplingItems: [
+        { selectionReason: 'Risk: weekend' }, { selectionReason: 'Risk: closing' },
+        { selectionReason: 'Random (Risk)' }
+      ] as any,
+      riskCriteriaHits: { weekend: 9, holiday: 0, closing: 282 },
+      riskCriteriaSelected: { weekend: 1, holiday: 0, closing: 1 },
+      riskMatchedTotal: 288
+    });
+    const { vars, subst } = getCalculationDetails(capped, withHits, 'ua');
+    expect(vars['Відібрано за критеріями ризику:']).toBe('2 з 288 збігів (ліміт 2)');
+    expect(subst).toContain('вихідні дні — 1 з 9');
+    expect(subst).toContain('останні 5 дн. місяця — 1 з 282');
   });
 
   it('spells out the enabled criteria and how the sample adds up', () => {

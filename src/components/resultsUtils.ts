@@ -110,9 +110,16 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
         const includeWeekend = config.riskWeekend !== false;
         const includeHoliday = config.riskHoliday !== false;
         const randomCount = config.riskRandomCount ?? 5;
+        const randomAuto = config.riskRandomAuto !== false;
+        const cap = Number(config.riskMaxByCriteria) || 0;
+        const keyThreshold = Number(config.riskKeyThreshold) || 0;
+        const applyCtt = config.riskApplyCtt !== false;
         const configuredHolidays = sanitizeHolidays(config.holidays);
         const holidayList = configuredHolidays.length > 0 ? configuredHolidays : DEFAULT_HOLIDAYS;
-        const byCriteria = (results.samplingItems || []).filter(i => i.selectionReason === 'Risk Criteria').length;
+        // 'Risk Criteria' is the older, undifferentiated label; current runs
+        // name the criteria that matched ('Risk: holiday, weekend').
+        const isByCriteria = (r?: string) => !!r && (r === 'Risk Criteria' || r.startsWith('Risk:'));
+        const byCriteria = (results.samplingItems || []).filter(i => isByCriteria(i.selectionReason)).length;
         const byRandom = (results.samplingItems || []).filter(i => i.selectionReason === 'Random (Risk)').length;
         const yes = isUa ? 'так' : 'yes';
         const no = isUa ? 'ні' : 'no';
@@ -123,10 +130,21 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
         const withHits = (label: string, n: number | undefined) =>
             n === undefined ? label : `${label} — ${n}`;
 
+        // When the selection was capped, each criterion reports selected/matched
+        // so the auditor sees the coverage rather than assuming it was complete.
+        const sel = results.riskCriteriaSelected;
+        const withCoverage = (label: string, c: 'weekend' | 'holiday' | 'closing') => {
+            const matched = hits?.[c];
+            if (matched === undefined) return label;
+            const chosen = sel?.[c];
+            if (chosen === undefined || chosen === matched) return withHits(label, matched);
+            return isUa ? `${label} — ${chosen} з ${matched}` : `${label} — ${chosen} of ${matched}`;
+        };
+
         const criteria: string[] = [];
-        if (includeWeekend) criteria.push(withHits(isUa ? 'вихідні дні' : 'weekends', hits?.weekend));
-        if (includeHoliday) criteria.push(withHits(isUa ? `святкові дні (${holidayList.length})` : `public holidays (${holidayList.length})`, hits?.holiday));
-        if (closingDays > 0) criteria.push(withHits(isUa ? `останні ${closingDays} дн. місяця` : `last ${closingDays} days of month`, hits?.closing));
+        if (includeWeekend) criteria.push(withCoverage(isUa ? 'вихідні дні' : 'weekends', 'weekend'));
+        if (includeHoliday) criteria.push(withCoverage(isUa ? `святкові дні (${holidayList.length})` : `public holidays (${holidayList.length})`, 'holiday'));
+        if (closingDays > 0) criteria.push(withCoverage(isUa ? `останні ${closingDays} дн. місяця` : `last ${closingDays} days of month`, 'closing'));
 
         vars[methodStr] = config.method;
         vars[isUa ? 'Операції у вихідні:' : 'Weekend entries:'] = includeWeekend ? yes : no;
@@ -135,8 +153,17 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
             : no;
         vars[isUa ? 'Днів закриття періоду:' : 'Period closing days:'] = closingDays;
         vars[isUa ? 'Зерно генератора (Seed):' : 'Generator Seed:'] = config.seed || 0;
-        vars[isUa ? 'Відібрано за критеріями ризику:' : 'Selected by risk criteria:'] = byCriteria;
-        vars[isUa ? 'Додано випадкових (контроль):' : 'Random control items:'] = `${byRandom} / ${randomCount}`;
+        const matchedTotal = results.riskMatchedTotal;
+        vars[isUa ? 'Відібрано за критеріями ризику:' : 'Selected by risk criteria:'] =
+            (matchedTotal !== undefined && matchedTotal !== byCriteria)
+                ? (isUa ? `${byCriteria} з ${matchedTotal} збігів (ліміт ${cap})` : `${byCriteria} of ${matchedTotal} matches (cap ${cap})`)
+                : byCriteria;
+        if (keyThreshold > 0) {
+            vars[isUa ? 'Поріг ключових елементів:' : 'Key item threshold:'] = formatMoney(keyThreshold);
+        }
+        vars[isUa ? 'ВНС застосовано до критеріїв:' : 'CTT applied to criteria:'] = applyCtt ? yes : no;
+        vars[isUa ? 'Додано випадкових (контроль):' : 'Random control items:'] =
+            randomAuto ? `${byRandom} (${isUa ? 'авто' : 'auto'})` : `${byRandom} / ${randomCount}`;
         vars[isUa ? 'Кількість відібраних елементів (n):' : 'Sample Size (n):'] = results.samplingItems.length;
 
         const criteriaStr = criteria.length > 0

@@ -2,6 +2,7 @@ import { DatabaseService } from './DatabaseService';
 import { getReliabilityFactor, getZScore, getExpansionFactor } from '../../statistics/reliabilityFactor';
 import { Mulberry32 } from '../../statistics/prng';
 import { DEFAULT_HOLIDAYS, sanitizeHolidays, splitHolidays } from '../../utils/holidays';
+import { allocateRiskSample, autoRandomCount, riskReasonLabel, RiskFlags, RiskCounts } from '../../utils/riskSelection';
 
 export class SamplingService {
   constructor(private db: DatabaseService) {}
@@ -81,15 +82,25 @@ export class SamplingService {
     // For other variable/stratified methods, key items are extracted only when
     // anomaly detection is active.
     const isMUSKeyExtract = config.method === 'MUS' && tm > 0;
-    const allowedMethodsForKeyItems = ['Random', 'FixedRandom', 'CVS', 'Cluster', 'RiskAssessment'];
-    const excludeKeyItems = isMUSKeyExtract || (!isAnomalyDisabled && tm > 0 && allowedMethodsForKeyItems.includes(config.method));
-    const upperLimit = excludeKeyItems ? tm : 999999999999;
+    const allowedMethodsForKeyItems = ['Random', 'FixedRandom', 'CVS', 'Cluster'];
+    // RiskAssessment is not value-based, so it uses its own key-item threshold
+    // instead of materiality, and can skip the clearly-trivial cut entirely.
+    const isRiskMethod = config.method === 'RiskAssessment';
+    const riskKeyThreshold = Number(config.riskKeyThreshold) || 0;
+    const riskApplyCtt = config.riskApplyCtt !== false;
+    const excludeKeyItems = isRiskMethod
+      ? riskKeyThreshold > 0
+      : (isMUSKeyExtract || (!isAnomalyDisabled && tm > 0 && allowedMethodsForKeyItems.includes(config.method)));
+    const keyThreshold = isRiskMethod ? riskKeyThreshold : tm;
+    const upperLimit = excludeKeyItems ? keyThreshold : 999999999999;
+    // Amount floor for the sampling pool: zero when the trivial cut is off.
+    const poolFloor = (isRiskMethod && !riskApplyCtt) ? 0 : ctt;
 
     // 2. Trivial items
     let trivialCount = 0;
     let trivialValue = 0;
     let trivialItems: any[] = [];
-    if (ctt > 0) {
+    if (ctt > 0 && (!isRiskMethod || riskApplyCtt)) {
       await updateProgress('Selecting trivial items...');
       const trivAgg: any[] = await this.db.query(`SELECT COUNT(*) as cnt, SUM(amount) as val FROM population WHERE ABS(amount) < ?`, [ctt]);
       trivialCount = trivAgg[0]?.cnt || 0;
@@ -105,7 +116,7 @@ export class SamplingService {
     let keyItems: any[] = [];
     if (excludeKeyItems) {
       await updateProgress('Selecting key items...');
-      keyItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) >= ? LIMIT 5000`, [tm]);
+      keyItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) >= ? LIMIT 5000`, [keyThreshold]);
       keyItems = keyItems.map(item => ({
         ...item,
         originalRow: item.originalRow ? JSON.parse(item.originalRow) : [],
@@ -123,7 +134,9 @@ export class SamplingService {
     const rf = getReliabilityFactor(config.confidenceLevel);
 
     let sampleItems: any[] = [];
-    let riskCriteriaHits: { weekend: number; holiday: number; closing: number } | undefined;
+    let riskCriteriaHits: RiskCounts | undefined;
+    let riskCriteriaSelected: RiskCounts | undefined;
+    let riskMatchedTotal: number | undefined;
     
     await updateProgress('Applying sampling method...');
     if (config.method === 'RiskAssessment') {
@@ -167,14 +180,41 @@ export class SamplingService {
         // both NULL and NOT NULL filter them out and the sample comes back empty.
         const riskWhereStr = riskQueryConds.length > 0 ? `COALESCE((${riskQueryConds.join(' OR ')}), 0)` : '0';
         
-        // Find risk matched
-        const riskMatchedQuery = `
-          SELECT * FROM population 
+        // Fetch only the ids and the per-criterion flags first: the selection
+        // is then capped and drawn in JS, shared with the in-memory engine, so
+        // both produce the same sample from the same seed.
+        const flagRows: any[] = await this.db.query(`
+          SELECT rowid AS rid,
+                 ${includeWeekend ? `COALESCE((${weekendCond}), 0)` : '0'} AS w,
+                 ${holidayConds.length > 0 ? `COALESCE((${holidayConds.join(' OR ')}), 0)` : '0'} AS h,
+                 ${closingCond ? `COALESCE((${closingCond}), 0)` : '0'} AS c
+          FROM population
           WHERE ABS(amount) < ? AND ABS(amount) >= ? AND ${riskWhereStr}
-          LIMIT 5000
-        `;
-        const riskMatched: any[] = await this.db.query(riskMatchedQuery, [upperLimit, ctt]);
-        
+        `, [upperLimit, poolFloor]);
+
+        const flagsOf = (r: any): RiskFlags => ({ weekend: !!r.w, holiday: !!r.h, closing: !!r.c });
+        riskCriteriaHits = {
+            weekend: flagRows.filter(r => r.w).length,
+            holiday: flagRows.filter(r => r.h).length,
+            closing: flagRows.filter(r => r.c).length
+        };
+        riskMatchedTotal = flagRows.length;
+
+        const cap = Number(config.riskMaxByCriteria) || 0;
+        const allocation = allocateRiskSample(flagRows, flagsOf, cap, seed);
+        riskCriteriaSelected = allocation.selected;
+
+        const reasonById = new Map<number, string>();
+        for (const r of allocation.picked) reasonById.set(r.rid, riskReasonLabel(flagsOf(r)));
+
+        const pickedIds = allocation.picked.map(r => r.rid);
+        const riskMatched: any[] = [];
+        for (let i = 0; i < pickedIds.length; i += 500) {
+            const chunk = pickedIds.slice(i, i + 500);
+            const rows = await this.db.query(`SELECT rowid AS rid, * FROM population WHERE rowid IN (${chunk.join(',')})`);
+            riskMatched.push(...rows);
+        }
+
         for (const item of riskMatched) {
             sampleItems.push({
                 ...item,
@@ -183,29 +223,19 @@ export class SamplingService {
                 difference: item.amount,
                 tainting: 1,
                 isSampled: true,
-                selectionReason: 'Risk Criteria'
+                selectionReason: reasonById.get(item.rid) || 'Risk Criteria'
             });
         }
-        
-        // Hit count per criterion over the same filtered population.
-        const countWhere = async (cond: string): Promise<number> => {
-            if (!cond) return 0;
-            const rows: { cnt: number }[] = await this.db.query(
-                `SELECT COUNT(*) as cnt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? AND COALESCE((${cond}), 0)`,
-                [upperLimit, ctt]
-            );
-            return rows[0]?.cnt || 0;
-        };
-        riskCriteriaHits = {
-            weekend: includeWeekend ? await countWhere(weekendCond) : 0,
-            holiday: holidayConds.length > 0 ? await countWhere(holidayConds.join(' OR ')) : 0,
-            closing: await countWhere(closingCond)
-        };
 
         // Find risk unmatched (random ones)
-        const randomCount = config.riskRandomCount ?? 5;
         const riskUnmatchedWhere = `ABS(amount) < ? AND ABS(amount) >= ? AND NOT ${riskWhereStr}`;
-        const randomMatched: any[] = await this.getRandomSample(riskUnmatchedWhere, [upperLimit, ctt], randomCount, seed);
+        const nonRiskAgg: { cnt: number }[] = await this.db.query(
+            `SELECT COUNT(*) as cnt FROM population WHERE ${riskUnmatchedWhere}`, [upperLimit, poolFloor]);
+        const nonRiskSize = nonRiskAgg[0]?.cnt || 0;
+        const randomCount = config.riskRandomAuto === false
+            ? (config.riskRandomCount ?? 5)
+            : autoRandomCount(nonRiskSize);
+        const randomMatched: any[] = await this.getRandomSample(riskUnmatchedWhere, [upperLimit, poolFloor], randomCount, seed);
         
         for (const item of randomMatched) {
             sampleItems.push({
@@ -463,7 +493,9 @@ export class SamplingService {
       excludedItems: trivialItems,
       projectedMisstatement: 0,
       upperMisstatementBound: 0,
-      riskCriteriaHits
+      riskCriteriaHits,
+      riskCriteriaSelected,
+      riskMatchedTotal
     };
     
     // Defer complex extrapolation to the same code path or replicate here

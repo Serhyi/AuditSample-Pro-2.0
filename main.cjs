@@ -64628,6 +64628,85 @@ function splitHolidays(list) {
   };
 }
 
+// src/utils/riskSelection.ts
+var CRITERION_ORDER = ["holiday", "weekend", "closing"];
+var emptyCounts = () => ({ weekend: 0, holiday: 0, closing: 0 });
+function primaryCriterion(flags) {
+  for (const c of CRITERION_ORDER) if (flags[c]) return c;
+  return null;
+}
+function pick(items, count, rng2) {
+  const copy = items.slice();
+  const n = Math.min(count, copy.length);
+  for (let i = 0; i < n; i++) {
+    const j = i + rng2.nextInt(0, copy.length - i);
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy.slice(0, n);
+}
+function allocateRiskSample(matched, flagsOf, cap, seed) {
+  const groups = { holiday: [], weekend: [], closing: [] };
+  for (const item of matched) {
+    const c = primaryCriterion(flagsOf(item));
+    if (c) groups[c].push(item);
+  }
+  const countOf = (items) => items.length;
+  const selected = emptyCounts();
+  if (cap <= 0 || matched.length <= cap) {
+    for (const c of CRITERION_ORDER) selected[c] = countOf(groups[c]);
+    return { picked: matched.slice(), selected };
+  }
+  const total = matched.length;
+  const quotas = {};
+  const remainders = [];
+  let assigned = 0;
+  for (const c of CRITERION_ORDER) {
+    const size = groups[c].length;
+    if (size === 0) {
+      quotas[c] = 0;
+      continue;
+    }
+    const exact = size / total * cap;
+    const base = Math.max(1, Math.floor(exact));
+    quotas[c] = Math.min(base, size);
+    assigned += quotas[c];
+    remainders.push({ c, rem: exact - Math.floor(exact) });
+  }
+  remainders.sort((a, b) => b.rem - a.rem);
+  let diff = cap - assigned;
+  while (diff !== 0) {
+    let moved = false;
+    for (const { c } of remainders) {
+      if (diff === 0) break;
+      if (diff > 0 && quotas[c] < groups[c].length) {
+        quotas[c]++;
+        diff--;
+        moved = true;
+      } else if (diff < 0 && quotas[c] > 1) {
+        quotas[c]--;
+        diff++;
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+  const rng2 = new Mulberry32(Math.floor(seed) || 0);
+  const picked = [];
+  for (const c of CRITERION_ORDER) {
+    const chosen = pick(groups[c], quotas[c] || 0, rng2);
+    selected[c] = chosen.length;
+    picked.push(...chosen);
+  }
+  return { picked, selected };
+}
+function autoRandomCount(nonRiskPoolSize) {
+  return Math.max(5, Math.round(nonRiskPoolSize * 0.01));
+}
+function riskReasonLabel(flags) {
+  const hit = CRITERION_ORDER.filter((c) => flags[c]);
+  return hit.length > 0 ? `Risk: ${hit.join(", ")}` : "Risk Criteria";
+}
+
 // src/main/services/SamplingService.ts
 var SamplingService = class {
   constructor(db) {
@@ -64692,13 +64771,18 @@ var SamplingService = class {
     const ctt = Number(config.clearlyTrivialThreshold) || 0;
     const isAnomalyDisabled = config.anomalyMethod === "None";
     const isMUSKeyExtract = config.method === "MUS" && tm > 0;
-    const allowedMethodsForKeyItems = ["Random", "FixedRandom", "CVS", "Cluster", "RiskAssessment"];
-    const excludeKeyItems = isMUSKeyExtract || !isAnomalyDisabled && tm > 0 && allowedMethodsForKeyItems.includes(config.method);
-    const upperLimit = excludeKeyItems ? tm : 999999999999;
+    const allowedMethodsForKeyItems = ["Random", "FixedRandom", "CVS", "Cluster"];
+    const isRiskMethod = config.method === "RiskAssessment";
+    const riskKeyThreshold = Number(config.riskKeyThreshold) || 0;
+    const riskApplyCtt = config.riskApplyCtt !== false;
+    const excludeKeyItems = isRiskMethod ? riskKeyThreshold > 0 : isMUSKeyExtract || !isAnomalyDisabled && tm > 0 && allowedMethodsForKeyItems.includes(config.method);
+    const keyThreshold = isRiskMethod ? riskKeyThreshold : tm;
+    const upperLimit = excludeKeyItems ? keyThreshold : 999999999999;
+    const poolFloor = isRiskMethod && !riskApplyCtt ? 0 : ctt;
     let trivialCount = 0;
     let trivialValue = 0;
     let trivialItems = [];
-    if (ctt > 0) {
+    if (ctt > 0 && (!isRiskMethod || riskApplyCtt)) {
       await updateProgress("Selecting trivial items...");
       const trivAgg = await this.db.query(`SELECT COUNT(*) as cnt, SUM(amount) as val FROM population WHERE ABS(amount) < ?`, [ctt]);
       trivialCount = trivAgg[0]?.cnt || 0;
@@ -64712,7 +64796,7 @@ var SamplingService = class {
     let keyItems = [];
     if (excludeKeyItems) {
       await updateProgress("Selecting key items...");
-      keyItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) >= ? LIMIT 5000`, [tm]);
+      keyItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) >= ? LIMIT 5000`, [keyThreshold]);
       keyItems = keyItems.map((item) => ({
         ...item,
         originalRow: item.originalRow ? JSON.parse(item.originalRow) : [],
@@ -64728,6 +64812,8 @@ var SamplingService = class {
     const rf = getReliabilityFactor(config.confidenceLevel);
     let sampleItems = [];
     let riskCriteriaHits;
+    let riskCriteriaSelected;
+    let riskMatchedTotal;
     await updateProgress("Applying sampling method...");
     if (config.method === "RiskAssessment") {
       const closingDays = config.riskClosingDays ?? 5;
@@ -64757,12 +64843,33 @@ var SamplingService = class {
         riskQueryConds.push(closingCond);
       }
       const riskWhereStr = riskQueryConds.length > 0 ? `COALESCE((${riskQueryConds.join(" OR ")}), 0)` : "0";
-      const riskMatchedQuery = `
-          SELECT * FROM population 
+      const flagRows = await this.db.query(`
+          SELECT rowid AS rid,
+                 ${includeWeekend ? `COALESCE((${weekendCond}), 0)` : "0"} AS w,
+                 ${holidayConds.length > 0 ? `COALESCE((${holidayConds.join(" OR ")}), 0)` : "0"} AS h,
+                 ${closingCond ? `COALESCE((${closingCond}), 0)` : "0"} AS c
+          FROM population
           WHERE ABS(amount) < ? AND ABS(amount) >= ? AND ${riskWhereStr}
-          LIMIT 5000
-        `;
-      const riskMatched = await this.db.query(riskMatchedQuery, [upperLimit, ctt]);
+        `, [upperLimit, poolFloor]);
+      const flagsOf = (r) => ({ weekend: !!r.w, holiday: !!r.h, closing: !!r.c });
+      riskCriteriaHits = {
+        weekend: flagRows.filter((r) => r.w).length,
+        holiday: flagRows.filter((r) => r.h).length,
+        closing: flagRows.filter((r) => r.c).length
+      };
+      riskMatchedTotal = flagRows.length;
+      const cap = Number(config.riskMaxByCriteria) || 0;
+      const allocation = allocateRiskSample(flagRows, flagsOf, cap, seed);
+      riskCriteriaSelected = allocation.selected;
+      const reasonById = /* @__PURE__ */ new Map();
+      for (const r of allocation.picked) reasonById.set(r.rid, riskReasonLabel(flagsOf(r)));
+      const pickedIds = allocation.picked.map((r) => r.rid);
+      const riskMatched = [];
+      for (let i = 0; i < pickedIds.length; i += 500) {
+        const chunk = pickedIds.slice(i, i + 500);
+        const rows = await this.db.query(`SELECT rowid AS rid, * FROM population WHERE rowid IN (${chunk.join(",")})`);
+        riskMatched.push(...rows);
+      }
       for (const item of riskMatched) {
         sampleItems.push({
           ...item,
@@ -64771,25 +64878,17 @@ var SamplingService = class {
           difference: item.amount,
           tainting: 1,
           isSampled: true,
-          selectionReason: "Risk Criteria"
+          selectionReason: reasonById.get(item.rid) || "Risk Criteria"
         });
       }
-      const countWhere = async (cond) => {
-        if (!cond) return 0;
-        const rows = await this.db.query(
-          `SELECT COUNT(*) as cnt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? AND COALESCE((${cond}), 0)`,
-          [upperLimit, ctt]
-        );
-        return rows[0]?.cnt || 0;
-      };
-      riskCriteriaHits = {
-        weekend: includeWeekend ? await countWhere(weekendCond) : 0,
-        holiday: holidayConds.length > 0 ? await countWhere(holidayConds.join(" OR ")) : 0,
-        closing: await countWhere(closingCond)
-      };
-      const randomCount = config.riskRandomCount ?? 5;
       const riskUnmatchedWhere = `ABS(amount) < ? AND ABS(amount) >= ? AND NOT ${riskWhereStr}`;
-      const randomMatched = await this.getRandomSample(riskUnmatchedWhere, [upperLimit, ctt], randomCount, seed);
+      const nonRiskAgg = await this.db.query(
+        `SELECT COUNT(*) as cnt FROM population WHERE ${riskUnmatchedWhere}`,
+        [upperLimit, poolFloor]
+      );
+      const nonRiskSize = nonRiskAgg[0]?.cnt || 0;
+      const randomCount = config.riskRandomAuto === false ? config.riskRandomCount ?? 5 : autoRandomCount(nonRiskSize);
+      const randomMatched = await this.getRandomSample(riskUnmatchedWhere, [upperLimit, poolFloor], randomCount, seed);
       for (const item of randomMatched) {
         sampleItems.push({
           ...item,
@@ -65013,7 +65112,9 @@ var SamplingService = class {
       excludedItems: trivialItems,
       projectedMisstatement: 0,
       upperMisstatementBound: 0,
-      riskCriteriaHits
+      riskCriteriaHits,
+      riskCriteriaSelected,
+      riskMatchedTotal
     };
     return this.calculateExtrapolation(preResult, config, rf);
   }
