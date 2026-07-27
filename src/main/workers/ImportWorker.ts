@@ -134,7 +134,7 @@ async function startTask() {
     parentPort?.postMessage({ type: 'progress', pct: 10, stage: 'Opening file...' });
     
     // Convert mapping config
-    const { activeIndices, startRow } = config;
+    const { activeIndices, startRow, monthFirst } = config;
 
     if (filePath.endsWith('.csv')) {
       parentPort?.postMessage({ type: 'progress', pct: 50, stage: 'Importing...' });
@@ -248,9 +248,9 @@ async function startTask() {
                           // Normalize on import: dates become ISO strings and
                           // numeric text becomes numbers, so every consumer
                           // (display, sampling, export) gets typed values.
-                          const rowArray = Array.isArray(row) ? row.map((c: any) => normalizeCellValue(c)) : [];
+                          const rowArray = Array.isArray(row) ? row.map((c: any) => normalizeCellValue(c, monthFirst)) : [];
 
-                          stmt.run([String(idv), toIsoDate(dtv), amountVal, amountVal, amountVal, JSON.stringify(rowArray)]);
+                          stmt.run([String(idv), toIsoDate(dtv, monthFirst), amountVal, amountVal, amountVal, JSON.stringify(rowArray)]);
                           inserted++;
                           
                           if (inserted % 50000 === 0) {
@@ -337,10 +337,10 @@ async function startTask() {
                    const amtRaw = r[activeIndices.amount];
                    
                    const idVal = String(typeof idv === 'object' && idv !== null && 'text' in idv ? idv.text : (idv || ''));
-                   const dateVal = toIsoDate(dt);
+                   const dateVal = toIsoDate(dt, monthFirst);
                    const amountVal = parseAmount(typeof amtRaw === 'object' && amtRaw !== null && 'text' in amtRaw ? amtRaw.text : (typeof amtRaw === 'object' && amtRaw !== null && 'result' in amtRaw ? amtRaw.result : amtRaw));
                    
-                   const cleanRowArray = r.map((v: any) => normalizeCellValue(v));
+                   const cleanRowArray = r.map((v: any) => normalizeCellValue(v, monthFirst));
                    
                    stmt.run([idVal, dateVal, amountVal, amountVal, amountVal, JSON.stringify(cleanRowArray)]);
                    insertedXlsx++;

@@ -6,12 +6,14 @@ import ConfigStep from './components/ConfigStep';
 import ResultsStep from './components/ResultsStep';
 import { LicenseActivationModal } from './components/LicenseActivationModal';
 import { UpgradeModal } from './components/UpgradeModal';
-import { TransactionItem, SamplingConfig, SamplingResult, Currency, ColumnIndices, GlobalSettings, Language } from './types';
+import { TransactionItem, SamplingConfig, SamplingResult, Currency, ColumnIndices, Language } from './types';
 import { runSampling } from './utils/samplingEngine';
 import { t } from './utils/translations';
 import { useAppStorage } from './contexts/StorageContext';
 import { usePopulationAdapter } from './adapters/usePopulationAdapter';
 import { isElectron } from './utils/isElectron';
+import { DEFAULT_HOLIDAYS, sanitizeHolidays, isValidHoliday } from './utils/holidays';
+import { isMonthFirstLocale, formatIsoDate, getNumberExample } from './utils/locale';
 import { useLicense } from './licensing/useLicense';
 import { FREE_METHODS } from './components/config/MethodSelector';
 
@@ -90,6 +92,23 @@ const App: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [holidayDraft, setHolidayDraft] = useState('');
+  const [holidayError, setHolidayError] = useState('');
+
+  const addHoliday = () => {
+    const entry = holidayDraft.trim();
+    if (!entry) return;
+    if (!isValidHoliday(entry)) {
+      setHolidayError(t('settingHolidaysInvalid', lang));
+      return;
+    }
+    const current = settings.holidays || [];
+    if (!current.includes(entry)) {
+      updateSettings({ ...settings, holidays: [...current, entry].sort() });
+    }
+    setHolidayDraft('');
+    setHolidayError('');
+  };
   const [activeTab, setActiveTab] = useState<'about' | 'license'>('about');
   
   const { getFullPopulation, setPopulation, refreshStats, totalPopValue, isVirtual } = usePopulationAdapter([]);
@@ -337,7 +356,10 @@ const App: React.FC = () => {
           if (isElectron() && currentFilePath && window.api) {
               await window.api.import.start(currentFilePath, { 
                   activeIndices: columnIndices, 
-                  startRow: currentStartRow
+                  startRow: currentStartRow,
+                  // The renderer sees the real OS locale; the main process may
+                  // resolve a different one, so send the decision along.
+                  monthFirst: isMonthFirstLocale()
               });
               await refreshStats();
           } else {
@@ -388,6 +410,11 @@ const App: React.FC = () => {
     if (!finalConfig.tolerableMisstatement) {
         finalConfig.tolerableMisstatement = Math.floor(totalPopValue * 0.01);
     }
+    // The holiday list lives in global settings but the engines receive only the
+    // config, so copy it in. It also ends up in the exported config snapshot,
+    // which is what makes a risk-based sample reproducible later.
+    finalConfig.holidays = sanitizeHolidays(settings.holidays);
+    if (finalConfig.holidays.length === 0) finalConfig.holidays = DEFAULT_HOLIDAYS;
     if (finalConfig.clearlyTrivialThreshold === undefined || finalConfig.clearlyTrivialThreshold === null) {
         finalConfig.clearlyTrivialThreshold = Math.floor(finalConfig.tolerableMisstatement * 0.05);
     }
@@ -554,7 +581,6 @@ const App: React.FC = () => {
                   lang={lang} 
                   currency={currency}
                   setCurrency={setCurrency}
-                  settings={settings}
                 />
                 <div className="flex justify-end">
                     <button 
@@ -590,7 +616,6 @@ const App: React.FC = () => {
                     setConfig={setConfig}
                     totalPopulationValue={totalPopValue}
                     lang={lang}
-                    settings={settings}
                     licenseState={licenseState}
                     onLockedMethodClick={() => setShowUpgradeModal(true)}
                 />
@@ -780,45 +805,64 @@ const App: React.FC = () => {
                       <button onClick={() => setShowSettingsModal(false)} className="text-slate-400 hover:text-neutral-900 p-2 hover:bg-slate-100 rounded-full transition-all"><X className="w-6 h-6" /></button>
                   </div>
                   <div className="p-8 space-y-8">
-                      <div>
-                          <label className="block text-[10px] font-black text-brand-600 mb-3 uppercase tracking-[0.15em]">{t('settingRegion', lang)}</label>
-                          <div className="grid grid-cols-3 gap-2">
-                              {(['ua', 'us', 'eu'] as const).map((r) => (
-                                  <button
-                                      key={r}
-                                      onClick={() => updateSettings({
-                                          ...settings, 
-                                          region: r, 
-                                          dateFormat: r === 'us' ? 'mm/dd/yyyy' : 'dd.mm.yyyy', 
-                                          numberSeparator: r === 'us' ? 'comma_dot' : (r === 'ua' ? 'space_comma' : 'dot_comma')
-                                      })}
-                                      className={`py-2.5 text-[11px] rounded-xl border text-center transition-all ${settings.region === r ? 'bg-brand-50 border-brand-600 text-brand-800 font-bold shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}>{r === 'ua' ? 'Ukraine' : (r === 'us' ? 'USA' : 'Europe')}</button>
-                              ))}
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                          <p className="text-[10px] font-black text-brand-600 uppercase tracking-[0.15em] mb-2">{t('settingFormatsSystem', lang)}</p>
+                          <div className="flex gap-6">
+                              <div>
+                                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">{t('settingFormatsDate', lang)}</p>
+                                  <p className="text-[12px] font-bold text-neutral-900 font-mono">{formatIsoDate('2025-09-30')}</p>
+                              </div>
+                              <div>
+                                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">{t('settingFormatsNumber', lang)}</p>
+                                  <p className="text-[12px] font-bold text-neutral-900 font-mono">{getNumberExample()}</p>
+                              </div>
                           </div>
+                          <p className="text-[11px] text-slate-400 font-medium italic mt-2">{t('settingFormatsHelp', lang)}</p>
                       </div>
                       <div>
-                          <label className="block text-[10px] font-black text-brand-600 mb-3 uppercase tracking-[0.15em]">{t('settingDate', lang)}</label>
-                          <select 
-                            className="w-full border border-slate-200 rounded-xl p-3.5 text-[13px] font-medium focus:ring-2 focus:ring-brand-500 outline-none transition-all bg-slate-50" 
-                            value={settings.dateFormat} 
-                            onChange={(e) => updateSettings({...settings, dateFormat: e.target.value as GlobalSettings['dateFormat']})}
-                          >
-                              <option value="dd.mm.yyyy">DD.MM.YYYY (30.09.2025)</option>
-                              <option value="mm/dd/yyyy">MM/DD/YYYY (09/30/2025)</option>
-                              <option value="yyyy-mm-dd">YYYY-MM-DD (2025-09-30)</option>
-                          </select>
-                      </div>
-                      <div>
-                          <label className="block text-[10px] font-black text-brand-600 mb-3 uppercase tracking-[0.15em]">{t('settingNumber', lang)}</label>
-                          <select 
-                            className="w-full border border-slate-200 rounded-xl p-3.5 text-[13px] font-medium focus:ring-2 focus:ring-brand-500 outline-none transition-all bg-slate-50" 
-                            value={settings.numberSeparator} 
-                            onChange={(e) => updateSettings({...settings, numberSeparator: e.target.value as GlobalSettings['numberSeparator']})}
-                          >
-                              <option value="space_comma">1 234,56</option>
-                              <option value="comma_dot">1,234.56</option>
-                              <option value="dot_comma">1.234,56</option>
-                          </select>
+                          <div className="flex items-baseline justify-between mb-3">
+                              <label className="block text-[10px] font-black text-brand-600 uppercase tracking-[0.15em]">{t('settingHolidays', lang)}</label>
+                              <button
+                                  onClick={() => updateSettings({ ...settings, holidays: DEFAULT_HOLIDAYS })}
+                                  className="text-[11px] font-bold text-slate-400 hover:text-brand-600 transition-colors">
+                                  {t('settingHolidaysReset', lang)}
+                              </button>
+                          </div>
+                          <p className="text-[11px] text-slate-400 font-medium italic mb-3">{t('settingHolidaysHelp', lang)}</p>
+
+                          <div className="flex flex-wrap gap-2 mb-3">
+                              {(settings.holidays || []).map((h) => (
+                                  <span key={h} className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1.5 bg-brand-50 border border-brand-100 text-brand-800 rounded-lg text-[12px] font-bold font-mono">
+                                      {h}
+                                      <button
+                                          onClick={() => updateSettings({ ...settings, holidays: (settings.holidays || []).filter(x => x !== h) })}
+                                          className="text-brand-400 hover:text-red-600 transition-colors"
+                                          aria-label={`remove ${h}`}>
+                                          <X className="w-3.5 h-3.5" />
+                                      </button>
+                                  </span>
+                              ))}
+                              {(settings.holidays || []).length === 0 && (
+                                  <span className="text-[12px] text-slate-400 font-medium italic">{t('settingHolidaysEmpty', lang)}</span>
+                              )}
+                          </div>
+
+                          <div className="flex gap-2">
+                              <input
+                                  type="text"
+                                  value={holidayDraft}
+                                  onChange={(e) => { setHolidayDraft(e.target.value); setHolidayError(''); }}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') addHoliday(); }}
+                                  placeholder="12-25 / 2025-04-20"
+                                  className="flex-1 border border-slate-200 rounded-xl p-3 text-[13px] font-mono focus:ring-2 focus:ring-brand-500 outline-none transition-all bg-slate-50"
+                              />
+                              <button
+                                  onClick={addHoliday}
+                                  className="px-5 py-2.5 bg-brand-600 text-white text-[12px] font-bold rounded-xl hover:bg-brand-700 transition-all whitespace-nowrap">
+                                  {t('settingHolidaysAdd', lang)}
+                              </button>
+                          </div>
+                          {holidayError && <p className="text-[11px] text-red-600 font-bold mt-2">{holidayError}</p>}
                       </div>
                   </div>
                   <div className="p-7 bg-slate-50/50 border-t text-right">

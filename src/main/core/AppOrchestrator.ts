@@ -66,7 +66,11 @@ export class AppOrchestrator {
         const sampleSheet = workbook.getWorksheet('Вибірка') || workbook.getWorksheet('Sample');
         if (!sampleSheet) return null;
 
-        const summarySheet = workbook.getWorksheet('Опис та результат') || workbook.getWorksheet('Description and Result');
+        // Client exports carry no summary sheet; their snapshots live on the
+        // hidden meta sheet instead.
+        const summarySheet = workbook.getWorksheet('Опис та результат')
+          || workbook.getWorksheet('Description and Result')
+          || workbook.getWorksheet('__AuditSampleData');
 
         const getCellValue = (v: any): any => {
           if (v === null || v === undefined) return null;

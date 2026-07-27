@@ -1,4 +1,5 @@
-import { SamplingConfig, SamplingResult, GlobalSettings, Language } from '../types';
+import { SamplingConfig, SamplingResult, Language } from '../types';
+import { DEFAULT_HOLIDAYS, sanitizeHolidays } from '../utils/holidays';
 import { t } from '../utils/translations';
 
 export const METHOD_PREFIX_MAP: Record<string, string> = {
@@ -41,7 +42,7 @@ export function getDynamicMethodDescription(config: SamplingConfig, lang: Langua
 import { formatMoney } from '../utils/samplingEngine';
 import { getReliabilityFactor, getExpansionFactor } from '../statistics/reliabilityFactor';
 
-export function getCalculationDetails(config: SamplingConfig, results: SamplingResult, settings: GlobalSettings, lang: string): { vars: Record<string, string|number>, subst: string } {
+export function getCalculationDetails(config: SamplingConfig, results: SamplingResult, lang: string): { vars: Record<string, string|number>, subst: string } {
     const isUa = lang === 'ua';
     const rf = getReliabilityFactor(config.confidenceLevel);
     
@@ -52,8 +53,8 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
     const vars: Record<string, string|number> = {};
     let subst = '';
 
-    const bvStr = formatMoney(bv, settings);
-    const pmStr = formatMoney(pm, settings);
+    const bvStr = formatMoney(bv);
+    const pmStr = formatMoney(pm);
     const methodStr = isUa ? 'Метод:' : 'Method:';
     const confLevelStr = isUa ? 'Рівень впевненості:' : 'Confidence Level:';
     
@@ -61,7 +62,7 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
         const expectedMisstatement = config.expectedMisstatement || 0;
         const expansionFactor = getExpansionFactor(config.confidenceLevel);
         const denominator = Math.max(pm - expectedMisstatement * expansionFactor, pm * 0.01);
-        const denomStr = formatMoney(denominator, settings);
+        const denomStr = formatMoney(denominator);
 
         vars[isUa ? 'Залишкова сукупність (BV):' : 'Residual Book Value (BV):'] = bvStr;
         vars[isUa ? `Коефіцієнт RF (${config.confidenceLevel}%):` : `Reliability Factor RF (${config.confidenceLevel}%):`] = rf;
@@ -69,7 +70,7 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
 
         const calcN = Math.ceil((bv * rf) / denominator);
         if (expectedMisstatement > 0) {
-            const eeStr = formatMoney(expectedMisstatement, settings);
+            const eeStr = formatMoney(expectedMisstatement);
             vars[isUa ? 'Очікуване викривлення (EM):' : 'Expected Misstatement (EM):'] = eeStr;
             vars[isUa ? `Коефіцієнт розширення (EF):` : `Expansion Factor (EF):`] = expansionFactor;
             subst = `n = (${bvStr} × ${rf}) / (${pmStr} − ${eeStr} × ${expansionFactor})\nn = (${bvStr} × ${rf}) / ${denomStr}\nn = ${calcN}`;
@@ -102,9 +103,42 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
         vars[isUa ? 'Кількість відібраних елементів (n):' : 'Sample Size (n):'] = results.samplingItems.length;
         subst = `n = ${results.samplingItems.length}`;
     } else if (config.method === 'RiskAssessment') {
-        vars[isUa ? 'Суттєвість (PM):' : 'Materiality (PM):'] = pmStr;
-        vars[isUa ? 'Оцінка ризику:' : 'Risk Assessment:'] = config.riskFactor;
-        subst = isUa ? 'Відібрано записи за індикаторами ризику' : 'Selected entries based on risk indicators.';
+        // Only the parameters this method actually uses. Materiality and the
+        // risk factor are deliberately absent: neither is configurable for
+        // RiskAssessment, so showing them would report values the user never set.
+        const closingDays = config.riskClosingDays ?? 5;
+        const includeWeekend = config.riskWeekend !== false;
+        const includeHoliday = config.riskHoliday !== false;
+        const randomCount = config.riskRandomCount ?? 5;
+        const configuredHolidays = sanitizeHolidays(config.holidays);
+        const holidayList = configuredHolidays.length > 0 ? configuredHolidays : DEFAULT_HOLIDAYS;
+        const byCriteria = (results.samplingItems || []).filter(i => i.selectionReason === 'Risk Criteria').length;
+        const byRandom = (results.samplingItems || []).filter(i => i.selectionReason === 'Random (Risk)').length;
+        const yes = isUa ? 'так' : 'yes';
+        const no = isUa ? 'ні' : 'no';
+
+        const criteria: string[] = [];
+        if (includeWeekend) criteria.push(isUa ? 'вихідні дні' : 'weekends');
+        if (includeHoliday) criteria.push(isUa ? `святкові дні (${holidayList.length})` : `public holidays (${holidayList.length})`);
+        if (closingDays > 0) criteria.push(isUa ? `останні ${closingDays} дн. місяця` : `last ${closingDays} days of month`);
+
+        vars[methodStr] = config.method;
+        vars[isUa ? 'Операції у вихідні:' : 'Weekend entries:'] = includeWeekend ? yes : no;
+        vars[isUa ? 'Операції у свята:' : 'Holiday entries:'] = includeHoliday
+            ? (isUa ? `${yes} (у списку днів: ${holidayList.length})` : `${yes} (${holidayList.length} days listed)`)
+            : no;
+        vars[isUa ? 'Днів закриття періоду:' : 'Period closing days:'] = closingDays;
+        vars[isUa ? 'Зерно генератора (Seed):' : 'Generator Seed:'] = config.seed || 0;
+        vars[isUa ? 'Відібрано за критеріями ризику:' : 'Selected by risk criteria:'] = byCriteria;
+        vars[isUa ? 'Додано випадкових (контроль):' : 'Random control items:'] = `${byRandom} / ${randomCount}`;
+        vars[isUa ? 'Кількість відібраних елементів (n):' : 'Sample Size (n):'] = results.samplingItems.length;
+
+        const criteriaStr = criteria.length > 0
+            ? criteria.join(', ')
+            : (isUa ? 'критерії вимкнено' : 'no criteria enabled');
+        subst = isUa
+            ? `Критерії ризику: ${criteriaStr}\nn = ${byCriteria} (за критеріями) + ${byRandom} (випадкові) = ${results.samplingItems.length}`
+            : `Risk criteria: ${criteriaStr}\nn = ${byCriteria} (by criteria) + ${byRandom} (random) = ${results.samplingItems.length}`;
     } else if (config.method === 'Pareto') {
         vars[methodStr] = config.method;
         vars[isUa ? 'Цільове покриття (%):' : 'Target Coverage (%):'] = config.paretoCoverage || 80;

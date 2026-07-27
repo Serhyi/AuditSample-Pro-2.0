@@ -64535,39 +64535,124 @@ function getExpansionFactor(confidenceLevel) {
   }
 }
 
+// src/statistics/prng.ts
+var Mulberry32 = class {
+  state;
+  constructor(seed) {
+    this.state = seed >>> 0;
+  }
+  /**
+   * Генерація наступного числа [0, 1)
+   */
+  next() {
+    this.state = this.state + 1831565813 >>> 0;
+    let t = this.state;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
+  /**
+   * Генерація цілого числа в діапазоні [min, max)
+   */
+  nextInt(min, max) {
+    return Math.floor(this.next() * (max - min)) + min;
+  }
+  /**
+   * Перемішування масиву (Fisher-Yates)
+   */
+  shuffle(array) {
+    const result = [...array];
+    for (let i = result.length - 1; i > 0; i--) {
+      const j = this.nextInt(0, i + 1);
+      [result[i], result[j]] = [result[j], result[i]];
+    }
+    return result;
+  }
+  /**
+   * Вибір випадкових елементів без повторень
+   */
+  sample(array, count) {
+    if (count > array.length) {
+      throw new Error("Sample count cannot exceed population size");
+    }
+    const shuffled = this.shuffle(array);
+    return shuffled.slice(0, count);
+  }
+};
+
+// src/utils/holidays.ts
+var DEFAULT_HOLIDAYS = [
+  "01-01",
+  // Новий рік
+  "03-08",
+  // Міжнародний жіночий день
+  "05-01",
+  // День праці
+  "05-08",
+  // День пам'яті та перемоги
+  "05-09",
+  // День перемоги
+  "06-28",
+  // День Конституції
+  "08-24",
+  // День Незалежності
+  "10-01",
+  // День захисників і захисниць
+  "12-25"
+  // Різдво
+];
+var RECURRING = /^\d{2}-\d{2}$/;
+var SPECIFIC = /^\d{4}-\d{2}-\d{2}$/;
+function isValidHoliday(entry) {
+  const s = entry.trim();
+  if (!RECURRING.test(s) && !SPECIFIC.test(s)) return false;
+  const parts = s.split("-");
+  const [m, d] = parts.length === 3 ? [Number(parts[1]), Number(parts[2])] : [Number(parts[0]), Number(parts[1])];
+  if (m < 1 || m > 12 || d < 1 || d > 31) return false;
+  const maxDay = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+  return d <= maxDay;
+}
+function sanitizeHolidays(list) {
+  if (!Array.isArray(list)) return [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const raw of list) {
+    const s = String(raw).trim();
+    if (isValidHoliday(s)) seen.add(s);
+  }
+  return Array.from(seen).sort();
+}
+function splitHolidays(list) {
+  return {
+    recurring: list.filter((h) => RECURRING.test(h)),
+    specific: list.filter((h) => SPECIFIC.test(h))
+  };
+}
+
 // src/main/services/SamplingService.ts
 var SamplingService = class {
   constructor(db) {
     this.db = db;
   }
   db;
-  async getRandomSample(whereClause, params, sampleSize) {
-    const countAgg = await this.db.query(`SELECT COUNT(*) as cnt FROM population WHERE ${whereClause}`, params);
-    const total = countAgg[0]?.cnt || 0;
-    if (total === 0) return [];
-    const poolSize = Math.max(sampleSize * 5, 200);
-    let prob = poolSize / total;
-    if (prob >= 1) {
-      prob = 1;
-    }
-    const pThreshold = Math.ceil(prob * 1e6);
-    let poolIds = [];
-    if (prob < 1) {
-      const poolQuery = `SELECT rowid FROM population WHERE ${whereClause} AND (ABS(RANDOM()) % 1000000) < ${pThreshold}`;
-      const poolResults = await this.db.query(poolQuery, params);
-      poolIds = poolResults.map((r) => r.rowid);
-    }
-    if (poolIds.length < sampleSize) {
-      const fallbackQuery = `SELECT rowid FROM population WHERE ${whereClause}`;
-      const fallbackResults = await this.db.query(fallbackQuery, params);
-      poolIds = fallbackResults.map((r) => r.rowid);
-    }
-    for (let i = poolIds.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+  /**
+   * Draws `sampleSize` items at random from the rows matching `whereClause`.
+   * Seeded from config.seed via Mulberry32 so a sample can be reproduced and
+   * matches what the web engine produces for the same seed. SQL RANDOM() must
+   * not be used here: it is unseedable, which would make the sample
+   * impossible to reproduce for review.
+   */
+  async getRandomSample(whereClause, params, sampleSize, seed) {
+    if (sampleSize <= 0) return [];
+    const rowidRows = await this.db.query(`SELECT rowid FROM population WHERE ${whereClause}`, params);
+    const poolIds = rowidRows.map((r) => r.rowid);
+    if (poolIds.length === 0) return [];
+    const rng2 = new Mulberry32(Math.floor(seed) || 0);
+    const count = Math.min(sampleSize, poolIds.length);
+    for (let i = 0; i < count; i++) {
+      const j = i + rng2.nextInt(0, poolIds.length - i);
       [poolIds[i], poolIds[j]] = [poolIds[j], poolIds[i]];
     }
-    const pickedRowIds = poolIds.slice(0, sampleSize);
-    if (pickedRowIds.length === 0) return [];
+    const pickedRowIds = poolIds.slice(0, count);
     const results = [];
     const chunkSize = 500;
     for (let i = 0; i < pickedRowIds.length; i += chunkSize) {
@@ -64602,6 +64687,7 @@ var SamplingService = class {
     if (popSize === 0) {
       throw new Error("Population cannot be empty");
     }
+    const seed = Math.floor(Number(config.seed)) || 0;
     const tm = Number(config.tolerableMisstatement) || 0;
     const ctt = Number(config.clearlyTrivialThreshold) || 0;
     const isAnomalyDisabled = config.anomalyMethod === "None";
@@ -64651,7 +64737,15 @@ var SamplingService = class {
         riskQueryConds.push(`CAST(strftime('%w', date) AS INTEGER) IN (0, 6)`);
       }
       if (includeHoliday) {
-        riskQueryConds.push(`strftime('%m-%d', date) IN ('01-01', '03-08', '05-01', '05-08', '05-09', '06-28', '08-24', '10-01', '12-25')`);
+        const configured = sanitizeHolidays(config.holidays);
+        const holidayList = configured.length > 0 ? configured : DEFAULT_HOLIDAYS;
+        const { recurring, specific } = splitHolidays(holidayList);
+        if (recurring.length > 0) {
+          riskQueryConds.push(`strftime('%m-%d', date) IN (${recurring.map((h) => `'${h}'`).join(", ")})`);
+        }
+        if (specific.length > 0) {
+          riskQueryConds.push(`date IN (${specific.map((h) => `'${h}'`).join(", ")})`);
+        }
       }
       if (closingDays > 0) {
         riskQueryConds.push(`(julianday(date(date, 'start of month', '+1 month', '-1 day')) - julianday(date)) <= ${closingDays}`);
@@ -64676,7 +64770,7 @@ var SamplingService = class {
       }
       const randomCount = config.riskRandomCount ?? 5;
       const riskUnmatchedWhere = `ABS(amount) < ? AND ABS(amount) >= ? AND NOT ${riskWhereStr}`;
-      const randomMatched = await this.getRandomSample(riskUnmatchedWhere, [upperLimit, ctt], randomCount);
+      const randomMatched = await this.getRandomSample(riskUnmatchedWhere, [upperLimit, ctt], randomCount, seed);
       for (const item of randomMatched) {
         sampleItems.push({
           ...item,
@@ -64740,7 +64834,7 @@ var SamplingService = class {
     } else if (config.method === "Benford") {
       const benfordCount = config.benfordSampleSize || 50;
       const whereCond = `ABS(amount) < ? AND ABS(amount) >= ?`;
-      const items = await this.getRandomSample(whereCond, [upperLimit, ctt], benfordCount);
+      const items = await this.getRandomSample(whereCond, [upperLimit, ctt], benfordCount, seed);
       sampleItems = items.map((item) => ({
         ...item,
         bookValue: item.amount,
@@ -64868,7 +64962,7 @@ var SamplingService = class {
       } else {
         await updateProgress(`Performing random selection (${sampleSize} items)...`);
         const whereStr = `ABS(amount) < ? AND ABS(amount) >= ?`;
-        const rawSampleItems = await this.getRandomSample(whereStr, [upperLimit, ctt], sampleSize);
+        const rawSampleItems = await this.getRandomSample(whereStr, [upperLimit, ctt], sampleSize, seed);
         sampleItems = rawSampleItems.map((item, idx) => ({
           ...item,
           bookValue: item.amount,
@@ -64988,6 +65082,35 @@ var WorkerPool = class {
   }
 };
 
+// src/utils/locale.ts
+function getSystemLocale() {
+  try {
+    if (typeof navigator !== "undefined" && navigator.language) return navigator.language;
+    const resolved = new Intl.DateTimeFormat().resolvedOptions().locale;
+    if (resolved) return resolved;
+  } catch {
+  }
+  return "uk-UA";
+}
+function getDateOrder(locale = getSystemLocale()) {
+  try {
+    const parts = new Intl.DateTimeFormat(locale, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).formatToParts(new Date(2e3, 0, 2));
+    const order = parts.filter((p) => p.type === "year" || p.type === "month" || p.type === "day").map((p) => p.type);
+    if (order[0] === "year") return "ymd";
+    if (order[0] === "month") return "mdy";
+    return "dmy";
+  } catch {
+    return "dmy";
+  }
+}
+function isMonthFirstLocale(locale) {
+  return getDateOrder(locale) === "mdy";
+}
+
 // src/utils/cellNormalization.ts
 var makeIso = (y, m, d) => {
   if (m < 1 || m > 12 || d < 1 || d > 31) return null;
@@ -64996,7 +65119,7 @@ var makeIso = (y, m, d) => {
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 };
 var looksLikeDate = (str) => /^\d{1,4}[./-]\d{1,2}[./-]\d{2,4}/.test(str);
-function parseDateText(str, monthFirst = false) {
+function parseDateText(str, monthFirst = isMonthFirstLocale()) {
   const s = str.trim();
   const iso = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[T ][\d:.]+Z?)?$/);
   if (iso) return makeIso(Number(iso[1]), Number(iso[2]), Number(iso[3]));
@@ -65048,7 +65171,7 @@ function parseNumericText(str) {
   const signed = sign * num;
   return negative ? -Math.abs(signed) : signed;
 }
-function toIsoDate(raw, monthFirst = false) {
+function toIsoDate(raw, monthFirst = isMonthFirstLocale()) {
   if (raw === void 0 || raw === null || raw === "") return "";
   if (raw instanceof Date) {
     return `${raw.getFullYear()}-${String(raw.getMonth() + 1).padStart(2, "0")}-${String(raw.getDate()).padStart(2, "0")}`;
@@ -65070,7 +65193,7 @@ function toIsoDate(raw, monthFirst = false) {
   }
   return parseDateText(str, monthFirst) || "";
 }
-function normalizeCellValue(raw, monthFirst = false) {
+function normalizeCellValue(raw, monthFirst = isMonthFirstLocale()) {
   if (raw === null || raw === void 0) return "";
   if (raw instanceof Date) return toIsoDate(raw, monthFirst);
   if (typeof raw === "number") return raw;
@@ -65133,7 +65256,7 @@ var AppOrchestrator = class {
         await workbook.xlsx.readFile(filePath);
         const sampleSheet = workbook.getWorksheet("\u0412\u0438\u0431\u0456\u0440\u043A\u0430") || workbook.getWorksheet("Sample");
         if (!sampleSheet) return null;
-        const summarySheet = workbook.getWorksheet("\u041E\u043F\u0438\u0441 \u0442\u0430 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442") || workbook.getWorksheet("Description and Result");
+        const summarySheet = workbook.getWorksheet("\u041E\u043F\u0438\u0441 \u0442\u0430 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442") || workbook.getWorksheet("Description and Result") || workbook.getWorksheet("__AuditSampleData");
         const getCellValue = (v) => {
           if (v === null || v === void 0) return null;
           if (typeof v === "object" && "result" in v) return v.result;

@@ -1,3 +1,5 @@
+import { isMonthFirstLocale } from './locale';
+
 // Single source of truth for turning raw spreadsheet/CSV cells into clean
 // typed values. Used by both importers (web worker and desktop worker) so the
 // data is normalized once, on import, and by the exporter so older files
@@ -22,10 +24,12 @@ export const looksLikeDate = (str: string): boolean =>
   /^\d{1,4}[./-]\d{1,2}[./-]\d{2,4}/.test(str);
 
 /**
- * Parses date text into 'YYYY-MM-DD'. Day-first is the app-wide convention;
- * `monthFirst` flips it for the US date setting.
+ * Parses date text into 'YYYY-MM-DD'. Ambiguous input like '05/07/2025' is
+ * read the way the operating system's locale writes dates; pass `monthFirst`
+ * explicitly to override (the desktop worker gets it from the renderer, whose
+ * locale is the authoritative one).
  */
-export function parseDateText(str: string, monthFirst = false): string | null {
+export function parseDateText(str: string, monthFirst = isMonthFirstLocale()): string | null {
   const s = str.trim();
 
   // ISO, optionally with a time part (JSON.stringify of a Date yields this).
@@ -111,7 +115,7 @@ export function parseNumericText(str: string): number | null {
  * Unlike normalizeCellValue this also accepts bare numbers as Excel serial
  * dates — safe only because the column is known to hold dates.
  */
-export function toIsoDate(raw: any, monthFirst = false): string {
+export function toIsoDate(raw: any, monthFirst = isMonthFirstLocale()): string {
   if (raw === undefined || raw === null || raw === '') return '';
   if (raw instanceof Date) {
     return `${raw.getFullYear()}-${String(raw.getMonth() + 1).padStart(2, '0')}-${String(raw.getDate()).padStart(2, '0')}`;
@@ -144,7 +148,7 @@ export function toIsoDate(raw: any, monthFirst = false): string {
  * Bare numbers are never reinterpreted as dates here: in a generic column
  * 45000 is an amount, not an Excel serial date.
  */
-export function normalizeCellValue(raw: any, monthFirst = false): any {
+export function normalizeCellValue(raw: any, monthFirst = isMonthFirstLocale()): any {
   if (raw === null || raw === undefined) return '';
   if (raw instanceof Date) return toIsoDate(raw, monthFirst);
   if (typeof raw === 'number') return raw;

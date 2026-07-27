@@ -35,6 +35,7 @@ import { LicensePayload } from '../licensing/LicenseTypes';
 import { calculateExtrapolation, formatMoney, formatDate, smartFormat, methodsSupportingAnomalies } from '../utils/samplingEngine';
 import { Upload, CheckCircle2, AlertCircle, ShieldCheck, BookOpen, Sigma, PlayCircle, StopCircle, Calculator, Database, Info, Layers, Target } from 'lucide-react';
 import { t } from '../utils/translations';
+import { getDecimalSeparator } from '../utils/locale';
 import { exportToExcel } from '../export/excel';
 import { getCalculationDetails, getStaticFormula, METHOD_PREFIX_MAP, getDynamicMethodName, getDynamicMethodDescription } from './resultsUtils';
 
@@ -79,21 +80,23 @@ const DistributionGraphic: React.FC<{ items: SampledItem[], keys: SampledItem[] 
 const MoneyInput: React.FC<{ 
   id: string | number, 
   value: number | '', 
-  settings: GlobalSettings, 
   onChange: (val: string) => void, 
   onQuickFill: () => void, 
   onKeyDown: (e: React.KeyboardEvent) => void 
-}> = ({ id, value, settings, onChange, onQuickFill, onKeyDown }) => {
+}> = ({ id, value, onChange, onQuickFill, onKeyDown }) => {
   const [isFocused, setIsFocused] = useState(false);
-  const [localValue, setLocalValue] = useState(value === '' ? '' : value.toString().replace('.', ','));
-  useEffect(() => { if (!isFocused) setLocalValue(value === '' ? '' : value.toString().replace('.', ',')); }, [value, isFocused]);
+  // While editing, show the raw number with the locale's decimal separator;
+  // input is parsed back with separator auto-detection either way.
+  const forEditing = (v: number | '') => v === '' ? '' : v.toString().replace('.', getDecimalSeparator());
+  const [localValue, setLocalValue] = useState(() => forEditing(value));
+  useEffect(() => { if (!isFocused) setLocalValue(forEditing(value)); }, [value, isFocused]);
   return (
     <input
       id={`audit-input-${id}`}
       type="text"
       inputMode="decimal"
       className="w-full text-right bg-transparent border-b border-brand-300 focus:border-brand-700 focus:outline-none font-mono font-bold text-[13px] cursor-pointer hover:bg-brand-50/50 transition-colors whitespace-nowrap focus:bg-white focus:px-2 rounded-t-sm"
-      value={isFocused ? localValue : (value === '' ? '' : formatMoney(Number(value), settings))}
+      value={isFocused ? localValue : (value === '' ? '' : formatMoney(Number(value)))}
       onFocus={() => setIsFocused(true)}
       onBlur={() => setIsFocused(false)}
       onChange={(e) => { setLocalValue(e.target.value); onChange(e.target.value); }}
@@ -261,7 +264,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
 
 
   const renderMethodologyNote = () => {
-    const calcDetails = getCalculationDetails(config, currentResults, settings, lang);
+    const calcDetails = getCalculationDetails(config, currentResults, lang);
     
     // Check if current method supports anomalies
     const isAnomalySupported = methodsSupportingAnomalies.includes(config.method);
@@ -382,7 +385,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                     <div className="mt-auto space-y-1">
                         <div className="flex justify-between items-center border-b border-slate-100 pb-1">
                             <span className="text-[9px] text-slate-400 font-bold uppercase">{t('cttThreshold', lang)}</span>
-                            <span className="text-neutral-900 font-bold text-[10px]">{formatMoney(config.clearlyTrivialThreshold, settings)}</span>
+                            <span className="text-neutral-900 font-bold text-[10px]">{formatMoney(config.clearlyTrivialThreshold)}</span>
                         </div>
                         <div className="text-[9px] text-slate-600 leading-snug line-clamp-2">{trivialActionDesc}</div>
                         <div className="flex justify-between items-center pt-0.5">
@@ -486,7 +489,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                         {sourceHeaders.map((_, i) => {
                             let content;
                             if (i === colIndices.date) {
-                                content = formatDate(item.date, settings);
+                                content = formatDate(item.date);
                             } else if (i === colIndices.id) {
                                 // For the ID/Number column, show as is (plain string or integer)
                                 content = item.originalRow[i] !== undefined && item.originalRow[i] !== null 
@@ -497,7 +500,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                                     ? String(item.originalRow[i]).replace(/\.0$/, '')
                                     : '';
                             } else {
-                                content = smartFormat(item.originalRow[i], settings);
+                                content = smartFormat(item.originalRow[i]);
                             }
                             return (
                                 <td key={i} className="px-6 py-4 whitespace-nowrap font-medium text-left text-slate-600 border-r border-slate-50">
@@ -505,12 +508,12 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                                 </td>
                             );
                         })}
-                        <td className="px-6 py-4 text-right font-mono font-bold text-neutral-900 bg-slate-50/20 border-r border-slate-50 whitespace-nowrap">{formatMoney(item.bookValue, settings)}</td>
+                        <td className="px-6 py-4 text-right font-mono font-bold text-neutral-900 bg-slate-50/20 border-r border-slate-50 whitespace-nowrap">{formatMoney(item.bookValue)}</td>
                         <td className="px-6 py-4 bg-brand-50/30 group-hover:bg-brand-50/50 border-x border-brand-100/50 transition-colors">
-                            <MoneyInput id={item.id} value={item.auditedValue} settings={settings} onChange={v => handleAuditValueChange(item.id, isKey, v)} onQuickFill={() => handleAuditValueChange(item.id, isKey, item.bookValue)} onKeyDown={e => handleGridKeyDown(e, items, idx, isKey)} />
+                            <MoneyInput id={item.id} value={item.auditedValue} onChange={v => handleAuditValueChange(item.id, isKey, v)} onQuickFill={() => handleAuditValueChange(item.id, isKey, item.bookValue)} onKeyDown={e => handleGridKeyDown(e, items, idx, isKey)} />
                         </td>
                         <td className={`px-6 py-4 text-right font-mono font-bold whitespace-nowrap border-r border-slate-50 transition-colors ${liveHasDiff ? 'text-red-600' : 'text-slate-300 opacity-60'}`}>
-                            {formatMoney(liveDiff, settings)}
+                            {formatMoney(liveDiff)}
                         </td>
                         <td className="px-6 py-4">
                             <input type="text" value={item.comments || ''} onChange={(e) => handleCommentChange(item.id, isKey, e.target.value)} className="w-full bg-transparent border-b border-transparent focus:border-brand-400 focus:outline-none text-[12px] text-slate-600 placeholder:text-slate-200 transition-colors" placeholder="..." />
@@ -522,12 +525,12 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         </table>
       </SyncedScrollContainer>
     </div>
-  ), [sourceHeaders, colIndices, settings, lang, handleAuditValueChange, handleGridKeyDown, fillAllVisible, handleCommentChange]);
+  ), [sourceHeaders, colIndices, lang, handleAuditValueChange, handleGridKeyDown, fillAllVisible, handleCommentChange]);
 
   return (
     <div className="space-y-8 animate-fade-in pb-12">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <StatCard label={t('totalPop', lang)} value={`${currentResults.populationSize} ${t('items', lang)}`} subValue={`${formatMoney(currentResults.populationValue, settings)} ${currency}`} icon={<Database className="w-4 h-4" />} />
+        <StatCard label={t('totalPop', lang)} value={`${currentResults.populationSize} ${t('items', lang)}`} subValue={`${formatMoney(currentResults.populationValue)} ${currency}`} icon={<Database className="w-4 h-4" />} />
         
         <div className="bg-white p-6 rounded-[1.5rem] border border-slate-200 shadow-sm flex flex-col relative overflow-hidden group hover:shadow-md transition-all">
           <div className="text-brand-600 text-[10px] font-black uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
@@ -541,11 +544,11 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
           <div className="mt-auto pt-4 border-t border-slate-50 space-y-1.5">
             <div className="flex justify-between items-center text-[10px] font-bold">
                 <span className="text-slate-400 uppercase tracking-widest">Сума вибірки:</span>
-                <span className="text-neutral-900 font-mono">{formatMoney(currentResults.sampleValue, settings)} <span className="text-[9px] text-slate-400 ml-0.5">{currency}</span></span>
+                <span className="text-neutral-900 font-mono">{formatMoney(currentResults.sampleValue)} <span className="text-[9px] text-slate-400 ml-0.5">{currency}</span></span>
             </div>
             <div className="flex justify-between items-center text-[10px] font-bold border-l-2 border-brand-500 pl-3">
                 <span className="text-slate-400 uppercase tracking-widest">Ключові ел.:</span>
-                <span className="text-neutral-900 font-mono">{formatMoney(keyItemsValue, settings)} <span className="text-[9px] text-slate-400 ml-0.5">{currency}</span></span>
+                <span className="text-neutral-900 font-mono">{formatMoney(keyItemsValue)} <span className="text-[9px] text-slate-400 ml-0.5">{currency}</span></span>
             </div>
           </div>
         </div>
@@ -560,7 +563,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
         ) : (
             <StatCard 
                 label={t('projError', lang)} 
-                value={isAttribute ? `${extrapolation.projected.toFixed(2)}%` : formatMoney(extrapolation.projected, settings)} 
+                value={isAttribute ? `${extrapolation.projected.toFixed(2)}%` : formatMoney(extrapolation.projected)} 
                 subValue={t('projErrorDesc', lang)}
                 currency={!isAttribute ? currency : undefined} 
                 icon={<Sigma className="w-4 h-4 text-brand-600" />} 
@@ -590,14 +593,14 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                     {t('upperBound', lang)}
                 </div>
                 <div className={`text-base xl:text-lg 2xl:text-xl font-mono font-bold text-right mb-6 break-all ${isExceeded ? 'text-red-700' : 'text-brand-700'}`}>
-                    {isAttribute ? `${extrapolation.ub.toFixed(2)}%` : formatMoney(extrapolation.ub, settings)}
+                    {isAttribute ? `${extrapolation.ub.toFixed(2)}%` : formatMoney(extrapolation.ub)}
                     {!isAttribute && <span className="text-sm font-medium opacity-60 ml-1">{currency}</span>}
                 </div>
                 <div className="mt-auto pt-4 border-t border-white/50 flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
                     <span className={`${isExceeded ? 'text-red-400' : 'text-brand-400'}`}>
                         {t('upperBoundDesc', lang)}
                     </span>
-                    <span className={`${isExceeded ? 'text-red-700' : 'text-brand-700'}`}>{isExceeded ? '>' : '<='} {isAttribute ? `${limitValue}%` : formatMoney(limitValue, settings)}</span>
+                    <span className={`${isExceeded ? 'text-red-700' : 'text-brand-700'}`}>{isExceeded ? '>' : '<='} {isAttribute ? `${limitValue}%` : formatMoney(limitValue)}</span>
                 </div>
             </div>
         )}

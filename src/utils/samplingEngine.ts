@@ -1,62 +1,34 @@
-import { TransactionItem, SamplingConfig, SamplingResult, SampledItem, GlobalSettings } from '../types';
+import { TransactionItem, SamplingConfig, SamplingResult, SampledItem } from '../types';
 import { Mulberry32 } from '../statistics/prng';
+import { DEFAULT_HOLIDAYS, sanitizeHolidays, isHoliday } from '../utils/holidays';
+import { formatIsoDate, formatNumber } from '../utils/locale';
 import { getReliabilityFactor, getZScore, getExpansionFactor } from '../statistics/reliabilityFactor';
 
 export const methodsSupportingAnomalies = ['MUS', 'CVS', 'Random', 'FixedRandom'];
 
-export function formatMoney(val: number, settings?: GlobalSettings): string {
-    const raw = new Intl.NumberFormat('en-US', { 
-        style: 'decimal', 
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2 
-    }).format(val);
-    
-    if (settings) {
-        if (settings.numberSeparator === 'comma_dot') {
-            return raw; // 1,000.00
-        } else if (settings.numberSeparator === 'dot_comma') {
-            // 1.000,00
-            return raw.replace(/,/g, 'X').replace(/\./g, ',').replace(/X/g, '.');
-        } else {
-            // space_comma: 1 000,00
-            return raw.replace(/,/g, ' ').replace(/\./g, ',');
-        }
-    }
-    
-    return raw.replace(/,/g, ' ');
+export function formatMoney(val: number): string {
+    // Grouping and decimal separators follow the operating system, the same
+    // source the date format comes from.
+    return formatNumber(val);
 }
 
-export function formatDate(val: string, settings?: GlobalSettings): string {
-    if (!val) return val;
-    const parts = val.split('-');
-    if (parts.length === 3) {
-        const date = new Date(Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10)));
-        return new Intl.DateTimeFormat(settings?.region === 'us' ? 'en-US' : 'uk-UA', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            timeZone: 'UTC'
-        }).format(date);
-    }
-    return val;
+export function formatDate(val: string): string {
+    // Dates are stored as ISO and shown the way the operating system writes
+    // them, which is also the format the Excel export uses.
+    return formatIsoDate(val);
 }
 
-export function smartFormat(val: any, settings?: GlobalSettings): string {
+export function smartFormat(val: any): string {
     if (val === null || val === undefined) return '';
     if (typeof val === 'number') {
-        if (Number.isInteger(val)) return val.toString();
-        if (settings) {
-            return new Intl.NumberFormat('en-US', { 
-                minimumFractionDigits: 2, 
-                maximumFractionDigits: 2 
-            }).format(val).replace(/,/g, ' ');
-        }
-        return val.toFixed(2);
+        // Integers are identifiers or codes as often as they are amounts, so
+        // they stay bare; only fractional values get the money rendering.
+        return Number.isInteger(val) ? val.toString() : formatNumber(val);
     }
     const str = String(val);
     // Cells normalized on import store dates as ISO; show them in the user's
     // format instead of leaking the storage representation into the table.
-    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return formatDate(str, settings);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return formatDate(str);
     return str;
 }
 
@@ -221,7 +193,10 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
         const closingDays = config.riskClosingDays ?? 5;
         const includeWeekend = config.riskWeekend !== false;
         
-        const UA_HOLIDAYS = new Set(['01-01', '03-08', '05-01', '05-08', '05-09', '06-28', '08-24', '10-01', '12-25']);
+        const holidayList = (() => {
+            const configured = sanitizeHolidays(config.holidays);
+            return configured.length > 0 ? configured : DEFAULT_HOLIDAYS;
+        })();
         const includeHoliday = config.riskHoliday !== false;
         
         const riskMatched: TransactionItem[] = [];
@@ -243,9 +218,8 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
                     if (dow === 0 || dow === 6) isRisk = true;
                 }
                 
-                if (!isRisk && includeHoliday) {
-                    const strMMDD = item.date.substring(5, 10);
-                    if (UA_HOLIDAYS.has(strMMDD)) isRisk = true;
+                if (!isRisk && includeHoliday && isHoliday(item.date, holidayList)) {
+                    isRisk = true;
                 }
                 
                 if (!isRisk && closingDays > 0) {

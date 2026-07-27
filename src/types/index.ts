@@ -6,11 +6,16 @@ export type Language = 'en' | 'ua';
 export type Currency = 'UAH' | 'USD' | 'EUR';
 
 export interface GlobalSettings {
-  region: 'ua' | 'us' | 'eu'; // ua = Kyiv, us = US, eu = Generic EU
-  dateFormat: 'dd.mm.yyyy' | 'mm/dd/yyyy' | 'yyyy-mm-dd';
-  numberSeparator: 'space_comma' | 'comma_dot' | 'dot_comma'; // 1 000,00 vs 1,000.00 vs 1.000,00
+  // Date and number formatting are not settings: they follow the operating
+  // system's locale (see utils/locale.ts), so what is shown on screen, what is
+  // read on import and what is written on export can never disagree.
   language: Language;
   currency: Currency;
+  /**
+   * Holidays used by the RiskAssessment method. Entries are 'MM-DD' (recurring)
+   * or 'YYYY-MM-DD' (a single date). See utils/holidays.ts.
+   */
+  holidays: string[];
 }
 
 export interface ColumnIndices {
@@ -69,6 +74,8 @@ export interface SamplingConfig {
   riskRandomCount?: number;
   riskWeekend?: boolean;
   riskHoliday?: boolean;
+  /** Holidays copied from global settings at run time (see utils/holidays.ts). */
+  holidays?: string[];
 }
 
 export interface ValidationResult {

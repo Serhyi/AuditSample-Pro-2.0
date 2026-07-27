@@ -3,7 +3,12 @@ import { Language, TransactionItem } from '../types';
 import { t } from '../utils/translations';
 import { formatMoney, methodsSupportingAnomalies, calculateExtrapolation } from '../utils/samplingEngine';
 import { parseDateText, parseNumericText, looksLikeDate } from '../utils/cellNormalization';
+import { getExcelDateFormat, isMonthFirstLocale } from '../utils/locale';
 import { METHOD_PREFIX_MAP, getStaticFormula, getCalculationDetails, getDynamicMethodName, getDynamicMethodDescription } from '../components/resultsUtils';
+
+// Hidden sheet that carries the machine-readable snapshots in client exports,
+// which have no summary sheet to host them.
+export const META_SHEET_NAME = '__AuditSampleData';
 
 export async function exportToExcel(
   fullState: any,
@@ -15,7 +20,7 @@ export async function exportToExcel(
   // when the user actually exports, keeping the main bundle small.
   const ExcelJS = (await import('exceljs')).default as typeof ExcelJSType;
   const workbook = new ExcelJS.Workbook();
-  const { results, sourceHeaders, config, settings, population, license } = fullState;
+  const { results, sourceHeaders, config, population, license } = fullState;
   
   const isUa = lang === 'ua';
 
@@ -24,6 +29,37 @@ export async function exportToExcel(
   const colorDarkBlue = 'FF1E293B';
   const colorRowBg = 'FFF8FAFC';
   
+  // Machine-readable snapshots for lossless project recovery on re-import.
+  // Written as hidden rows: the config restores the sampling parameters, and
+  // the results snapshot carries the exact samplingInterval / trivialValue
+  // needed to recompute projected misstatement and upper bound once the client
+  // fills in audit values (they cannot be reverse-engineered from the
+  // formatted text labels).
+  const addMachineReadableRows = (sheet: ExcelJSType.Worksheet) => {
+    const write = (label: string, payload: unknown) => {
+      try {
+        const row = sheet.addRow([label, JSON.stringify(payload)]);
+        row.hidden = true;
+        row.getCell(1).font = { color: { argb: 'FFCBD5E1' } };
+        row.getCell(2).font = { color: { argb: 'FFCBD5E1' } };
+      } catch {
+        // If the payload cannot be serialized, text-based recovery still applies.
+      }
+    };
+
+    write('__AUDITSAMPLE_CONFIG__', config);
+    write('__AUDITSAMPLE_RESULTS__', {
+      populationSize: results.populationSize,
+      populationValue: results.populationValue,
+      trivialCount: results.trivialCount,
+      trivialValue: results.trivialValue,
+      areTrivialExcluded: results.areTrivialExcluded,
+      sampleSize: results.sampleSize,
+      sampleValue: results.sampleValue,
+      samplingInterval: results.samplingInterval
+    });
+  };
+
   // 1. "Опис та результат" (Description and Result) map
   const addSummarySheet = () => {
     const sheet = workbook.addWorksheet(isUa ? 'Опис та результат' : 'Description and Result');
@@ -89,7 +125,7 @@ export async function exportToExcel(
 
     // Trivial
     addSectionHeader(isUa ? 'Вочевидь незначні суми (ВНС)' : 'Clearly Trivial Items (CTT)', colorRowBg, 'FF1E293B');
-    addDetailRow(isUa ? 'Поріг ВНС' : 'CTT Threshold', formatMoney(config.clearlyTrivialThreshold, settings));
+    addDetailRow(isUa ? 'Поріг ВНС' : 'CTT Threshold', formatMoney(config.clearlyTrivialThreshold));
 
     let trivialActionDesc = t('trivialItemsNotExcluded', lang);
     if (results.areTrivialExcluded) {
@@ -113,19 +149,21 @@ export async function exportToExcel(
     addSectionHeader(isUa ? 'РОЗРАХУНОК ВИБІРКИ' : 'SAMPLING CALCULATION', colorDarkBlue);
     
     addSectionHeader(isUa ? '1. ПАРАМЕТРИ ГЕНЕРАЛЬНОЇ СУКУПНОСТІ' : '1. POPULATION PARAMETERS', 'FF0F172A');
-    addDetailRow(isUa ? 'ГЕНЕРАЛЬНА СУКУПНІСТЬ' : 'TOTAL POPULATION', formatMoney(results.populationValue, settings));
+    addDetailRow(isUa ? 'ГЕНЕРАЛЬНА СУКУПНІСТЬ' : 'TOTAL POPULATION', formatMoney(results.populationValue));
     addDetailRow(isUa ? 'Обсяг ген. сукупності' : 'Population Size', results.populationSize, '0');
     if (config.seed) addDetailRow(isUa ? 'Зерно генератора (Seed)' : 'Generator Seed', config.seed);
 
     sheet.addRow([]);
 
     addSectionHeader(isUa ? '2. НАЛАШТУВАННЯ ТА ОЦІНКА РИЗИКІВ' : '2. SETTINGS AND RISK ASSESSMENT', 'FF0F172A');
-    const calcDetails = getCalculationDetails(config, results, settings, lang);
+    const calcDetails = getCalculationDetails(config, results, lang);
     Object.entries(calcDetails.vars).forEach(([k, v]) => {
-        if (!isNaN(Number(v)) && k !== "Z" && k !== "R") {
-             addDetailRow(k, formatMoney(Number(v), settings));
-        } else if (!isNaN(Number(v))) {
-             addDetailRow(k, Number(v).toFixed(2));
+        // Monetary figures already arrive as formatted strings from
+        // getCalculationDetails. Raw numbers here are counts, seeds and
+        // coefficients, so money formatting would misreport them (a step of 5
+        // as "5,00", a reliability factor of 2.996 as "3,00").
+        if (typeof v === 'number') {
+             addDetailRow(k, Number.isInteger(v) ? String(v) : v.toFixed(3));
         } else {
              addDetailRow(k, String(v));
         }
@@ -153,8 +191,8 @@ export async function exportToExcel(
         addDetailRow(isUa ? 'Очікуваний ступінь відхилення' : 'Projected Deviation', `${projNum.toFixed(2)}%`);
         addDetailRow(isUa ? 'Максимальна помилка (СУЕВ)' : 'Upper Deviation Bound', `${ubNum.toFixed(2)}%`);
     } else {
-        addDetailRow(isUa ? 'Прогнозоване викривлення' : 'Projected Misstatement', formatMoney(projNum, settings));
-        addDetailRow(isUa ? 'Верхня межа викривлення' : 'Upper Misstatement Bound', formatMoney(ubNum, settings));
+        addDetailRow(isUa ? 'Прогнозоване викривлення' : 'Projected Misstatement', formatMoney(projNum));
+        addDetailRow(isUa ? 'Верхня межа викривлення' : 'Upper Misstatement Bound', formatMoney(ubNum));
     }
     
     sheet.addRow([]);
@@ -173,14 +211,14 @@ export async function exportToExcel(
     } else if (config.method === 'RiskAssessment') {
         const keyItemsMisstatements = (results.keyItems || []).reduce((acc: any, i: any) => acc + (i.difference || 0), 0);
         conclusionPrefix = isUa ? "🟡 ОЦІНКА РИЗИКІВ" : "🟡 RISK ASSESSMENT";
-        conclusionText = isUa ? `Знайдено викривлень на суму ${formatMoney(keyItemsMisstatements, settings)}.` : `Total misstatements found is ${formatMoney(keyItemsMisstatements, settings)}.`;
+        conclusionText = isUa ? `Знайдено викривлень на суму ${formatMoney(keyItemsMisstatements)}.` : `Total misstatements found is ${formatMoney(keyItemsMisstatements)}.`;
     } else {
         if (ubNum <= config.tolerableMisstatement) {
             conclusionPrefix = isUa ? "🟢 НИЗЬКИЙ РИЗИК" : "🟢 LOW RISK";
-            conclusionText = isUa ? `Верхня межа викривлення (${formatMoney(ubNum, settings)}) НЕ ПЕРЕВИЩУЄ допустиме викривлення (${formatMoney(config.tolerableMisstatement, settings)}). Вибірка підтверджує відсутність суттєвих викривлень (Низький ризик).` : `Upper misstatement bound (${formatMoney(ubNum, settings)}) DOES NOT EXCEED tolerable misstatement (${formatMoney(config.tolerableMisstatement, settings)}). Sample confirms absence of material misstatements (Low risk).`;
+            conclusionText = isUa ? `Верхня межа викривлення (${formatMoney(ubNum)}) НЕ ПЕРЕВИЩУЄ допустиме викривлення (${formatMoney(config.tolerableMisstatement)}). Вибірка підтверджує відсутність суттєвих викривлень (Низький ризик).` : `Upper misstatement bound (${formatMoney(ubNum)}) DOES NOT EXCEED tolerable misstatement (${formatMoney(config.tolerableMisstatement)}). Sample confirms absence of material misstatements (Low risk).`;
         } else {
              conclusionPrefix = isUa ? "🔴 ВИСОКИЙ РИЗИК" : "🔴 HIGH RISK";
-             conclusionText = isUa ? `Верхня межа викривлення (${formatMoney(ubNum, settings)}) ПЕРЕВИЩУЄ допустиме викривлення (${formatMoney(config.tolerableMisstatement, settings)}). Вибірка свідчить про наявність суттєвих викривлень (Високий ризик).` : `Upper misstatement bound (${formatMoney(ubNum, settings)}) EXCEEDS tolerable misstatement (${formatMoney(config.tolerableMisstatement, settings)}). Sample indicates presence of material misstatements (High risk).`;
+             conclusionText = isUa ? `Верхня межа викривлення (${formatMoney(ubNum)}) ПЕРЕВИЩУЄ допустиме викривлення (${formatMoney(config.tolerableMisstatement)}). Вибірка свідчить про наявність суттєвих викривлень (Високий ризик).` : `Upper misstatement bound (${formatMoney(ubNum)}) EXCEEDS tolerable misstatement (${formatMoney(config.tolerableMisstatement)}). Sample indicates presence of material misstatements (High risk).`;
         }
     }
     
@@ -205,43 +243,19 @@ export async function exportToExcel(
 
     sheet.addRow([]);
 
-    // Machine-readable config snapshot for lossless project recovery on re-import.
-    // Stored in a hidden row so it does not clutter the human-readable report.
-    try {
-      const metaRow = sheet.addRow(['__AUDITSAMPLE_CONFIG__', JSON.stringify(config)]);
-      metaRow.hidden = true;
-      metaRow.getCell(1).font = { color: { argb: 'FFCBD5E1' } };
-      metaRow.getCell(2).font = { color: { argb: 'FFCBD5E1' } };
-    } catch {
-      // If config cannot be serialized, the text-based recovery still applies.
-    }
-
-    // Machine-readable results snapshot: exact numbers needed to recompute
-    // projected misstatement / upper bound after the client fills audit values
-    // and the file is re-imported (samplingInterval, trivialValue etc. cannot
-    // be reliably reverse-engineered from the formatted text labels).
-    try {
-      const resultsSnapshot = {
-        populationSize: results.populationSize,
-        populationValue: results.populationValue,
-        trivialCount: results.trivialCount,
-        trivialValue: results.trivialValue,
-        areTrivialExcluded: results.areTrivialExcluded,
-        sampleSize: results.sampleSize,
-        sampleValue: results.sampleValue,
-        samplingInterval: results.samplingInterval
-      };
-      const resRow = sheet.addRow(['__AUDITSAMPLE_RESULTS__', JSON.stringify(resultsSnapshot)]);
-      resRow.hidden = true;
-      resRow.getCell(1).font = { color: { argb: 'FFCBD5E1' } };
-      resRow.getCell(2).font = { color: { argb: 'FFCBD5E1' } };
-    } catch {
-      // Text-based recovery still applies.
-    }
+    addMachineReadableRows(sheet);
   };
 
-  // Create summary sheet
-  addSummarySheet();
+  // The client receives only the selected items: no methodology, no
+  // conclusion, no population. The snapshots still travel with the file on a
+  // hidden sheet so the returned workbook re-imports losslessly.
+  if (isClientVersion) {
+    const metaSheet = workbook.addWorksheet(META_SHEET_NAME);
+    metaSheet.state = 'veryHidden';
+    addMachineReadableRows(metaSheet);
+  } else {
+    addSummarySheet();
+  }
 
   // --- Source cell presentation --------------------------------------------
   // Cells are normalized on import (utils/cellNormalization): numbers are
@@ -250,13 +264,8 @@ export async function exportToExcel(
   // date format. Files imported before normalization existed still carry raw
   // text, so the same parsers run as a fallback.
 
-  const DATE_NUM_FMT: Record<string, string> = {
-    'dd.mm.yyyy': 'dd.mm.yyyy',
-    'mm/dd/yyyy': 'mm/dd/yyyy',
-    'yyyy-mm-dd': 'yyyy-mm-dd'
-  };
-  const dateNumFmt = DATE_NUM_FMT[settings?.dateFormat] || 'dd.mm.yyyy';
-  const monthFirst = settings?.dateFormat === 'mm/dd/yyyy';
+  const dateNumFmt = getExcelDateFormat();
+  const monthFirst = isMonthFirstLocale();
 
   const isoToDate = (iso: string): Date => {
     const [y, m, d] = iso.split('-').map(Number);

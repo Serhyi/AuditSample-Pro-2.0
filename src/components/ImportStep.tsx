@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, Download, AlertTriangle, CheckCircle, FileSpreadsheet, Database, Info, Settings2, ChevronDown, ChevronUp, XCircle } from 'lucide-react';
-import { TransactionItem, ValidationResult, Language, Currency, ColumnIndices, GlobalSettings } from '../types';
+import { TransactionItem, ValidationResult, Language, Currency, ColumnIndices } from '../types';
 import { t } from '../utils/translations';
 import { formatMoney, formatDate } from '../utils/samplingEngine';
 import WebImportWorker from './ImportWorker?worker';
@@ -14,7 +14,6 @@ interface ImportStepProps {
   lang: Language;
   currency: Currency;
   setCurrency: (c: Currency) => void;
-  settings: GlobalSettings;
 }
 
 const parseExcelRawDate = (rawVal: any): string | null => {
@@ -114,7 +113,7 @@ const detectTableStructure = (rawData: any[][]): { startRow: number, indices: Co
     return { startRow: 6, indices: { id: 0, amount: 1, date: 2 } };
 };
 
-const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onProjectRecovered, onLoadingStateChange, onImportProject, lang, currency, setCurrency, settings }) => {
+const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onProjectRecovered, onLoadingStateChange, onImportProject, lang, currency, setCurrency }) => {
   const [dragActive, setDragActive] = useState(false);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -347,10 +346,10 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onProjectRecovere
                     
                     if (isAmount) {
                         cellStyle = isAmtInvalid ? "bg-red-50 text-red-600 font-bold" : "font-mono font-bold text-neutral-900";
-                        if (!isAmtInvalid) content = formatMoney(parsedAmt, settings);
+                        if (!isAmtInvalid) content = formatMoney(parsedAmt);
                     } else if (isDate) {
                         cellStyle = isDateInvalid ? "bg-red-50 text-red-600" : "text-brand-700 font-medium";
-                        if (parsedDate) content = formatDate(parsedDate, settings);
+                        if (parsedDate) content = formatDate(parsedDate);
                     } else if (isId) {
                         cellStyle = "font-medium text-slate-800 bg-slate-50";
                     }
