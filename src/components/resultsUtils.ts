@@ -112,8 +112,6 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
         const randomCount = config.riskRandomCount ?? 5;
         const randomAuto = config.riskRandomAuto !== false;
         const cap = Number(config.riskMaxByCriteria) || 0;
-        const keyThreshold = Number(config.riskKeyThreshold) || 0;
-        const applyCtt = config.riskApplyCtt !== false;
         const configuredHolidays = sanitizeHolidays(config.holidays);
         const holidayList = configuredHolidays.length > 0 ? configuredHolidays : DEFAULT_HOLIDAYS;
         // 'Risk Criteria' is the older, undifferentiated label; current runs
@@ -158,10 +156,6 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
             (matchedTotal !== undefined && matchedTotal !== byCriteria)
                 ? (isUa ? `${byCriteria} з ${matchedTotal} збігів (ліміт ${cap})` : `${byCriteria} of ${matchedTotal} matches (cap ${cap})`)
                 : byCriteria;
-        if (keyThreshold > 0) {
-            vars[isUa ? 'Поріг ключових елементів:' : 'Key item threshold:'] = formatMoney(keyThreshold);
-        }
-        vars[isUa ? 'ВНС застосовано до критеріїв:' : 'CTT applied to criteria:'] = applyCtt ? yes : no;
         vars[isUa ? 'Додано випадкових (контроль):' : 'Random control items:'] =
             randomAuto ? `${byRandom} (${isUa ? 'авто' : 'auto'})` : `${byRandom} / ${randomCount}`;
         vars[isUa ? 'Кількість відібраних елементів (n):' : 'Sample Size (n):'] = results.samplingItems.length;

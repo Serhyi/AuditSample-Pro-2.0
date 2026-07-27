@@ -64772,17 +64772,12 @@ var SamplingService = class {
     const isAnomalyDisabled = config.anomalyMethod === "None";
     const isMUSKeyExtract = config.method === "MUS" && tm > 0;
     const allowedMethodsForKeyItems = ["Random", "FixedRandom", "CVS", "Cluster"];
-    const isRiskMethod = config.method === "RiskAssessment";
-    const riskKeyThreshold = Number(config.riskKeyThreshold) || 0;
-    const riskApplyCtt = config.riskApplyCtt !== false;
-    const excludeKeyItems = isRiskMethod ? riskKeyThreshold > 0 : isMUSKeyExtract || !isAnomalyDisabled && tm > 0 && allowedMethodsForKeyItems.includes(config.method);
-    const keyThreshold = isRiskMethod ? riskKeyThreshold : tm;
-    const upperLimit = excludeKeyItems ? keyThreshold : 999999999999;
-    const poolFloor = isRiskMethod && !riskApplyCtt ? 0 : ctt;
+    const excludeKeyItems = config.method !== "RiskAssessment" && (isMUSKeyExtract || !isAnomalyDisabled && tm > 0 && allowedMethodsForKeyItems.includes(config.method));
+    const upperLimit = excludeKeyItems ? tm : 999999999999;
     let trivialCount = 0;
     let trivialValue = 0;
     let trivialItems = [];
-    if (ctt > 0 && (!isRiskMethod || riskApplyCtt)) {
+    if (ctt > 0) {
       await updateProgress("Selecting trivial items...");
       const trivAgg = await this.db.query(`SELECT COUNT(*) as cnt, SUM(amount) as val FROM population WHERE ABS(amount) < ?`, [ctt]);
       trivialCount = trivAgg[0]?.cnt || 0;
@@ -64796,7 +64791,7 @@ var SamplingService = class {
     let keyItems = [];
     if (excludeKeyItems) {
       await updateProgress("Selecting key items...");
-      keyItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) >= ? LIMIT 5000`, [keyThreshold]);
+      keyItems = await this.db.query(`SELECT * FROM population WHERE ABS(amount) >= ? LIMIT 5000`, [tm]);
       keyItems = keyItems.map((item) => ({
         ...item,
         originalRow: item.originalRow ? JSON.parse(item.originalRow) : [],
@@ -64850,7 +64845,7 @@ var SamplingService = class {
                  ${closingCond ? `COALESCE((${closingCond}), 0)` : "0"} AS c
           FROM population
           WHERE ABS(amount) < ? AND ABS(amount) >= ? AND ${riskWhereStr}
-        `, [upperLimit, poolFloor]);
+        `, [upperLimit, ctt]);
       const flagsOf = (r) => ({ weekend: !!r.w, holiday: !!r.h, closing: !!r.c });
       riskCriteriaHits = {
         weekend: flagRows.filter((r) => r.w).length,
@@ -64884,11 +64879,11 @@ var SamplingService = class {
       const riskUnmatchedWhere = `ABS(amount) < ? AND ABS(amount) >= ? AND NOT ${riskWhereStr}`;
       const nonRiskAgg = await this.db.query(
         `SELECT COUNT(*) as cnt FROM population WHERE ${riskUnmatchedWhere}`,
-        [upperLimit, poolFloor]
+        [upperLimit, ctt]
       );
       const nonRiskSize = nonRiskAgg[0]?.cnt || 0;
       const randomCount = config.riskRandomAuto === false ? config.riskRandomCount ?? 5 : autoRandomCount(nonRiskSize);
-      const randomMatched = await this.getRandomSample(riskUnmatchedWhere, [upperLimit, poolFloor], randomCount, seed);
+      const randomMatched = await this.getRandomSample(riskUnmatchedWhere, [upperLimit, ctt], randomCount, seed);
       for (const item of randomMatched) {
         sampleItems.push({
           ...item,

@@ -90,16 +90,15 @@ describe('key items and the trivial cut', () => {
   const cfg = { ...base, riskWeekend: true, riskClosingDays: 0, clearlyTrivialThreshold: 100,
                 riskRandomAuto: false, riskRandomCount: 0, tolerableMisstatement: 43585 } as SamplingConfig;
 
-  it('uses its own key threshold, not materiality', () => {
-    expect(runSampling(withAmounts, cfg).keyItems).toHaveLength(0);
-    const withKey = runSampling(withAmounts, { ...cfg, riskKeyThreshold: 10000 });
-    expect(withKey.keyItems.map(i => i.id)).toEqual(['big']);
+  it('never splits off key items, whatever materiality says', () => {
+    const r = runSampling(withAmounts, cfg);
+    expect(r.keyItems).toHaveLength(0);
+    expect(r.samplingItems.map(i => i.id)).toContain('big');
   });
 
-  it('can consider trivial amounts when the CTT cut is switched off', () => {
-    expect(runSampling(withAmounts, cfg).samplingItems.map(i => i.id)).not.toContain('small');
-    const noCtt = runSampling(withAmounts, { ...cfg, riskApplyCtt: false });
-    expect(noCtt.samplingItems.map(i => i.id)).toContain('small');
-    expect(noCtt.trivialCount).toBe(0);
+  it('always drops amounts below the clearly-trivial threshold', () => {
+    const r = runSampling(withAmounts, cfg);
+    expect(r.samplingItems.map(i => i.id)).not.toContain('small');
+    expect(r.trivialCount).toBe(1);
   });
 });

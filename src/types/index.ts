@@ -74,13 +74,8 @@ export interface SamplingConfig {
   riskRandomCount?: number;
   riskWeekend?: boolean;
   riskHoliday?: boolean;
-  // Cap on how many criteria matches enter the sample (0 = take them all).
+  // Upper limit on the sample drawn by the criteria (0 = no limit).
   riskMaxByCriteria?: number;
-  // Own key-item threshold: the method is not value-based, so it does not
-  // borrow materiality the way the variable-sampling methods do (0 = none).
-  riskKeyThreshold?: number;
-  // Whether the clearly-trivial cut-off applies before the risk criteria.
-  riskApplyCtt?: boolean;
   // Derive the number of random control items from the non-risk pool size.
   riskRandomAuto?: boolean;
   /** Holidays copied from global settings at run time (see utils/holidays.ts). */

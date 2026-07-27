@@ -243,17 +243,10 @@ const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulat
                             </label>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-6">
-                        <div>
-                            <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">{t('riskMaxByCriteriaLabel', lang)}</label>
-                            <NumberInput min={0} value={config.riskMaxByCriteria ?? 0} onChange={(val) => handleChange('riskMaxByCriteria', val)} className="w-full px-5 py-3 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-bold text-[13px]" />
-                            <p className="text-[11px] text-slate-400 mt-1.5 italic">{t('riskMaxByCriteriaHelp', lang)}</p>
-                        </div>
-                        <div>
-                            <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">{t('riskKeyThresholdLabel', lang)}</label>
-                            <NumberInput min={0} value={config.riskKeyThreshold ?? 0} onChange={(val) => handleChange('riskKeyThreshold', val)} className="w-full px-5 py-3 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-bold text-[13px]" />
-                            <p className="text-[11px] text-slate-400 mt-1.5 italic">{t('riskKeyThresholdHelp', lang)}</p>
-                        </div>
+                    <div>
+                        <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">{t('riskMaxByCriteriaLabel', lang)}</label>
+                        <NumberInput min={0} value={config.riskMaxByCriteria ?? 0} onChange={(val) => handleChange('riskMaxByCriteria', val)} className="w-full px-5 py-3 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-bold text-[13px]" />
+                        <p className="text-[11px] text-slate-400 mt-1.5 italic">{t('riskMaxByCriteriaHelp', lang)}</p>
                     </div>
                     <div className="grid grid-cols-2 gap-6">
                         <label className="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-2xl cursor-pointer hover:border-brand-400 transition-all">
@@ -269,13 +262,6 @@ const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulat
                              </div>
                              <input type="checkbox" className="hidden" checked={config.riskHoliday !== false} onChange={(e) => handleChange('riskHoliday', e.target.checked)} />
                              <span className="text-[12px] font-bold text-slate-700">{t('riskHolidayLabel', lang)}</span>
-                        </label>
-                        <label className="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-2xl cursor-pointer hover:border-brand-400 transition-all col-span-2">
-                             <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${config.riskApplyCtt !== false ? 'bg-brand-500 border-brand-500 text-white' : 'border-slate-300 bg-slate-50'}`}>
-                                 {config.riskApplyCtt !== false && <Check className="w-3.5 h-3.5" />}
-                             </div>
-                             <input type="checkbox" className="hidden" checked={config.riskApplyCtt !== false} onChange={(e) => handleChange('riskApplyCtt', e.target.checked)} />
-                             <span className="text-[12px] font-bold text-slate-700">{t('riskApplyCttLabel', lang)}</span>
                         </label>
                     </div>
                      <p className="text-[12px] font-medium text-slate-400 mt-2.5 flex items-start gap-2 italic">
