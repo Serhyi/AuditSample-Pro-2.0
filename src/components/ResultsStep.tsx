@@ -30,7 +30,7 @@ const SyncedScrollContainer = ({ children, setRefs, syncScrollRef }: any) => {
     );
 };
 
-import { SampledItem, SamplingResult, SamplingConfig, Language, Currency, ColumnIndices, TransactionItem, GlobalSettings } from '../types';
+import { SampledItem, SamplingResult, SamplingConfig, Language, Currency, ColumnIndices, GlobalSettings } from '../types';
 import { LicensePayload } from '../licensing/LicenseTypes';
 import { calculateExtrapolation, formatMoney, formatDate, smartFormat, methodsSupportingAnomalies } from '../utils/samplingEngine';
 import { Upload, CheckCircle2, AlertCircle, ShieldCheck, BookOpen, Sigma, PlayCircle, StopCircle, Calculator, Database, Info, Layers, Target } from 'lucide-react';
@@ -47,7 +47,6 @@ interface ResultsStepProps {
   currency: Currency;
   sourceHeaders: string[];
   colIndices: ColumnIndices;
-  getFullPopulation: () => TransactionItem[];
   settings: GlobalSettings;
   license?: LicensePayload | null;
 }
@@ -117,7 +116,7 @@ const TablePagination = memo<{ items: SampledItem[], title?: string, isKey?: boo
    );
 });
 
-const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onResultsUpdate, config, lang, currency, sourceHeaders, colIndices, getFullPopulation, settings, license }) => {
+const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onResultsUpdate, config, lang, currency, sourceHeaders, colIndices, settings, license }) => {
   const [activeTab, setActiveTab] = useState<'sample' | 'key'>('sample');
 
   const extrapolation = useMemo(() => calculateExtrapolation(currentResults, config), [currentResults, config]);
@@ -222,13 +221,10 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
   }, [handleAuditValueChange]);
 
   const handleExport = async () => {
-    const pop = getFullPopulation();
-
     const fullState = {
         version: "2.0",
         timestamp: Date.now(),
         currentStep: 2,
-        population: pop,
         sourceHeaders,
         columnIndices: colIndices,
         config,
@@ -238,30 +234,8 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
     };
 
     const dateStr = new Date().toLocaleDateString('uk-UA').replace(/\./g, '_');
-    exportToExcel(fullState, `Вибірка_${config.method}_Робоча_${dateStr}.xlsx`, false, lang);
+    exportToExcel(fullState, `Вибірка_${config.method}_${dateStr}.xlsx`, lang);
   };
-
-  const handleExportClient = async () => {
-    const pop = getFullPopulation();
-
-    const clientState = {
-        version: "2.0",
-        timestamp: Date.now(),
-        currentStep: 2,
-        population: pop,
-        sourceHeaders,
-        columnIndices: colIndices,
-        config,
-        results: currentResults,
-        settings,
-        license
-    };
-
-    const dateStr = new Date().toLocaleDateString('uk-UA').replace(/\./g, '_');
-    exportToExcel(clientState, `Вибірка_${config.method}_Клієнту_${dateStr}.xlsx`, true, lang);
-  };
-
-
 
   const renderMethodologyNote = () => {
     const calcDetails = getCalculationDetails(config, currentResults, lang);
@@ -615,7 +589,6 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
           renderTable={renderTable}
           tableContainerRefs={tableContainerRefs}
           syncScrollRef={cardSyncScrollRef}
-          handleExportClient={handleExportClient}
           handleExport={handleExport}
           samplingItemsLength={samplingItemsLength}
           keyItemsLength={keyItemsLength}
@@ -628,7 +601,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
   );
 };
 
-const TableCard = ({ activeTab, setActiveTab, currentResults, lang, renderTable, tableContainerRefs, syncScrollRef, handleExportClient, handleExport, samplingItemsLength, config }: any) => {
+const TableCard = ({ activeTab, setActiveTab, currentResults, lang, renderTable, tableContainerRefs, syncScrollRef, handleExport, samplingItemsLength, config }: any) => {
     const [contentWidth, setContentWidth] = React.useState(0);
 
     const onSyncScroll = () => {
@@ -656,7 +629,6 @@ const TableCard = ({ activeTab, setActiveTab, currentResults, lang, renderTable,
                     <button onClick={() => setActiveTab('key')} className={`px-6 py-2.5 text-[11px] font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'key' ? 'bg-white text-brand-600 shadow-md shadow-slate-200' : 'text-slate-400 hover:text-slate-600'}`}>{lang === 'ua' ? 'Ключові елементи' : 'Key Items'} {(currentResults.keyItems || []).length}</button>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={handleExportClient} className="flex items-center gap-3 text-[11px] text-brand-600 font-black uppercase tracking-widest bg-brand-50 border border-brand-200 hover:bg-brand-100 px-7 py-3 rounded-xl transition-all active:scale-95"><Upload className="w-4 h-4 stroke-[3px]"/> {lang === 'ua' ? 'Експорт для клієнта' : 'Export for Client'}</button>
                     <button onClick={handleExport} className="flex items-center gap-3 text-[11px] text-white font-black uppercase tracking-widest bg-brand-600 hover:bg-brand-700 px-7 py-3 rounded-xl shadow-[0_4px_12px_rgba(0,133,75,0.25)] transition-all active:scale-95"><Upload className="w-4 h-4 stroke-[3px]"/> {lang === 'ua' ? 'Експорт XLSX' : 'Export XLSX'}</button>
                 </div>
             </div>

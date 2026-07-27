@@ -212,16 +212,14 @@ self.onmessage = async (e) => {
                     return String(v).trim() === '';
                 };
                 
-                const extractSummaryInfo = (sheet: any): any => {
+                const extractSummaryInfo = (sheets: any[]): any => {
                     let populationSize = 0, populationValue = 0, projectedMisstatement = 0, upperMisstatementBound = 0;
                     let sampleSize = 0, trivialCount = 0, tolerableMisstatement = 0, confidenceLevel = 0;
                     let methodStr = 'MUS';
                     let configJson: any = null;
                     let resultsSnapshot: any = null;
 
-                    if (!sheet) return { populationSize, populationValue, projectedMisstatement, upperMisstatementBound, sampleSize, trivialCount, tolerableMisstatement, confidenceLevel, method: methodStr, config: configJson, resultsSnapshot };
-                    
-                    for (let r = 1; r <= sheet.rowCount; r++) {
+                    for (const sheet of sheets) for (let r = 1; r <= sheet.rowCount; r++) {
                         const row = sheet.getRow(r);
                         const lbl = String(getCellValue(row.getCell(1).value) || '');
                         const val = getCellValue(row.getCell(2).value);
@@ -277,12 +275,14 @@ self.onmessage = async (e) => {
                 if (sampleSheet) {
                     self.postMessage({ type: 'PARSE_PROGRESS', payload: { pct: 50, stage: 'Reading exported project...' } });
                     
-                    // Client exports carry no summary sheet; their snapshots live on the
-                    // hidden meta sheet instead.
-                    const summarySheet = workbook.getWorksheet('Опис та результат')
-                      || workbook.getWorksheet('Description and Result')
-                      || workbook.getWorksheet('__AuditSampleData');
-                    const summaryData = extractSummaryInfo(summarySheet);
+                    // Human-readable figures live on the summary sheet, the
+                    // machine-readable snapshots on the hidden meta sheet.
+                    const summarySheets = [
+                      workbook.getWorksheet('Опис та результат'),
+                      workbook.getWorksheet('Description and Result'),
+                      workbook.getWorksheet('__AuditSampleData')
+                    ].filter(Boolean);
+                    const summaryData = extractSummaryInfo(summarySheets);
                     
                     const extractSheet = (sheet: any): {items: any[], headers: string[]} => {
                         const items: any[] = [];

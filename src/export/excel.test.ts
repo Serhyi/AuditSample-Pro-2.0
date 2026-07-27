@@ -38,7 +38,7 @@ const state = {
 
 describe('export normalization', () => {
   it('writes dates and numbers as real Excel values', async () => {
-    await exportToExcel(state, 'x.xlsx', false, 'ua');
+    await exportToExcel(state, 'x.xlsx', 'ua');
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(captured!);
     const sheet = wb.getWorksheet('Вибірка')!;
@@ -73,37 +73,39 @@ describe('export normalization', () => {
   });
 });
 
-describe('client export', () => {
-  it('contains only the sample sheets plus the hidden snapshot sheet', async () => {
-    await exportToExcel(state, 'client.xlsx', true, 'ua');
+describe('single export', () => {
+  it('has the sample sheets, no population sheet, and the hidden snapshot sheet', async () => {
+    await exportToExcel(state, 'x.xlsx', 'ua');
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(captured!);
     const names = wb.worksheets.map(w => w.name);
 
     expect(names).toContain('Вибірка');
-    expect(names).not.toContain('Опис та результат');
+    expect(names).toContain('Опис та результат');
     expect(names).not.toContain('Генеральна сукупність');
 
     const meta = wb.getWorksheet('__AuditSampleData')!;
-    expect(meta).toBeDefined();
     expect(meta.state).toBe('veryHidden');
     // The snapshots must survive so the returned file re-imports losslessly.
     const labels = [meta.getRow(1).getCell(1).value, meta.getRow(2).getCell(1).value];
     expect(labels).toEqual(['__AUDITSAMPLE_CONFIG__', '__AUDITSAMPLE_RESULTS__']);
     expect(JSON.parse(String(meta.getRow(2).getCell(2).value)).samplingInterval).toBe(100);
 
-    // The auditor's comments column stays empty for the client.
-    const sample = wb.getWorksheet('Вибірка')!;
-    expect(String(sample.getRow(1).getCell(12).value)).toBe('Коментарі');
+    // No service rows leak onto the visible summary sheet.
+    const summary = wb.getWorksheet('Опис та результат')!;
+    const firstCol: string[] = [];
+    summary.eachRow(r => firstCol.push(String(r.getCell(1).value ?? '')));
+    expect(firstCol.some(l => l.startsWith('__AUDITSAMPLE'))).toBe(false);
   });
 
-  it('keeps the summary and population sheets in the working export', async () => {
-    await exportToExcel({ ...state, population: state.results.samplingItems }, 'work.xlsx', false, 'ua');
+  it('reserves a highlighted first row for the population file link', async () => {
+    await exportToExcel(state, 'x.xlsx', 'ua');
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(captured!);
-    const names = wb.worksheets.map(w => w.name);
-    expect(names).toContain('Опис та результат');
-    expect(names).toContain('Генеральна сукупність');
-    expect(names).not.toContain('__AuditSampleData');
+    const row = wb.getWorksheet('Опис та результат')!.getRow(1);
+
+    expect(String(row.getCell(1).value)).toBe('Файл генеральної сукупності:');
+    expect((row.getCell(1).fill as any).fgColor.argb).toBe('FFFFF3B0');
+    expect((row.getCell(2).fill as any).fgColor.argb).toBe('FFFFF3B0');
   });
 });

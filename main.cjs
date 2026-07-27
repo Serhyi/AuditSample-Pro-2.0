@@ -65256,7 +65256,11 @@ var AppOrchestrator = class {
         await workbook.xlsx.readFile(filePath);
         const sampleSheet = workbook.getWorksheet("\u0412\u0438\u0431\u0456\u0440\u043A\u0430") || workbook.getWorksheet("Sample");
         if (!sampleSheet) return null;
-        const summarySheet = workbook.getWorksheet("\u041E\u043F\u0438\u0441 \u0442\u0430 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442") || workbook.getWorksheet("Description and Result") || workbook.getWorksheet("__AuditSampleData");
+        const summarySheets = [
+          workbook.getWorksheet("\u041E\u043F\u0438\u0441 \u0442\u0430 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442"),
+          workbook.getWorksheet("Description and Result"),
+          workbook.getWorksheet("__AuditSampleData")
+        ].filter(Boolean);
         const getCellValue = (v) => {
           if (v === null || v === void 0) return null;
           if (typeof v === "object" && "result" in v) return v.result;
@@ -65277,12 +65281,12 @@ var AppOrchestrator = class {
           }
           return parseFloat(s) || 0;
         };
-        const extractSummaryInfo = (sheet) => {
-          if (!sheet) return null;
+        const extractSummaryInfo = (sheets) => {
+          if (!sheets.length) return null;
           let populationSize = 0, populationValue = 0, projectedMisstatement = 0, upperMisstatementBound = 0, sampleSize = 0, trivialCount = 0, tolerableMisstatement = 0, confidenceLevel = 95, methodStr = "MUS";
           let configJson = null;
           let resultsSnapshot = null;
-          sheet.eachRow((row) => {
+          for (const sheet of sheets) sheet.eachRow((row) => {
             const lbl = String(getCellValue(row.getCell(1).value) || "").trim();
             const val = getCellValue(row.getCell(2).value);
             if (lbl === "__AUDITSAMPLE_CONFIG__" && val) {
@@ -65362,7 +65366,7 @@ var AppOrchestrator = class {
           }
           return { items, headers: sourceHeaders };
         };
-        const summaryData = extractSummaryInfo(summarySheet);
+        const summaryData = extractSummaryInfo(summarySheets);
         const sampleData = extractSheet(sampleSheet);
         const keySheet = workbook.getWorksheet("\u041A\u043B\u044E\u0447\u043E\u0432\u0456") || workbook.getWorksheet("Key");
         const keyData = extractSheet(keySheet);
