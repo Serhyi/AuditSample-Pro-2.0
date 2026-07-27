@@ -31,6 +31,58 @@ export function getDynamicMethodName(config: SamplingConfig, lang: Language): st
 export function getDynamicMethodDescription(config: SamplingConfig, lang: Language): string {
     const mPrefix = METHOD_PREFIX_MAP[config.method] || config.method.toLowerCase();
     let desc = t(mPrefix + 'EvaluationText', lang);
+    if (config.method === 'RiskAssessment') {
+        // Spelled out from the configuration: the criteria are switchable and
+        // the holidays come from the settings, so a fixed sentence would
+        // describe a run that did not happen.
+        const isUa = lang === 'ua';
+        const opts = riskCriteriaOptions(config);
+        const parts: string[] = [];
+
+        if (opts.includeWeekend) {
+            parts.push(isUa
+                ? 'операції у вихідні дні (субота, неділя) — день тижня визначається з дати операції'
+                : 'entries on weekends (Saturday, Sunday), derived from the entry date');
+        }
+        if (opts.includeHoliday) {
+            const days = opts.holidayList.map(formatHoliday).join(', ');
+            parts.push(isUa
+                ? `операції у святкові дні за списком з налаштувань (${opts.holidayList.length}): ${days}`
+                : `entries on the holidays listed in the settings (${opts.holidayList.length}): ${days}`);
+        }
+        if (opts.closingDays > 0) {
+            parts.push(isUa
+                ? `операції періоду закриття — останні ${opts.closingDays} дн. кожного місяця`
+                : `entries in the closing period - the last ${opts.closingDays} days of each month`);
+        }
+
+        const criteria = parts.length > 0
+            ? (isUa ? `Критерії ризику: ${parts.join('; ')}.` : `Risk criteria: ${parts.join('; ')}.`)
+            : (isUa ? 'Жоден критерій ризику не увімкнено.' : 'No risk criterion is enabled.');
+
+        const cap = Number(config.riskMaxByCriteria) || 0;
+        const capText = cap > 0
+            ? (isUa
+                ? `Обсяг вибірки обмежено ${cap} елементами: квота розподіляється між критеріями пропорційно кількості збігів, не менше одного елемента на критерій, добір усередині критерію — псевдовипадковий за зерном (seed).`
+                : `The sample is capped at ${cap} items: the quota is split across the criteria in proportion to their matches, at least one item each, and drawn within a criterion pseudo-randomly from the seed.`)
+            : (isUa
+                ? 'Обмеження обсягу не задано: перевіряються всі операції, що відповідають критеріям.'
+                : 'No cap is set: every entry meeting the criteria is checked.');
+
+        const random = config.riskRandomAuto === false
+            ? (isUa
+                ? `Додатково відбирається ${config.riskRandomCount ?? 5} випадкових елементів з тих, що не відповідають жодному критерію (елемент непередбачуваності, МСА 240).`
+                : `A further ${config.riskRandomCount ?? 5} items are drawn at random from entries matching no criterion (unpredictability, ISA 240).`)
+            : (isUa
+                ? 'Додатково відбираються випадкові елементи з тих, що не відповідають жодному критерію: 1% від їх кількості, але не менше 5 (елемент непередбачуваності, МСА 240).'
+                : 'A random control group is drawn from entries matching no criterion: 1% of them, at least 5 (unpredictability, ISA 240).');
+
+        const evaluation = isUa
+            ? 'Метод нестатистичний (цільовий): прогнозоване викривлення та верхня межа дорівнюють сумі фактично встановлених помилок, екстраполяція на неперевірену частину сукупності не здійснюється.'
+            : 'The method is non-statistical (judgmental): projected and upper misstatement equal the errors actually established, with no extrapolation to the untested remainder.';
+
+        return `${criteria} ${capText} ${random} ${evaluation}`;
+    }
     if (config.method === 'Pareto') {
         const pCov = config.paretoCoverage || 80;
         desc = desc.replace('80%', `${pCov}%`).replace('80', String(pCov));
@@ -40,6 +92,8 @@ export function getDynamicMethodDescription(config: SamplingConfig, lang: Langua
 
 
 import { formatMoney } from '../utils/samplingEngine';
+import { formatHoliday } from '../utils/holidays';
+import { riskCriteriaOptions } from '../utils/riskSelection';
 import { getReliabilityFactor, getExpansionFactor } from '../statistics/reliabilityFactor';
 
 export function getCalculationDetails(config: SamplingConfig, results: SamplingResult, lang: string): { vars: Record<string, string|number>, subst: string } {
