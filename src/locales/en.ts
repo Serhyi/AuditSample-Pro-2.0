@@ -129,7 +129,7 @@ export const en = {
   riskWeekendLabel: "Include Weekends",
   riskHolidayLabel: "Include Holidays",
   riskMaxByCriteriaLabel: "Limit sample size (items)",
-  riskMaxByCriteriaHelp: "0 checks every entry that meets the criteria. Any other number draws that many, split across the criteria in proportion.",
+  riskMaxByCriteriaHelp: "0 puts every entry that meets the criteria into the sample. If that is too many, say how many to check: they are drawn at random (from the seed), each criterion getting a share matching how many entries it caught.",
   riskRandomAutoLabel: "Auto: 1% of non-risk, min 5",
   riskRandomAutoValue: "auto",
   
