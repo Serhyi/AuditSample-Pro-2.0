@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getCalculationDetails } from './resultsUtils';
+import { getCalculationDetails, getDynamicMethodDescription } from './resultsUtils';
 import { SamplingConfig, SamplingResult } from '../types';
 
 const mkResult = (over: Partial<SamplingResult> = {}): SamplingResult => ({
@@ -75,5 +75,35 @@ describe('getCalculationDetails: RiskAssessment', () => {
     const off = { ...config, riskWeekend: false, riskHoliday: false, riskClosingDays: 0 } as SamplingConfig;
     const { subst } = getCalculationDetails(off, mkResult(), 'ua');
     expect(subst).toContain('критерії вимкнено');
+  });
+});
+
+describe('getDynamicMethodDescription: RiskAssessment', () => {
+  const cfg = {
+    method: 'RiskAssessment', anomalyMethod: 'None', confidenceLevel: 95,
+    tolerableMisstatement: 0, expectedMisstatement: 0, clearlyTrivialThreshold: 0,
+    riskFactor: 'Moderate', seed: 7, riskClosingDays: 3,
+    riskWeekend: true, riskHoliday: true, holidays: ['01-01', '2025-05-01']
+  } as unknown as SamplingConfig;
+
+  it('names the configured holidays instead of a fixed list', () => {
+    const desc = getDynamicMethodDescription(cfg, 'ua');
+    expect(desc).toContain('за списком з налаштувань (2)');
+    expect(desc).toContain('01.01');
+    expect(desc).toContain('01.05.2025');
+    expect(desc).toContain('останні 3 дн. кожного місяця');
+  });
+
+  it('leaves out criteria that are switched off', () => {
+    const desc = getDynamicMethodDescription({ ...cfg, riskHoliday: false, riskWeekend: false } as SamplingConfig, 'ua');
+    expect(desc).not.toContain('святков');
+    expect(desc).not.toContain('вихідні');
+    expect(desc).toContain('останні 3 дн.');
+  });
+
+  it('states whether the sample size was capped', () => {
+    expect(getDynamicMethodDescription(cfg, 'ua')).toContain('Обмеження обсягу не задано');
+    expect(getDynamicMethodDescription({ ...cfg, riskMaxByCriteria: 25 } as SamplingConfig, 'ua'))
+      .toContain('обмежено 25 елементами');
   });
 });
