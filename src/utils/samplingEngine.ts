@@ -1,9 +1,8 @@
 import { TransactionItem, SamplingConfig, SamplingResult, SampledItem } from '../types';
 import { Mulberry32 } from '../statistics/prng';
-import { DEFAULT_HOLIDAYS, sanitizeHolidays, isHoliday } from '../utils/holidays';
 import { formatIsoDate, formatNumber } from '../utils/locale';
 import { getReliabilityFactor, getZScore, getExpansionFactor } from '../statistics/reliabilityFactor';
-import { allocateRiskSample, autoRandomCount, riskReasonLabel, RiskFlags, RiskCounts } from './riskSelection';
+import { allocateRiskSample, autoRandomCount, riskReasonLabel, riskCriteriaOptions, evaluateRiskFlags, anyFlag, emptyCounts, RiskFlags, RiskCounts } from './riskSelection';
 
 export const methodsSupportingAnomalies = ['MUS', 'CVS', 'Random', 'FixedRandom'];
 
@@ -221,61 +220,23 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
     };
 
     if (config.method === 'RiskAssessment') {
-        const closingDays = config.riskClosingDays ?? 5;
-        const includeWeekend = config.riskWeekend !== false;
-        
-        const holidayList = (() => {
-            const configured = sanitizeHolidays(config.holidays);
-            return configured.length > 0 ? configured : DEFAULT_HOLIDAYS;
-        })();
-        const includeHoliday = config.riskHoliday !== false;
-        
+        const opts = riskCriteriaOptions(config);
+
         const riskMatched: TransactionItem[] = [];
         const riskUnmatched: TransactionItem[] = [];
         // Per-criterion hit counts: they are the evidence that the reported
-        // criteria are the ones the selection actually used. Each enabled
-        // criterion is evaluated for every item, so an item can hit several.
-        const criteriaHits = { weekend: 0, holiday: 0, closing: 0 };
-        
+        // criteria are the ones the selection actually used. An item can hit
+        // several, so every enabled criterion is evaluated for every item.
+        const criteriaHits = emptyCounts();
         const matchedFlags = new Map<TransactionItem, RiskFlags>();
 
         regularItems.forEach(item => {
-            const flags: RiskFlags = { weekend: false, holiday: false, closing: false };
-            let matched = false;
-            
-            if (item.date && item.date.length >= 10) {
-                const yyyy = parseInt(item.date.substring(0, 4), 10);
-                const mm = parseInt(item.date.substring(5, 7), 10);
-                const dd = parseInt(item.date.substring(8, 10), 10);
-                
-                if (includeWeekend) {
-                    const t = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4];
-                    let y = yyyy;
-                    if (mm < 3) y -= 1;
-                    const dow = Math.floor(y + Math.floor(y/4) - Math.floor(y/100) + Math.floor(y/400) + t[mm-1] + dd) % 7;
-                    if (dow === 0 || dow === 6) { matched = true; flags.weekend = true; criteriaHits.weekend++; }
-                }
-                
-                if (includeHoliday && isHoliday(item.date, holidayList)) {
-                    matched = true;
-                    flags.holiday = true;
-                    criteriaHits.holiday++;
-                }
-                
-                if (closingDays > 0) {
-                    const isLeap = (yyyy % 4 === 0 && yyyy % 100 !== 0) || yyyy % 400 === 0;
-                    const dim = [31, isLeap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mm - 1];
-                    // "Last N days" means exactly N days: for N=2 in a 31-day
-                    // month that is the 30th and the 31st, not the 29th too.
-                    if ((dim - dd) < closingDays) {
-                        matched = true;
-                        flags.closing = true;
-                        criteriaHits.closing++;
-                    }
-                }
-            }
-            
-            if (matched) {
+            const flags = evaluateRiskFlags(item.date, opts);
+            if (flags.weekend) criteriaHits.weekend++;
+            if (flags.holiday) criteriaHits.holiday++;
+            if (flags.closing) criteriaHits.closing++;
+
+            if (anyFlag(flags)) {
                 riskMatched.push(item);
                 matchedFlags.set(item, flags);
             } else {

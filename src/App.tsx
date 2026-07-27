@@ -13,6 +13,7 @@ import { useAppStorage } from './contexts/StorageContext';
 import { usePopulationAdapter } from './adapters/usePopulationAdapter';
 import { isElectron } from './utils/isElectron';
 import { DEFAULT_HOLIDAYS, sanitizeHolidays, isValidHoliday } from './utils/holidays';
+import { previewRiskMatches, riskCriteriaOptions, RiskPreview } from './utils/riskSelection';
 import { isMonthFirstLocale, formatIsoDate, getNumberExample } from './utils/locale';
 import { useLicense } from './licensing/useLicense';
 import { FREE_METHODS } from './components/config/MethodSelector';
@@ -387,6 +388,34 @@ const App: React.FC = () => {
 
 
 
+  // Live criteria counts for the settings screen: without them the auditor
+  // would have to run the sampling to learn how many entries the criteria
+  // catch, and the sample-size decision comes before that.
+  const [riskPreview, setRiskPreview] = useState<RiskPreview | null>(null);
+  const holidaysKey = JSON.stringify(settings.holidays);
+  useEffect(() => {
+    if (currentStep !== 1 || config.method !== 'RiskAssessment') { setRiskPreview(null); return; }
+
+    let cancelled = false;
+    const previewConfig = { ...config, holidays: sanitizeHolidays(settings.holidays) };
+    if (previewConfig.holidays.length === 0) previewConfig.holidays = DEFAULT_HOLIDAYS;
+
+    const run = async () => {
+      try {
+        const result = (isElectron() && window.api && isVirtual)
+          ? await window.api.sampling.previewRisk(previewConfig)
+          : previewRiskMatches(getFullPopulation(), riskCriteriaOptions(previewConfig), previewConfig.clearlyTrivialThreshold || 0);
+        if (!cancelled) setRiskPreview(result);
+      } catch {
+        if (!cancelled) setRiskPreview(null);
+      }
+    };
+    run();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, config.method, config.riskWeekend, config.riskHoliday, config.riskClosingDays,
+      config.clearlyTrivialThreshold, holidaysKey, isVirtual]);
+
   const handleRunSampling = async () => {
     setIsProcessing(true);
     setSamplingError(null);
@@ -628,6 +657,7 @@ const App: React.FC = () => {
                     lang={lang}
                     licenseState={licenseState}
                     onLockedMethodClick={() => setShowUpgradeModal(true)}
+                    riskPreview={riskPreview}
                 />
                 <div className="flex justify-between">
                      <button onClick={() => { setConfig(prev => ({ ...prev, tolerableMisstatement: 0, clearlyTrivialThreshold: 0 })); setCurrentStep(0); }} className="text-brand-600 bg-white border border-brand-200 hover:bg-brand-50 px-10 py-3.5 rounded-xl text-sm font-bold transition-all shadow-sm">{t('back', lang)}</button>

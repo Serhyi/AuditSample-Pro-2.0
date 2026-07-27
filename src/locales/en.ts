@@ -128,8 +128,11 @@ export const en = {
   riskRandomCountLabel: "Random Items Count",
   riskWeekendLabel: "Include Weekends",
   riskHolidayLabel: "Include Holidays",
-  riskMaxByCriteriaLabel: "Limit sample size (items)",
-  riskMaxByCriteriaHelp: "0 puts every entry that meets the criteria into the sample. If that is too many, say how many to check: they are drawn at random (from the seed), each criterion getting a share matching how many entries it caught.",
+  riskPreviewMatched: "{matched} of {eligible} entries meet the criteria",
+  riskPreviewPending: "Counting how many entries meet the criteria…",
+  riskTakeAll: "Check every entry that meets the criteria",
+  riskLimitTo: "Limit the sample to",
+  riskFullScanWarning: "{matched} entries meet the criteria - leaving this unlimited means a full check, not a sample.",
   riskRandomAutoLabel: "Auto: 1% of non-risk, min 5",
   riskRandomAutoValue: "auto",
   

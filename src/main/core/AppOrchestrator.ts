@@ -295,6 +295,10 @@ export class AppOrchestrator {
       });
     });
 
+    ipcMain.handle('sampling:previewRisk', async (_event, config) => {
+      return await this.samplingService.previewRisk(config);
+    });
+
     ipcMain.handle('export:project', async (_event, state) => {
       console.log('IPC export:project received');
       const methodName = state?.config?.method || 'Sample';
