@@ -130,7 +130,7 @@ export const ua = {
   riskHolidayLabel: "Включати свята",
   riskMaxByCriteriaLabel: "Обмежити обсяг вибірки (елементів)",
   riskMaxByCriteriaHelp: "0 — перевіряти всі операції, що відповідають критеріям. Інше число — стільки елементів, розподілених між критеріями пропорційно.",
-  riskRandomAutoLabel: "Авто: 1% нериcкових, мін. 5",
+  riskRandomAutoLabel: "Авто: 1% неризикових, мін. 5",
   riskRandomAutoValue: "авто",
   
   paretoCoverageLabel: "Цільове покриття (%)",
