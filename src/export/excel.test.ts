@@ -98,6 +98,44 @@ describe('single export', () => {
     expect(firstCol.some(l => l.startsWith('__AUDITSAMPLE'))).toBe(false);
   });
 
+  it('writes numbers as numbers, never as text Excel would flag', async () => {
+    await exportToExcel(state, 'x.xlsx', 'ua');
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(captured!);
+    const summary = wb.getWorksheet('Опис та результат')!;
+
+    const textNumbers: string[] = [];
+    summary.eachRow(row => {
+      const v = row.getCell(2).value;
+      // A bare numeric string is what Excel marks with the green triangle.
+      if (typeof v === 'string' && /^[\s\d.,\u00A0\u202F+-]+$/.test(v) && /\d/.test(v)) {
+        textNumbers.push(`${String(row.getCell(1).value)} = ${v}`);
+      }
+    });
+    expect(textNumbers).toEqual([]);
+
+    // The risk card feeds its own set of counts through the same rows.
+    await exportToExcel({ ...state, config: { ...state.config, method: 'RiskAssessment', riskClosingDays: 5, seed: 2478 } }, 'r.xlsx', 'ua');
+    const riskWb = new ExcelJS.Workbook();
+    await riskWb.xlsx.load(captured!);
+    riskWb.getWorksheet('Опис та результат')!.eachRow(row => {
+      const v = row.getCell(2).value;
+      if (typeof v === 'string' && /^[\s\d.,\u00A0\u202F+-]+$/.test(v) && /\d/.test(v)) {
+        textNumbers.push(`${String(row.getCell(1).value)} = ${v}`);
+      }
+    });
+    expect(textNumbers).toEqual([]);
+
+    const labelled = (label: string) => {
+      let cell: any = null;
+      summary.eachRow(r => { if (String(r.getCell(1).value).startsWith(label)) cell = r.getCell(2); });
+      return cell;
+    };
+    expect(labelled('Обсяг ген. сукупності')!.value).toBe(2);
+    expect(labelled('Поріг ВНС')!.value).toBe(0);
+    expect(labelled('АНАЛІЗ ПОКРИТТЯ')!.numFmt).toBe('0.00%');
+  });
+
   it('reserves a highlighted first row for the population file link', async () => {
     await exportToExcel(state, 'x.xlsx', 'ua');
     const wb = new ExcelJS.Workbook();

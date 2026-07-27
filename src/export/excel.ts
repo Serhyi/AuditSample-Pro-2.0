@@ -78,15 +78,36 @@ export async function exportToExcel(
       r.getCell(1).font = { bold: true, color: { argb: fontColor } };
     };
 
+    // Money and counts reach this sheet already formatted as text (that is what
+    // the calculation card shows on screen). Written as text they would land in
+    // Excel as "number stored as text" - flagged, unsortable, unusable in a
+    // formula - so a numeric string is written back as a real number carrying
+    // the format its text form implied.
+    const formatOfNumericText = (text: string): string => {
+      const t = text.trim();
+      if (/[.,]\d{2}$/.test(t)) return '#,##0.00';
+      if (/[\s\u00A0\u202F]\d{3}\b/.test(t)) return '#,##0';
+      return '0';
+    };
+
     const addDetailRow = (lbl: string, val: string | number, numFmt?: string) => {
-      const r = sheet.addRow([lbl, val]);
+      let cellVal: string | number = val;
+      let fmt = numFmt;
+
+      if (typeof val === 'string') {
+        const asNumber = parseNumericText(val);
+        if (asNumber !== null) {
+          cellVal = asNumber;
+          if (!fmt) fmt = formatOfNumericText(val);
+        }
+      } else if (typeof val === 'number' && !fmt) {
+        fmt = Number.isInteger(val) ? '0' : '#,##0.00';
+      }
+
+      const r = sheet.addRow([lbl, cellVal]);
       r.getCell(1).font = { color: { argb: 'FF475569' }, bold: true };
       r.getCell(2).alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
-      if (typeof val === 'number') {
-        r.getCell(2).numFmt = numFmt || '#,##0.00';
-      } else if (numFmt) {
-        r.getCell(2).numFmt = numFmt;
-      }
+      if (fmt) r.getCell(2).numFmt = fmt;
     };
 
     // Reserved first row: the auditor pastes here the path or hyperlink to the
@@ -191,9 +212,11 @@ export async function exportToExcel(
         // coefficients, so money formatting would misreport them (a step of 5
         // as "5,00", a reliability factor of 2.996 as "3,00").
         if (typeof v === 'number') {
-             addDetailRow(k, Number.isInteger(v) ? String(v) : v.toFixed(3));
+            // Counts and seeds are plain integers; coefficients keep three
+            // decimals, the precision they are reported with on screen.
+            addDetailRow(k, v, Number.isInteger(v) ? '0' : '0.000');
         } else {
-             addDetailRow(k, String(v));
+            addDetailRow(k, String(v));
         }
     });
     
@@ -205,8 +228,8 @@ export async function exportToExcel(
 
     addSectionHeader(isUa ? '3. РЕЗУЛЬТАТИ ТА ЕКСТРАПОЛЯЦІЯ' : '3. RESULTS AND EXTRAPOLATION', 'FF0F172A');
     addDetailRow(isUa ? 'ОБСЯГ ВИБІРКИ' : 'SAMPLE SIZE', results.sampleSize, '0');
-    const coveragePercent = results.populationValue > 0 ? (results.sampleValue / results.populationValue) * 100 : 0;
-    addDetailRow(isUa ? 'АНАЛІЗ ПОКРИТТЯ' : 'COVERAGE ANALYSIS', `${coveragePercent.toFixed(2)}%`);
+    const coverage = results.populationValue > 0 ? results.sampleValue / results.populationValue : 0;
+    addDetailRow(isUa ? 'АНАЛІЗ ПОКРИТТЯ' : 'COVERAGE ANALYSIS', coverage, '0.00%');
     
     const isAttribute = config.method === 'Attribute';
     
@@ -216,8 +239,9 @@ export async function exportToExcel(
     const ubNum = extrapolation.ub;
     
     if (isAttribute) {
-        addDetailRow(isUa ? 'Очікуваний ступінь відхилення' : 'Projected Deviation', `${projNum.toFixed(2)}%`);
-        addDetailRow(isUa ? 'Максимальна помилка (СУЕВ)' : 'Upper Deviation Bound', `${ubNum.toFixed(2)}%`);
+        // Attribute rates are already percentages, hence the division.
+        addDetailRow(isUa ? 'Очікуваний ступінь відхилення' : 'Projected Deviation', projNum / 100, '0.00%');
+        addDetailRow(isUa ? 'Максимальна помилка (СУЕВ)' : 'Upper Deviation Bound', ubNum / 100, '0.00%');
     } else {
         addDetailRow(isUa ? 'Прогнозоване викривлення' : 'Projected Misstatement', formatMoney(projNum));
         addDetailRow(isUa ? 'Верхня межа викривлення' : 'Upper Misstatement Bound', formatMoney(ubNum));
