@@ -126,28 +126,17 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
     let trivialCount = 0;
     let trivialValue = 0;
     
-    // RiskAssessment is not a value-based method: it uses its own key-item
-    // threshold instead of borrowing materiality, and the clearly-trivial cut
-    // can be switched off so a small entry on a holiday is still considered.
+    // RiskAssessment never splits off key items: it is not a value-based
+    // method, so an amount alone says nothing about the risk of an entry.
+    // Everything above the clearly-trivial threshold goes into one pool.
     const isRisk = config.method === 'RiskAssessment';
-    const riskKeyThreshold = Number(config.riskKeyThreshold) || 0;
-    const riskApplyCtt = config.riskApplyCtt !== false;
 
     population.forEach((item) => {
         if (isRisk) {
-            if (riskApplyCtt && config.clearlyTrivialThreshold && Math.abs(item.amount) < config.clearlyTrivialThreshold) {
+            if (config.clearlyTrivialThreshold && Math.abs(item.amount) < config.clearlyTrivialThreshold) {
                 if (trivialItems.length < 10) trivialItems.push(item);
                 trivialCount++;
                 trivialValue += item.amount;
-            } else if (riskKeyThreshold > 0 && Math.abs(item.amount) >= riskKeyThreshold) {
-                keyItems.push({
-                    ...item,
-                    bookValue: item.amount,
-                    auditedValue: '',
-                    difference: item.amount,
-                    tainting: 1,
-                    isKeyItem: true
-                });
             } else {
                 regularItems.push(item);
             }

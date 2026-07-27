@@ -418,12 +418,10 @@ const App: React.FC = () => {
     if (finalConfig.method === 'RiskAssessment') {
         finalConfig.riskWeekend = finalConfig.riskWeekend !== false;
         finalConfig.riskHoliday = finalConfig.riskHoliday !== false;
-        finalConfig.riskApplyCtt = finalConfig.riskApplyCtt !== false;
         finalConfig.riskRandomAuto = finalConfig.riskRandomAuto !== false;
         finalConfig.riskClosingDays = finalConfig.riskClosingDays ?? 5;
         finalConfig.riskRandomCount = finalConfig.riskRandomCount ?? 5;
         finalConfig.riskMaxByCriteria = Number(finalConfig.riskMaxByCriteria) || 0;
-        finalConfig.riskKeyThreshold = Number(finalConfig.riskKeyThreshold) || 0;
     }
     finalConfig.holidays = sanitizeHolidays(settings.holidays);
     if (finalConfig.holidays.length === 0) finalConfig.holidays = DEFAULT_HOLIDAYS;

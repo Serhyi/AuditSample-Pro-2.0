@@ -128,11 +128,8 @@ export const en = {
   riskRandomCountLabel: "Random Items Count",
   riskWeekendLabel: "Include Weekends",
   riskHolidayLabel: "Include Holidays",
-  riskMaxByCriteriaLabel: "Max by criteria",
-  riskMaxByCriteriaHelp: "0 takes every match. Above it, a seeded pick proportional to each criterion is drawn.",
-  riskKeyThresholdLabel: "Key item threshold",
-  riskKeyThresholdHelp: "0 extracts no key items. Amounts at or above it are tested in full.",
-  riskApplyCttLabel: "Apply CTT to the risk criteria",
+  riskMaxByCriteriaLabel: "Limit sample size (items)",
+  riskMaxByCriteriaHelp: "0 checks every entry that meets the criteria. Any other number draws that many, split across the criteria in proportion.",
   riskRandomAutoLabel: "Auto: 1% of non-risk, min 5",
   riskRandomAutoValue: "auto",
   

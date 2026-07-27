@@ -128,11 +128,8 @@ export const ua = {
   riskRandomCountLabel: "Випадкові елементи",
   riskWeekendLabel: "Включати вихідні",
   riskHolidayLabel: "Включати свята",
-  riskMaxByCriteriaLabel: "Максимум за критеріями",
-  riskMaxByCriteriaHelp: "0 — брати всі збіги. Якщо збігів більше, добір за seed’ом пропорційно по кожному критерію.",
-  riskKeyThresholdLabel: "Поріг ключових елементів",
-  riskKeyThresholdHelp: "0 — не виділяти ключові елементи. Суми від цього порогу перевіряються суцільно.",
-  riskApplyCttLabel: "Застосовувати ВНС до критеріїв ризику",
+  riskMaxByCriteriaLabel: "Обмежити обсяг вибірки (елементів)",
+  riskMaxByCriteriaHelp: "0 — перевіряти всі операції, що відповідають критеріям. Інше число — стільки елементів, розподілених між критеріями пропорційно.",
   riskRandomAutoLabel: "Авто: 1% нериcкових, мін. 5",
   riskRandomAutoValue: "авто",
   
