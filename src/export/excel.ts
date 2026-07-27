@@ -1,7 +1,7 @@
 import type ExcelJSType from 'exceljs';
 import { Language } from '../types';
 import { t } from '../utils/translations';
-import { formatMoney, methodsSupportingAnomalies, calculateExtrapolation } from '../utils/samplingEngine';
+import { formatMoney, methodsSupportingAnomalies, calculateExtrapolation, getEnteredMisstatements } from '../utils/samplingEngine';
 import { parseDateText, parseNumericText, looksLikeDate } from '../utils/cellNormalization';
 import { getExcelDateFormat, isMonthFirstLocale } from '../utils/locale';
 import { METHOD_PREFIX_MAP, getStaticFormula, getCalculationDetails, getDynamicMethodName, getDynamicMethodDescription } from '../components/resultsUtils';
@@ -237,9 +237,18 @@ export async function exportToExcel(
         conclusionText = isUa ? `Верхня межа відхилення (${ubNum.toFixed(2)}%) ПЕРЕВИЩУЄ допустимий рівень відхилення (${config.tolerableMisstatement}%). Вибірка не підтверджує ефективність контролів.` : `Upper deviation bound (${ubNum.toFixed(2)}%) EXCEEDS tolerable deviation rate (${config.tolerableMisstatement}%). Sample does not confirm control effectiveness.`;
       }
     } else if (config.method === 'RiskAssessment') {
-        const keyItemsMisstatements = (results.keyItems || []).reduce((acc: any, i: any) => acc + (i.difference || 0), 0);
+        // Only items with an audit value entered say anything about misstatements.
+        const found = getEnteredMisstatements(results);
         conclusionPrefix = isUa ? "🟡 ОЦІНКА РИЗИКІВ" : "🟡 RISK ASSESSMENT";
-        conclusionText = isUa ? `Знайдено викривлень на суму ${formatMoney(keyItemsMisstatements)}.` : `Total misstatements found is ${formatMoney(keyItemsMisstatements)}.`;
+        if (found.audited === 0) {
+            conclusionText = isUa
+                ? `Аудиторські суми ще не внесені (перевірено 0 з ${found.items} елементів), тому висновок про викривлення зробити неможливо.`
+                : `No audit values entered yet (0 of ${found.items} items checked), so no conclusion on misstatements can be drawn.`;
+        } else {
+            conclusionText = isUa
+                ? `Перевірено ${found.audited} з ${found.items} відібраних елементів. Встановлено викривлень на суму ${formatMoney(found.total)}.`
+                : `Checked ${found.audited} of ${found.items} selected items. Established misstatements total ${formatMoney(found.total)}.`;
+        }
     } else {
         if (ubNum <= config.tolerableMisstatement) {
             conclusionPrefix = isUa ? "🟢 НИЗЬКИЙ РИЗИК" : "🟢 LOW RISK";

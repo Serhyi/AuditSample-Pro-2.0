@@ -141,6 +141,9 @@ export interface SamplingResult {
   excludedItems?: TransactionItem[]; // Items below CTT
   projectedMisstatement: number;
   upperMisstatementBound: number;
+  // How many population items each enabled risk criterion matched. Reported
+  // next to the criteria so the description cannot drift from the selection.
+  riskCriteriaHits?: { weekend: number; holiday: number; closing: number };
   statisticalStats?: {
     mean: number;
     stdDev: number;
