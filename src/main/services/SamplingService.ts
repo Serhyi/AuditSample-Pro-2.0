@@ -123,6 +123,7 @@ export class SamplingService {
     const rf = getReliabilityFactor(config.confidenceLevel);
 
     let sampleItems: any[] = [];
+    let riskCriteriaHits: { weekend: number; holiday: number; closing: number } | undefined;
     
     await updateProgress('Applying sampling method...');
     if (config.method === 'RiskAssessment') {
@@ -131,8 +132,13 @@ export class SamplingService {
         const includeHoliday = config.riskHoliday !== false;
         
         const riskQueryConds = [];
+        // Kept per criterion as well, so each one's hit count can be reported
+        // as evidence that the description matches the selection.
+        const weekendCond = `CAST(strftime('%w', date) AS INTEGER) IN (0, 6)`;
+        const holidayConds: string[] = [];
+        let closingCond = '';
         if (includeWeekend) {
-            riskQueryConds.push(`CAST(strftime('%w', date) AS INTEGER) IN (0, 6)`);
+            riskQueryConds.push(weekendCond);
         }
         if (includeHoliday) {
             // sanitizeHolidays() is what makes inlining these safe: it accepts
@@ -141,15 +147,19 @@ export class SamplingService {
             const holidayList = configured.length > 0 ? configured : DEFAULT_HOLIDAYS;
             const { recurring, specific } = splitHolidays(holidayList);
             if (recurring.length > 0) {
-                riskQueryConds.push(`strftime('%m-%d', date) IN (${recurring.map(h => `'${h}'`).join(', ')})`);
+                holidayConds.push(`strftime('%m-%d', date) IN (${recurring.map(h => `'${h}'`).join(', ')})`);
             }
             if (specific.length > 0) {
-                riskQueryConds.push(`date IN (${specific.map(h => `'${h}'`).join(', ')})`);
+                holidayConds.push(`date IN (${specific.map(h => `'${h}'`).join(', ')})`);
             }
+            riskQueryConds.push(...holidayConds);
         }
         if (closingDays > 0) {
             // SQLite last_day logic using start of next month - 1 day
-            riskQueryConds.push(`(julianday(date(date, 'start of month', '+1 month', '-1 day')) - julianday(date)) <= ${closingDays}`);
+            // "Last N days" means exactly N days, so the comparison is strict:
+            // with N=2 only the last two dates of the month qualify.
+            closingCond = `(julianday(date(date, 'start of month', '+1 month', '-1 day')) - julianday(date)) < ${closingDays}`;
+            riskQueryConds.push(closingCond);
         }
         
         // COALESCE: strftime/julianday return NULL for unparseable dates; such
@@ -177,6 +187,21 @@ export class SamplingService {
             });
         }
         
+        // Hit count per criterion over the same filtered population.
+        const countWhere = async (cond: string): Promise<number> => {
+            if (!cond) return 0;
+            const rows: { cnt: number }[] = await this.db.query(
+                `SELECT COUNT(*) as cnt FROM population WHERE ABS(amount) < ? AND ABS(amount) >= ? AND COALESCE((${cond}), 0)`,
+                [upperLimit, ctt]
+            );
+            return rows[0]?.cnt || 0;
+        };
+        riskCriteriaHits = {
+            weekend: includeWeekend ? await countWhere(weekendCond) : 0,
+            holiday: holidayConds.length > 0 ? await countWhere(holidayConds.join(' OR ')) : 0,
+            closing: await countWhere(closingCond)
+        };
+
         // Find risk unmatched (random ones)
         const randomCount = config.riskRandomCount ?? 5;
         const riskUnmatchedWhere = `ABS(amount) < ? AND ABS(amount) >= ? AND NOT ${riskWhereStr}`;
@@ -437,7 +462,8 @@ export class SamplingService {
       samplingItems: sampleItems,
       excludedItems: trivialItems,
       projectedMisstatement: 0,
-      upperMisstatementBound: 0
+      upperMisstatementBound: 0,
+      riskCriteriaHits
     };
     
     // Defer complex extrapolation to the same code path or replicate here

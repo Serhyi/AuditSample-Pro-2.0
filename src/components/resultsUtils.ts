@@ -117,10 +117,16 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
         const yes = isUa ? 'так' : 'yes';
         const no = isUa ? 'ні' : 'no';
 
+        // Hits are what the engine actually matched; showing them next to each
+        // criterion makes a mismatch between description and selection visible.
+        const hits = results.riskCriteriaHits;
+        const withHits = (label: string, n: number | undefined) =>
+            n === undefined ? label : `${label} — ${n}`;
+
         const criteria: string[] = [];
-        if (includeWeekend) criteria.push(isUa ? 'вихідні дні' : 'weekends');
-        if (includeHoliday) criteria.push(isUa ? `святкові дні (${holidayList.length})` : `public holidays (${holidayList.length})`);
-        if (closingDays > 0) criteria.push(isUa ? `останні ${closingDays} дн. місяця` : `last ${closingDays} days of month`);
+        if (includeWeekend) criteria.push(withHits(isUa ? 'вихідні дні' : 'weekends', hits?.weekend));
+        if (includeHoliday) criteria.push(withHits(isUa ? `святкові дні (${holidayList.length})` : `public holidays (${holidayList.length})`, hits?.holiday));
+        if (closingDays > 0) criteria.push(withHits(isUa ? `останні ${closingDays} дн. місяця` : `last ${closingDays} days of month`, hits?.closing));
 
         vars[methodStr] = config.method;
         vars[isUa ? 'Операції у вихідні:' : 'Weekend entries:'] = includeWeekend ? yes : no;

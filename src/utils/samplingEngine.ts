@@ -32,6 +32,18 @@ export function smartFormat(val: any): string {
     return str;
 }
 
+/**
+ * Misstatements the auditor has actually established: only items with an audit
+ * value entered are counted. Unaudited items carry difference = bookValue as a
+ * placeholder, so summing everything would report the whole sample as an error.
+ */
+export function getEnteredMisstatements(results: SamplingResult): { total: number; audited: number; items: number } {
+    const all = [...(results.samplingItems || []), ...(results.keyItems || [])];
+    const entered = all.filter(i => i.auditedValue !== '' && i.auditedValue !== null && i.auditedValue !== undefined);
+    const total = entered.reduce((acc, i) => acc + (i.bookValue - Number(i.auditedValue)), 0);
+    return { total, audited: entered.length, items: all.length };
+}
+
 export function calculateExtrapolation(results: SamplingResult, config: SamplingConfig): { projected: number, ub: number } {
     const hasEditableItems = (results.samplingItems?.length || 0) > 0 || (results.keyItems?.length || 0) > 0;
     if (!hasEditableItems && results.samplingInterval === 0 && (results.projectedMisstatement !== 0 || results.upperMisstatementBound !== 0)) {
@@ -161,6 +173,7 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
     const remPopValue = popValue - keyItems.reduce((acc, curr) => acc + Math.abs(curr.amount), 0) - Math.abs(trivialValue);
 
     let sampleItems: SampledItem[] = [];
+    let riskCriteriaHits: { weekend: number; holiday: number; closing: number } | undefined;
 
     const getRandomSamples = <T>(array: T[], count: number): T[] => {
         const result: T[] = [];
@@ -201,6 +214,10 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
         
         const riskMatched: TransactionItem[] = [];
         const riskUnmatched: TransactionItem[] = [];
+        // Per-criterion hit counts: they are the evidence that the reported
+        // criteria are the ones the selection actually used. Each enabled
+        // criterion is evaluated for every item, so an item can hit several.
+        const criteriaHits = { weekend: 0, holiday: 0, closing: 0 };
         
         regularItems.forEach(item => {
             let isRisk = false;
@@ -215,18 +232,22 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
                     let y = yyyy;
                     if (mm < 3) y -= 1;
                     const dow = Math.floor(y + Math.floor(y/4) - Math.floor(y/100) + Math.floor(y/400) + t[mm-1] + dd) % 7;
-                    if (dow === 0 || dow === 6) isRisk = true;
+                    if (dow === 0 || dow === 6) { isRisk = true; criteriaHits.weekend++; }
                 }
                 
-                if (!isRisk && includeHoliday && isHoliday(item.date, holidayList)) {
+                if (includeHoliday && isHoliday(item.date, holidayList)) {
                     isRisk = true;
+                    criteriaHits.holiday++;
                 }
                 
-                if (!isRisk && closingDays > 0) {
+                if (closingDays > 0) {
                     const isLeap = (yyyy % 4 === 0 && yyyy % 100 !== 0) || yyyy % 400 === 0;
                     const dim = [31, isLeap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mm - 1];
-                    if ((dim - dd) <= closingDays) {
+                    // "Last N days" means exactly N days: for N=2 in a 31-day
+                    // month that is the 30th and the 31st, not the 29th too.
+                    if ((dim - dd) < closingDays) {
                         isRisk = true;
+                        criteriaHits.closing++;
                     }
                 }
             }
@@ -237,6 +258,7 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
                 riskUnmatched.push(item);
             }
         });
+        riskCriteriaHits = criteriaHits;
 
         const riskSampled = riskMatched.slice(0, 5000).map(item => ({
             ...item,
@@ -395,7 +417,8 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
         samplingItems: sampleItems,
         excludedItems: trivialItems,
         projectedMisstatement: 0,
-        upperMisstatementBound: 0
+        upperMisstatementBound: 0,
+        riskCriteriaHits
     };
 
     const calculated = calculateExtrapolation(preResult, config);
