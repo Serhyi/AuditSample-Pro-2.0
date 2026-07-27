@@ -61,3 +61,11 @@ export function isHoliday(isoDate: string, list: string[]): boolean {
   if (isoDate.length < 10) return false;
   return list.includes(isoDate.slice(5, 10)) || list.includes(isoDate.slice(0, 10));
 }
+
+/** Human-readable holiday entry: '01-07' -> '07.01', '2025-05-01' -> '01.05.2025'. */
+export function formatHoliday(entry: string): string {
+  const parts = entry.split('-');
+  if (parts.length === 2) return `${parts[1]}.${parts[0]}`;
+  if (parts.length === 3) return `${parts[2]}.${parts[1]}.${parts[0]}`;
+  return entry;
+}

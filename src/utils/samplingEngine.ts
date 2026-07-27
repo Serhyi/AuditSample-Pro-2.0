@@ -1,8 +1,8 @@
 import { TransactionItem, SamplingConfig, SamplingResult, SampledItem } from '../types';
 import { Mulberry32 } from '../statistics/prng';
-import { DEFAULT_HOLIDAYS, sanitizeHolidays, isHoliday } from '../utils/holidays';
 import { formatIsoDate, formatNumber } from '../utils/locale';
 import { getReliabilityFactor, getZScore, getExpansionFactor } from '../statistics/reliabilityFactor';
+import { allocateRiskSample, autoRandomCount, riskReasonLabel, riskCriteriaOptions, evaluateRiskFlags, anyFlag, emptyCounts, RiskFlags, RiskCounts } from './riskSelection';
 
 export const methodsSupportingAnomalies = ['MUS', 'CVS', 'Random', 'FixedRandom'];
 
@@ -30,6 +30,18 @@ export function smartFormat(val: any): string {
     // format instead of leaking the storage representation into the table.
     if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return formatDate(str);
     return str;
+}
+
+/**
+ * Misstatements the auditor has actually established: only items with an audit
+ * value entered are counted. Unaudited items carry difference = bookValue as a
+ * placeholder, so summing everything would report the whole sample as an error.
+ */
+export function getEnteredMisstatements(results: SamplingResult): { total: number; audited: number; items: number } {
+    const all = [...(results.samplingItems || []), ...(results.keyItems || [])];
+    const entered = all.filter(i => i.auditedValue !== '' && i.auditedValue !== null && i.auditedValue !== undefined);
+    const total = entered.reduce((acc, i) => acc + (i.bookValue - Number(i.auditedValue)), 0);
+    return { total, audited: entered.length, items: all.length };
 }
 
 export function calculateExtrapolation(results: SamplingResult, config: SamplingConfig): { projected: number, ub: number } {
@@ -113,7 +125,22 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
     let trivialCount = 0;
     let trivialValue = 0;
     
+    // RiskAssessment never splits off key items: it is not a value-based
+    // method, so an amount alone says nothing about the risk of an entry.
+    // Everything above the clearly-trivial threshold goes into one pool.
+    const isRisk = config.method === 'RiskAssessment';
+
     population.forEach((item) => {
+        if (isRisk) {
+            if (config.clearlyTrivialThreshold && Math.abs(item.amount) < config.clearlyTrivialThreshold) {
+                if (trivialItems.length < 10) trivialItems.push(item);
+                trivialCount++;
+                trivialValue += item.amount;
+            } else {
+                regularItems.push(item);
+            }
+            return;
+        }
         if (config.clearlyTrivialThreshold && Math.abs(item.amount) < config.clearlyTrivialThreshold) {
             if (trivialItems.length < 10) trivialItems.push(item);
             trivialCount++;
@@ -161,6 +188,9 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
     const remPopValue = popValue - keyItems.reduce((acc, curr) => acc + Math.abs(curr.amount), 0) - Math.abs(trivialValue);
 
     let sampleItems: SampledItem[] = [];
+    let riskCriteriaHits: RiskCounts | undefined;
+    let riskCriteriaSelected: RiskCounts | undefined;
+    let riskMatchedTotal: number | undefined;
 
     const getRandomSamples = <T>(array: T[], count: number): T[] => {
         const result: T[] = [];
@@ -190,67 +220,60 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
     };
 
     if (config.method === 'RiskAssessment') {
-        const closingDays = config.riskClosingDays ?? 5;
-        const includeWeekend = config.riskWeekend !== false;
-        
-        const holidayList = (() => {
-            const configured = sanitizeHolidays(config.holidays);
-            return configured.length > 0 ? configured : DEFAULT_HOLIDAYS;
-        })();
-        const includeHoliday = config.riskHoliday !== false;
-        
+        const opts = riskCriteriaOptions(config);
+
         const riskMatched: TransactionItem[] = [];
         const riskUnmatched: TransactionItem[] = [];
-        
+        // Per-criterion hit counts: they are the evidence that the reported
+        // criteria are the ones the selection actually used. An item can hit
+        // several, so every enabled criterion is evaluated for every item.
+        const criteriaHits = emptyCounts();
+        const matchedFlags = new Map<TransactionItem, RiskFlags>();
+
         regularItems.forEach(item => {
-            let isRisk = false;
-            
-            if (item.date && item.date.length >= 10) {
-                const yyyy = parseInt(item.date.substring(0, 4), 10);
-                const mm = parseInt(item.date.substring(5, 7), 10);
-                const dd = parseInt(item.date.substring(8, 10), 10);
-                
-                if (includeWeekend) {
-                    const t = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4];
-                    let y = yyyy;
-                    if (mm < 3) y -= 1;
-                    const dow = Math.floor(y + Math.floor(y/4) - Math.floor(y/100) + Math.floor(y/400) + t[mm-1] + dd) % 7;
-                    if (dow === 0 || dow === 6) isRisk = true;
-                }
-                
-                if (!isRisk && includeHoliday && isHoliday(item.date, holidayList)) {
-                    isRisk = true;
-                }
-                
-                if (!isRisk && closingDays > 0) {
-                    const isLeap = (yyyy % 4 === 0 && yyyy % 100 !== 0) || yyyy % 400 === 0;
-                    const dim = [31, isLeap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mm - 1];
-                    if ((dim - dd) <= closingDays) {
-                        isRisk = true;
-                    }
-                }
-            }
-            
-            if (isRisk) {
+            const flags = evaluateRiskFlags(item.date, opts);
+            if (flags.weekend) criteriaHits.weekend++;
+            if (flags.holiday) criteriaHits.holiday++;
+            if (flags.closing) criteriaHits.closing++;
+
+            if (anyFlag(flags)) {
                 riskMatched.push(item);
+                matchedFlags.set(item, flags);
             } else {
                 riskUnmatched.push(item);
             }
         });
+        riskCriteriaHits = criteriaHits;
+        riskMatchedTotal = riskMatched.length;
 
-        const riskSampled = riskMatched.slice(0, 5000).map(item => ({
+        // Cap the criteria selection instead of truncating it: a plain slice
+        // would cut chronologically and silently drop the tail of the year.
+        const cap = Number(config.riskMaxByCriteria) || 0;
+        const allocation = allocateRiskSample(
+            riskMatched,
+            item => matchedFlags.get(item) || { weekend: false, holiday: false, closing: false },
+            cap,
+            config.seed ?? 0
+        );
+        riskCriteriaSelected = allocation.selected;
+
+        const riskSampled = allocation.picked.map(item => ({
             ...item,
             bookValue: item.amount,
             auditedValue: '' as const,
             difference: item.amount,
             tainting: 1,
             isSampled: true,
-            selectionReason: 'Risk Criteria'
+            selectionReason: riskReasonLabel(matchedFlags.get(item) || { weekend: false, holiday: false, closing: false })
         }));
         
         sampleItems = sampleItems.concat(riskSampled as any);
         
-        const randomCount = config.riskRandomCount ?? 5;
+        // The control group scales with the untouched part of the population
+        // unless the auditor pinned an explicit number.
+        const randomCount = config.riskRandomAuto === false
+            ? (config.riskRandomCount ?? 5)
+            : autoRandomCount(riskUnmatched.length);
         const randomSampled = getRandomSamples(riskUnmatched, randomCount).map(item => ({
             ...item,
             bookValue: item.amount,
@@ -395,7 +418,10 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
         samplingItems: sampleItems,
         excludedItems: trivialItems,
         projectedMisstatement: 0,
-        upperMisstatementBound: 0
+        upperMisstatementBound: 0,
+        riskCriteriaHits,
+        riskCriteriaSelected,
+        riskMatchedTotal
     };
 
     const calculated = calculateExtrapolation(preResult, config);

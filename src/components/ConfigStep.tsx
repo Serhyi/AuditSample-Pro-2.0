@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { SamplingConfig, Language } from '../types';
+import { RiskPreview } from '../utils/riskSelection';
 import { Settings, Info, Dices, Zap, Check } from 'lucide-react';
 import { t } from '../utils/translations';
 import { formatMoney } from '../utils/samplingEngine';
@@ -14,7 +15,14 @@ interface ConfigStepProps {
   lang: Language;
   licenseState?: LicenseState;
   onLockedMethodClick?: () => void;
+  /** Live criteria counts for the RiskAssessment panel; null while unknown. */
+  riskPreview?: RiskPreview | null;
 }
+
+// Sensible starting point when the auditor chooses to limit the sample.
+export const DEFAULT_RISK_LIMIT = 25;
+// Above this many matches an unlimited run stops being a sample.
+const FULL_SCAN_WARNING = 10000;
 
 interface NumberInputProps {
     value: number;
@@ -61,7 +69,10 @@ const NumberInput: React.FC<NumberInputProps> = ({ value, onChange, placeholder,
     );
 };
 
-const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulationValue, lang, licenseState, onLockedMethodClick }) => {
+const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulationValue, lang, licenseState, onLockedMethodClick, riskPreview }) => {
+  // The sample is limited when a positive cap is set; 0 / unset means every
+  // matching entry is checked.
+  const limited = (Number(config.riskMaxByCriteria) || 0) > 0;
   const handleChange = (key: keyof SamplingConfig, value: any) => { setConfig({ ...config, [key]: value }); };
   const suggestedPM = Math.floor(totalPopulationValue * 0.01);
   const suggestedTrivial = Math.floor(suggestedPM * 0.05); 
@@ -229,8 +240,65 @@ const ConfigStep: React.FC<ConfigStepProps> = ({ config, setConfig, totalPopulat
                         </div>
                         <div>
                             <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">{t('riskRandomCountLabel', lang)}</label>
-                            <NumberInput min={0} value={config.riskRandomCount ?? 5} onChange={(val) => handleChange('riskRandomCount', val)} className="w-full px-5 py-3 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-bold text-[13px]" />
+                            {config.riskRandomAuto === false ? (
+                                <NumberInput min={0} value={config.riskRandomCount ?? 5} onChange={(val) => handleChange('riskRandomCount', val)} className="w-full px-5 py-3 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-brand-500 bg-white shadow-sm font-bold text-[13px]" />
+                            ) : (
+                                <div className="w-full px-5 py-3 border border-slate-200 rounded-2xl bg-slate-50 text-slate-400 font-bold text-[13px]">{t('riskRandomAutoValue', lang)}</div>
+                            )}
+                            <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center ${config.riskRandomAuto !== false ? 'bg-brand-500 border-brand-500 text-white' : 'border-slate-300 bg-white'}`}>
+                                    {config.riskRandomAuto !== false && <Check className="w-3 h-3" />}
+                                </div>
+                                <input type="checkbox" className="hidden" checked={config.riskRandomAuto !== false} onChange={(e) => handleChange('riskRandomAuto', e.target.checked)} />
+                                <span className="text-[11px] font-bold text-slate-500">{t('riskRandomAutoLabel', lang)}</span>
+                            </label>
                         </div>
+                    </div>
+                    <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
+                        <p className="text-[12px] font-bold text-slate-600">
+                            {riskPreview
+                                ? t('riskPreviewMatched', lang)
+                                    .replace('{matched}', String(riskPreview.matched))
+                                    .replace('{eligible}', String(riskPreview.eligible))
+                                : t('riskPreviewPending', lang)}
+                            {riskPreview && (
+                                <span className="block mt-1 font-medium text-slate-400">
+                                    {[
+                                        config.riskWeekend !== false ? `${t('riskWeekendLabel', lang)}: ${riskPreview.hits.weekend}` : null,
+                                        config.riskHoliday !== false ? `${t('riskHolidayLabel', lang)}: ${riskPreview.hits.holiday}` : null,
+                                        (config.riskClosingDays ?? 5) > 0 ? `${t('riskClosingDaysLabel', lang)}: ${riskPreview.hits.closing}` : null
+                                    ].filter(Boolean).join(' · ')}
+                                </span>
+                            )}
+                        </p>
+
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <div className={`w-4 h-4 rounded-full border-[5px] transition-all ${!limited ? 'border-brand-500' : 'border-slate-300'}`} />
+                            <input type="radio" className="hidden" checked={!limited} onChange={() => handleChange('riskMaxByCriteria', 0)} />
+                            <span className="text-[12px] font-bold text-slate-700">
+                                {t('riskTakeAll', lang)}
+                                {riskPreview ? ` (${riskPreview.matched})` : ''}
+                            </span>
+                        </label>
+
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <div className={`w-4 h-4 rounded-full border-[5px] transition-all ${limited ? 'border-brand-500' : 'border-slate-300'}`} />
+                            <input type="radio" className="hidden" checked={limited} onChange={() => handleChange('riskMaxByCriteria', DEFAULT_RISK_LIMIT)} />
+                            <span className="text-[12px] font-bold text-slate-700">{t('riskLimitTo', lang)}</span>
+                            <NumberInput
+                                min={1}
+                                value={limited ? (config.riskMaxByCriteria as number) : DEFAULT_RISK_LIMIT}
+                                onChange={(val) => handleChange('riskMaxByCriteria', Math.max(1, val))}
+                                className={`w-28 px-4 py-2 border rounded-xl bg-white shadow-sm font-bold text-[13px] ${limited ? 'border-slate-200 focus:ring-2 focus:ring-brand-500' : 'border-slate-100 text-slate-300'}`}
+                            />
+                        </label>
+
+                        {!limited && riskPreview && riskPreview.matched > FULL_SCAN_WARNING && (
+                            <p className="text-[11px] font-bold text-amber-600 flex items-start gap-2">
+                                <Info className="w-4 h-4 flex-shrink-0" />
+                                {t('riskFullScanWarning', lang).replace('{matched}', String(riskPreview.matched))}
+                            </p>
+                        )}
                     </div>
                     <div className="grid grid-cols-2 gap-6">
                         <label className="flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-2xl cursor-pointer hover:border-brand-400 transition-all">

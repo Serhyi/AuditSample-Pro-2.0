@@ -1,26 +1,25 @@
 import type ExcelJSType from 'exceljs';
-import { Language, TransactionItem } from '../types';
+import { Language } from '../types';
 import { t } from '../utils/translations';
-import { formatMoney, methodsSupportingAnomalies, calculateExtrapolation } from '../utils/samplingEngine';
+import { formatMoney, methodsSupportingAnomalies, calculateExtrapolation, getEnteredMisstatements } from '../utils/samplingEngine';
 import { parseDateText, parseNumericText, looksLikeDate } from '../utils/cellNormalization';
 import { getExcelDateFormat, isMonthFirstLocale } from '../utils/locale';
 import { METHOD_PREFIX_MAP, getStaticFormula, getCalculationDetails, getDynamicMethodName, getDynamicMethodDescription } from '../components/resultsUtils';
 
-// Hidden sheet that carries the machine-readable snapshots in client exports,
-// which have no summary sheet to host them.
+// Hidden sheet that carries the machine-readable snapshots. It is the only
+// place service data lives, so nothing technical shows up in the visible sheets.
 export const META_SHEET_NAME = '__AuditSampleData';
 
 export async function exportToExcel(
   fullState: any,
   filename: string,
-  isClientVersion: boolean,
   lang: Language
 ): Promise<void> {
   // Lazily load ExcelJS so it is split into its own chunk and only fetched
   // when the user actually exports, keeping the main bundle small.
   const ExcelJS = (await import('exceljs')).default as typeof ExcelJSType;
   const workbook = new ExcelJS.Workbook();
-  const { results, sourceHeaders, config, population, license } = fullState;
+  const { results, sourceHeaders, config, license } = fullState;
   
   const isUa = lang === 'ua';
 
@@ -28,7 +27,11 @@ export async function exportToExcel(
   const colorGreen = 'FF00854B';
   const colorDarkBlue = 'FF1E293B';
   const colorRowBg = 'FFF8FAFC';
-  
+  // Yellow highlight for the reserved population-file link row.
+  const colorHighlight = 'FFFFF3B0';
+  const colorHighlightEdge = 'FFE0B411';
+  const colorHighlightText = 'FF854D0E';
+
   // Machine-readable snapshots for lossless project recovery on re-import.
   // Written as hidden rows: the config restores the sampling parameters, and
   // the results snapshot carries the exact samplingInterval / trivialValue
@@ -75,16 +78,62 @@ export async function exportToExcel(
       r.getCell(1).font = { bold: true, color: { argb: fontColor } };
     };
 
+    // Money and counts reach this sheet already formatted as text (that is what
+    // the calculation card shows on screen). Written as text they would land in
+    // Excel as "number stored as text" - flagged, unsortable, unusable in a
+    // formula - so a numeric string is written back as a real number carrying
+    // the format its text form implied.
+    const formatOfNumericText = (text: string): string => {
+      const t = text.trim();
+      if (/[.,]\d{2}$/.test(t)) return '#,##0.00';
+      if (/[\s\u00A0\u202F]\d{3}\b/.test(t)) return '#,##0';
+      return '0';
+    };
+
     const addDetailRow = (lbl: string, val: string | number, numFmt?: string) => {
-      const r = sheet.addRow([lbl, val]);
+      let cellVal: string | number = val;
+      let fmt = numFmt;
+
+      if (typeof val === 'string') {
+        const asNumber = parseNumericText(val);
+        if (asNumber !== null) {
+          cellVal = asNumber;
+          if (!fmt) fmt = formatOfNumericText(val);
+        }
+      } else if (typeof val === 'number' && !fmt) {
+        fmt = Number.isInteger(val) ? '0' : '#,##0.00';
+      }
+
+      const r = sheet.addRow([lbl, cellVal]);
       r.getCell(1).font = { color: { argb: 'FF475569' }, bold: true };
       r.getCell(2).alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
-      if (typeof val === 'number') {
-        r.getCell(2).numFmt = numFmt || '#,##0.00';
-      } else if (numFmt) {
-        r.getCell(2).numFmt = numFmt;
-      }
+      if (fmt) r.getCell(2).numFmt = fmt;
     };
+
+    // Reserved first row: the auditor pastes here the path or hyperlink to the
+    // file holding the population. The population itself is not exported, so
+    // this is the audit trail back to the tested data.
+    const linkRow = sheet.addRow([
+      isUa ? 'Файл генеральної сукупності:' : 'Population file:',
+      isUa
+        ? '⟵ вкажіть тут посилання або шлях до файлу з генеральною сукупністю'
+        : '⟵ enter here the link or path to the file holding the population'
+    ]);
+    linkRow.height = 24;
+    ['A', 'B'].forEach((col) => {
+      const cell = sheet.getCell(`${col}${linkRow.number}`);
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorHighlight } };
+      cell.border = {
+        top: { style: 'thin', color: { argb: colorHighlightEdge } },
+        bottom: { style: 'thin', color: { argb: colorHighlightEdge } },
+        left: { style: 'thin', color: { argb: colorHighlightEdge } },
+        right: { style: 'thin', color: { argb: colorHighlightEdge } }
+      };
+      cell.alignment = { vertical: 'middle', horizontal: 'left' };
+    });
+    linkRow.getCell(1).font = { bold: true, color: { argb: colorHighlightText } };
+    linkRow.getCell(2).font = { italic: true, color: { argb: 'FFA1741B' } };
+    sheet.addRow([]);
 
     // Main header
     addSectionHeader(isUa ? 'Опис та результат' : 'Description and Result', colorGreen);
@@ -163,9 +212,11 @@ export async function exportToExcel(
         // coefficients, so money formatting would misreport them (a step of 5
         // as "5,00", a reliability factor of 2.996 as "3,00").
         if (typeof v === 'number') {
-             addDetailRow(k, Number.isInteger(v) ? String(v) : v.toFixed(3));
+            // Counts and seeds are plain integers; coefficients keep three
+            // decimals, the precision they are reported with on screen.
+            addDetailRow(k, v, Number.isInteger(v) ? '0' : '0.000');
         } else {
-             addDetailRow(k, String(v));
+            addDetailRow(k, String(v));
         }
     });
     
@@ -177,8 +228,8 @@ export async function exportToExcel(
 
     addSectionHeader(isUa ? '3. РЕЗУЛЬТАТИ ТА ЕКСТРАПОЛЯЦІЯ' : '3. RESULTS AND EXTRAPOLATION', 'FF0F172A');
     addDetailRow(isUa ? 'ОБСЯГ ВИБІРКИ' : 'SAMPLE SIZE', results.sampleSize, '0');
-    const coveragePercent = results.populationValue > 0 ? (results.sampleValue / results.populationValue) * 100 : 0;
-    addDetailRow(isUa ? 'АНАЛІЗ ПОКРИТТЯ' : 'COVERAGE ANALYSIS', `${coveragePercent.toFixed(2)}%`);
+    const coverage = results.populationValue > 0 ? results.sampleValue / results.populationValue : 0;
+    addDetailRow(isUa ? 'АНАЛІЗ ПОКРИТТЯ' : 'COVERAGE ANALYSIS', coverage, '0.00%');
     
     const isAttribute = config.method === 'Attribute';
     
@@ -188,8 +239,9 @@ export async function exportToExcel(
     const ubNum = extrapolation.ub;
     
     if (isAttribute) {
-        addDetailRow(isUa ? 'Очікуваний ступінь відхилення' : 'Projected Deviation', `${projNum.toFixed(2)}%`);
-        addDetailRow(isUa ? 'Максимальна помилка (СУЕВ)' : 'Upper Deviation Bound', `${ubNum.toFixed(2)}%`);
+        // Attribute rates are already percentages, hence the division.
+        addDetailRow(isUa ? 'Очікуваний ступінь відхилення' : 'Projected Deviation', projNum / 100, '0.00%');
+        addDetailRow(isUa ? 'Максимальна помилка (СУЕВ)' : 'Upper Deviation Bound', ubNum / 100, '0.00%');
     } else {
         addDetailRow(isUa ? 'Прогнозоване викривлення' : 'Projected Misstatement', formatMoney(projNum));
         addDetailRow(isUa ? 'Верхня межа викривлення' : 'Upper Misstatement Bound', formatMoney(ubNum));
@@ -209,9 +261,18 @@ export async function exportToExcel(
         conclusionText = isUa ? `Верхня межа відхилення (${ubNum.toFixed(2)}%) ПЕРЕВИЩУЄ допустимий рівень відхилення (${config.tolerableMisstatement}%). Вибірка не підтверджує ефективність контролів.` : `Upper deviation bound (${ubNum.toFixed(2)}%) EXCEEDS tolerable deviation rate (${config.tolerableMisstatement}%). Sample does not confirm control effectiveness.`;
       }
     } else if (config.method === 'RiskAssessment') {
-        const keyItemsMisstatements = (results.keyItems || []).reduce((acc: any, i: any) => acc + (i.difference || 0), 0);
+        // Only items with an audit value entered say anything about misstatements.
+        const found = getEnteredMisstatements(results);
         conclusionPrefix = isUa ? "🟡 ОЦІНКА РИЗИКІВ" : "🟡 RISK ASSESSMENT";
-        conclusionText = isUa ? `Знайдено викривлень на суму ${formatMoney(keyItemsMisstatements)}.` : `Total misstatements found is ${formatMoney(keyItemsMisstatements)}.`;
+        if (found.audited === 0) {
+            conclusionText = isUa
+                ? `Аудиторські суми ще не внесені (перевірено 0 з ${found.items} елементів), тому висновок про викривлення зробити неможливо.`
+                : `No audit values entered yet (0 of ${found.items} items checked), so no conclusion on misstatements can be drawn.`;
+        } else {
+            conclusionText = isUa
+                ? `Перевірено ${found.audited} з ${found.items} відібраних елементів. Встановлено викривлень на суму ${formatMoney(found.total)}.`
+                : `Checked ${found.audited} of ${found.items} selected items. Established misstatements total ${formatMoney(found.total)}.`;
+        }
     } else {
         if (ubNum <= config.tolerableMisstatement) {
             conclusionPrefix = isUa ? "🟢 НИЗЬКИЙ РИЗИК" : "🟢 LOW RISK";
@@ -241,21 +302,15 @@ export async function exportToExcel(
     cr.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
     cr.getCell(2).alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
 
-    sheet.addRow([]);
-
-    addMachineReadableRows(sheet);
   };
 
-  // The client receives only the selected items: no methodology, no
-  // conclusion, no population. The snapshots still travel with the file on a
-  // hidden sheet so the returned workbook re-imports losslessly.
-  if (isClientVersion) {
-    const metaSheet = workbook.addWorksheet(META_SHEET_NAME);
-    metaSheet.state = 'veryHidden';
-    addMachineReadableRows(metaSheet);
-  } else {
-    addSummarySheet();
-  }
+  addSummarySheet();
+
+  // Service data for recalculation and re-import lives only on the hidden
+  // sheet, so the visible sheets stay clean.
+  const metaSheet = workbook.addWorksheet(META_SHEET_NAME);
+  metaSheet.state = 'veryHidden';
+  addMachineReadableRows(metaSheet);
 
   // --- Source cell presentation --------------------------------------------
   // Cells are normalized on import (utils/cellNormalization): numbers are
@@ -320,11 +375,7 @@ export async function exportToExcel(
     isUa ? 'Різниця' : 'Difference'
   );
   
-  if (!isClientVersion) {
-      baseHeaders.push(isUa ? 'Коментарі аудитора' : 'Auditor Comments');
-  } else {
-      baseHeaders.push(isUa ? 'Коментарі' : 'Comments');
-  }
+  baseHeaders.push(isUa ? 'Коментарі' : 'Comments');
 
   const addItemsToSheet = (sheetName: string, items: any[]) => {
     if (!items || items.length === 0) return;
@@ -383,7 +434,7 @@ export async function exportToExcel(
         diffValObj
       );
       
-      rowData.push(!isClientVersion ? (item.comments || '') : '');
+      rowData.push(item.comments || '');
 
       const addedRow = sheet.addRow(rowData);
       sourceCells.forEach((cell: { numFmt?: string }, colIdx: number) => {
@@ -426,44 +477,6 @@ export async function exportToExcel(
   if (results.keyItems && results.keyItems.length > 0) {
     addItemsToSheet(isUa ? 'Ключові' : 'Key', results.keyItems);
   }
-
-  if (!isClientVersion && population && population.length > 0 && population.length <= 150000) {
-    // Also include a population sheet without audit values, just book values
-    const sheetName = isUa ? 'Генеральна сукупність' : 'Population';
-    const sheet = workbook.addWorksheet(sheetName);
-    const popHeaders = [...(sourceHeaders || []), isUa ? 'Облікова сума' : 'Book Value'];
-    
-    const headerRow = sheet.addRow(popHeaders);
-    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    headerRow.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: colorDarkBlue }
-    };
-    
-    population.forEach((item: TransactionItem) => {
-      const sourceCells = (item.originalRow || []).map(normalizeCell);
-      const rowData: any[] = sourceCells.map((c: { value: any }) => c.value);
-      while (rowData.length < (sourceHeaders?.length || 0)) {
-        rowData.push('');
-      }
-      rowData.push(item.amount);
-      const addedRow = sheet.addRow(rowData);
-      sourceCells.forEach((cell: { numFmt?: string }, colIdx: number) => {
-        if (cell.numFmt) addedRow.getCell(colIdx + 1).numFmt = cell.numFmt;
-      });
-    });
-
-    sheet.columns.forEach((column, i) => {
-      column.width = 15;
-      if (i === (sourceHeaders?.length || 0)) {
-        column.numFmt = '#,##0.00';
-      }
-    });
-    sheet.views = [{ state: 'frozen', ySplit: 1 }];
-  }
-
-  // Removed _metadata sheet as it's no longer used for project state loading (now using .audsmpl)
 
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer as any], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });

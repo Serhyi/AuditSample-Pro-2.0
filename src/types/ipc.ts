@@ -1,3 +1,4 @@
+import { RiskPreview } from '../utils/riskSelection';
 import { SamplingConfig, TransactionItem, SamplingResult } from './index';
 
 export interface ImportConfig {
@@ -41,6 +42,7 @@ export interface IpcApi {
   };
   sampling: {
     execute: (config: SamplingConfig) => Promise<SamplingResult>;
+    previewRisk: (config: SamplingConfig) => Promise<RiskPreview>;
   };
   export: {
     project: (state: any) => Promise<void>;

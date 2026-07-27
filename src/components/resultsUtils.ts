@@ -31,6 +31,58 @@ export function getDynamicMethodName(config: SamplingConfig, lang: Language): st
 export function getDynamicMethodDescription(config: SamplingConfig, lang: Language): string {
     const mPrefix = METHOD_PREFIX_MAP[config.method] || config.method.toLowerCase();
     let desc = t(mPrefix + 'EvaluationText', lang);
+    if (config.method === 'RiskAssessment') {
+        // Spelled out from the configuration: the criteria are switchable and
+        // the holidays come from the settings, so a fixed sentence would
+        // describe a run that did not happen.
+        const isUa = lang === 'ua';
+        const opts = riskCriteriaOptions(config);
+        const parts: string[] = [];
+
+        if (opts.includeWeekend) {
+            parts.push(isUa
+                ? 'операції у вихідні дні (субота, неділя) — день тижня визначається з дати операції'
+                : 'entries on weekends (Saturday, Sunday), derived from the entry date');
+        }
+        if (opts.includeHoliday) {
+            const days = opts.holidayList.map(formatHoliday).join(', ');
+            parts.push(isUa
+                ? `операції у святкові дні за списком з налаштувань (${opts.holidayList.length}): ${days}`
+                : `entries on the holidays listed in the settings (${opts.holidayList.length}): ${days}`);
+        }
+        if (opts.closingDays > 0) {
+            parts.push(isUa
+                ? `операції періоду закриття — останні ${opts.closingDays} дн. кожного місяця`
+                : `entries in the closing period - the last ${opts.closingDays} days of each month`);
+        }
+
+        const criteria = parts.length > 0
+            ? (isUa ? `Критерії ризику: ${parts.join('; ')}.` : `Risk criteria: ${parts.join('; ')}.`)
+            : (isUa ? 'Жоден критерій ризику не увімкнено.' : 'No risk criterion is enabled.');
+
+        const cap = Number(config.riskMaxByCriteria) || 0;
+        const capText = cap > 0
+            ? (isUa
+                ? `Обсяг вибірки обмежено ${cap} елементами: квота розподіляється між критеріями пропорційно кількості збігів, не менше одного елемента на критерій, добір усередині критерію — псевдовипадковий за зерном (seed).`
+                : `The sample is capped at ${cap} items: the quota is split across the criteria in proportion to their matches, at least one item each, and drawn within a criterion pseudo-randomly from the seed.`)
+            : (isUa
+                ? 'Обмеження обсягу не задано: перевіряються всі операції, що відповідають критеріям.'
+                : 'No cap is set: every entry meeting the criteria is checked.');
+
+        const random = config.riskRandomAuto === false
+            ? (isUa
+                ? `Додатково відбирається ${config.riskRandomCount ?? 5} випадкових елементів з тих, що не відповідають жодному критерію (елемент непередбачуваності, МСА 240).`
+                : `A further ${config.riskRandomCount ?? 5} items are drawn at random from entries matching no criterion (unpredictability, ISA 240).`)
+            : (isUa
+                ? 'Додатково відбираються випадкові елементи з тих, що не відповідають жодному критерію: 1% від їх кількості, але не менше 5 (елемент непередбачуваності, МСА 240).'
+                : 'A random control group is drawn from entries matching no criterion: 1% of them, at least 5 (unpredictability, ISA 240).');
+
+        const evaluation = isUa
+            ? 'Метод нестатистичний (цільовий): прогнозоване викривлення та верхня межа дорівнюють сумі фактично встановлених помилок, екстраполяція на неперевірену частину сукупності не здійснюється.'
+            : 'The method is non-statistical (judgmental): projected and upper misstatement equal the errors actually established, with no extrapolation to the untested remainder.';
+
+        return `${criteria} ${capText} ${random} ${evaluation}`;
+    }
     if (config.method === 'Pareto') {
         const pCov = config.paretoCoverage || 80;
         desc = desc.replace('80%', `${pCov}%`).replace('80', String(pCov));
@@ -40,6 +92,8 @@ export function getDynamicMethodDescription(config: SamplingConfig, lang: Langua
 
 
 import { formatMoney } from '../utils/samplingEngine';
+import { formatHoliday } from '../utils/holidays';
+import { riskCriteriaOptions } from '../utils/riskSelection';
 import { getReliabilityFactor, getExpansionFactor } from '../statistics/reliabilityFactor';
 
 export function getCalculationDetails(config: SamplingConfig, results: SamplingResult, lang: string): { vars: Record<string, string|number>, subst: string } {
@@ -110,17 +164,39 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
         const includeWeekend = config.riskWeekend !== false;
         const includeHoliday = config.riskHoliday !== false;
         const randomCount = config.riskRandomCount ?? 5;
+        const randomAuto = config.riskRandomAuto !== false;
+        const cap = Number(config.riskMaxByCriteria) || 0;
         const configuredHolidays = sanitizeHolidays(config.holidays);
         const holidayList = configuredHolidays.length > 0 ? configuredHolidays : DEFAULT_HOLIDAYS;
-        const byCriteria = (results.samplingItems || []).filter(i => i.selectionReason === 'Risk Criteria').length;
+        // 'Risk Criteria' is the older, undifferentiated label; current runs
+        // name the criteria that matched ('Risk: holiday, weekend').
+        const isByCriteria = (r?: string) => !!r && (r === 'Risk Criteria' || r.startsWith('Risk:'));
+        const byCriteria = (results.samplingItems || []).filter(i => isByCriteria(i.selectionReason)).length;
         const byRandom = (results.samplingItems || []).filter(i => i.selectionReason === 'Random (Risk)').length;
         const yes = isUa ? 'так' : 'yes';
         const no = isUa ? 'ні' : 'no';
 
+        // Hits are what the engine actually matched; showing them next to each
+        // criterion makes a mismatch between description and selection visible.
+        const hits = results.riskCriteriaHits;
+        const withHits = (label: string, n: number | undefined) =>
+            n === undefined ? label : `${label} — ${n}`;
+
+        // When the selection was capped, each criterion reports selected/matched
+        // so the auditor sees the coverage rather than assuming it was complete.
+        const sel = results.riskCriteriaSelected;
+        const withCoverage = (label: string, c: 'weekend' | 'holiday' | 'closing') => {
+            const matched = hits?.[c];
+            if (matched === undefined) return label;
+            const chosen = sel?.[c];
+            if (chosen === undefined || chosen === matched) return withHits(label, matched);
+            return isUa ? `${label} — ${chosen} з ${matched}` : `${label} — ${chosen} of ${matched}`;
+        };
+
         const criteria: string[] = [];
-        if (includeWeekend) criteria.push(isUa ? 'вихідні дні' : 'weekends');
-        if (includeHoliday) criteria.push(isUa ? `святкові дні (${holidayList.length})` : `public holidays (${holidayList.length})`);
-        if (closingDays > 0) criteria.push(isUa ? `останні ${closingDays} дн. місяця` : `last ${closingDays} days of month`);
+        if (includeWeekend) criteria.push(withCoverage(isUa ? 'вихідні дні' : 'weekends', 'weekend'));
+        if (includeHoliday) criteria.push(withCoverage(isUa ? `святкові дні (${holidayList.length})` : `public holidays (${holidayList.length})`, 'holiday'));
+        if (closingDays > 0) criteria.push(withCoverage(isUa ? `останні ${closingDays} дн. місяця` : `last ${closingDays} days of month`, 'closing'));
 
         vars[methodStr] = config.method;
         vars[isUa ? 'Операції у вихідні:' : 'Weekend entries:'] = includeWeekend ? yes : no;
@@ -129,8 +205,13 @@ export function getCalculationDetails(config: SamplingConfig, results: SamplingR
             : no;
         vars[isUa ? 'Днів закриття періоду:' : 'Period closing days:'] = closingDays;
         vars[isUa ? 'Зерно генератора (Seed):' : 'Generator Seed:'] = config.seed || 0;
-        vars[isUa ? 'Відібрано за критеріями ризику:' : 'Selected by risk criteria:'] = byCriteria;
-        vars[isUa ? 'Додано випадкових (контроль):' : 'Random control items:'] = `${byRandom} / ${randomCount}`;
+        const matchedTotal = results.riskMatchedTotal;
+        vars[isUa ? 'Відібрано за критеріями ризику:' : 'Selected by risk criteria:'] =
+            (matchedTotal !== undefined && matchedTotal !== byCriteria)
+                ? (isUa ? `${byCriteria} з ${matchedTotal} збігів (ліміт ${cap})` : `${byCriteria} of ${matchedTotal} matches (cap ${cap})`)
+                : byCriteria;
+        vars[isUa ? 'Додано випадкових (контроль):' : 'Random control items:'] =
+            randomAuto ? `${byRandom} (${isUa ? 'авто' : 'auto'})` : `${byRandom} / ${randomCount}`;
         vars[isUa ? 'Кількість відібраних елементів (n):' : 'Sample Size (n):'] = results.samplingItems.length;
 
         const criteriaStr = criteria.length > 0

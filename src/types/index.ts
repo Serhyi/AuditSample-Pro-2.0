@@ -74,6 +74,10 @@ export interface SamplingConfig {
   riskRandomCount?: number;
   riskWeekend?: boolean;
   riskHoliday?: boolean;
+  // Upper limit on the sample drawn by the criteria (0 = no limit).
+  riskMaxByCriteria?: number;
+  // Derive the number of random control items from the non-risk pool size.
+  riskRandomAuto?: boolean;
   /** Holidays copied from global settings at run time (see utils/holidays.ts). */
   holidays?: string[];
 }
@@ -141,6 +145,13 @@ export interface SamplingResult {
   excludedItems?: TransactionItem[]; // Items below CTT
   projectedMisstatement: number;
   upperMisstatementBound: number;
+  // How many population items each enabled risk criterion matched. Reported
+  // next to the criteria so the description cannot drift from the selection.
+  riskCriteriaHits?: { weekend: number; holiday: number; closing: number };
+  // How many of those matches actually entered the sample, per criterion, and
+  // the totals behind the coverage figure shown in the calculation card.
+  riskCriteriaSelected?: { weekend: number; holiday: number; closing: number };
+  riskMatchedTotal?: number;
   statisticalStats?: {
     mean: number;
     stdDev: number;

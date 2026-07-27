@@ -64628,12 +64628,150 @@ function splitHolidays(list) {
   };
 }
 
+// src/utils/riskSelection.ts
+var CRITERION_ORDER = ["holiday", "weekend", "closing"];
+var emptyCounts = () => ({ weekend: 0, holiday: 0, closing: 0 });
+function primaryCriterion(flags) {
+  for (const c of CRITERION_ORDER) if (flags[c]) return c;
+  return null;
+}
+function pick(items, count, rng2) {
+  const copy = items.slice();
+  const n = Math.min(count, copy.length);
+  for (let i = 0; i < n; i++) {
+    const j = i + rng2.nextInt(0, copy.length - i);
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy.slice(0, n);
+}
+function allocateRiskSample(matched, flagsOf, cap, seed) {
+  const groups = { holiday: [], weekend: [], closing: [] };
+  for (const item of matched) {
+    const c = primaryCriterion(flagsOf(item));
+    if (c) groups[c].push(item);
+  }
+  const countOf = (items) => items.length;
+  const selected = emptyCounts();
+  if (cap <= 0 || matched.length <= cap) {
+    for (const c of CRITERION_ORDER) selected[c] = countOf(groups[c]);
+    return { picked: matched.slice(), selected };
+  }
+  const total = matched.length;
+  const quotas = {};
+  const remainders = [];
+  let assigned = 0;
+  for (const c of CRITERION_ORDER) {
+    const size = groups[c].length;
+    if (size === 0) {
+      quotas[c] = 0;
+      continue;
+    }
+    const exact = size / total * cap;
+    const base = Math.max(1, Math.floor(exact));
+    quotas[c] = Math.min(base, size);
+    assigned += quotas[c];
+    remainders.push({ c, rem: exact - Math.floor(exact) });
+  }
+  remainders.sort((a, b) => b.rem - a.rem);
+  let diff = cap - assigned;
+  while (diff !== 0) {
+    let moved = false;
+    for (const { c } of remainders) {
+      if (diff === 0) break;
+      if (diff > 0 && quotas[c] < groups[c].length) {
+        quotas[c]++;
+        diff--;
+        moved = true;
+      } else if (diff < 0 && quotas[c] > 1) {
+        quotas[c]--;
+        diff++;
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+  const rng2 = new Mulberry32(Math.floor(seed) || 0);
+  const picked = [];
+  for (const c of CRITERION_ORDER) {
+    const chosen = pick(groups[c], quotas[c] || 0, rng2);
+    selected[c] = chosen.length;
+    picked.push(...chosen);
+  }
+  return { picked, selected };
+}
+function autoRandomCount(nonRiskPoolSize) {
+  return Math.max(5, Math.round(nonRiskPoolSize * 0.01));
+}
+function riskReasonLabel(flags) {
+  const hit = CRITERION_ORDER.filter((c) => flags[c]);
+  return hit.length > 0 ? `Risk: ${hit.join(", ")}` : "Risk Criteria";
+}
+
 // src/main/services/SamplingService.ts
-var SamplingService = class {
+var SamplingService = class _SamplingService {
   constructor(db) {
     this.db = db;
   }
   db;
+  /**
+   * SQL for the risk criteria, one condition per criterion. Shared by the run
+   * and by the settings preview so the counts shown before running are the
+   * counts the run will use.
+   */
+  static buildRiskConditions(config) {
+    const closingDays = config.riskClosingDays ?? 5;
+    const includeWeekend = config.riskWeekend !== false;
+    const includeHoliday = config.riskHoliday !== false;
+    const riskQueryConds = [];
+    const weekendCond = `CAST(strftime('%w', date) AS INTEGER) IN (0, 6)`;
+    const holidayConds = [];
+    let closingCond = "";
+    if (includeWeekend) riskQueryConds.push(weekendCond);
+    if (includeHoliday) {
+      const configured = sanitizeHolidays(config.holidays);
+      const holidayList = configured.length > 0 ? configured : DEFAULT_HOLIDAYS;
+      const { recurring, specific } = splitHolidays(holidayList);
+      if (recurring.length > 0) {
+        holidayConds.push(`strftime('%m-%d', date) IN (${recurring.map((h) => `'${h}'`).join(", ")})`);
+      }
+      if (specific.length > 0) {
+        holidayConds.push(`date IN (${specific.map((h) => `'${h}'`).join(", ")})`);
+      }
+      riskQueryConds.push(...holidayConds);
+    }
+    if (closingDays > 0) {
+      closingCond = `(julianday(date(date, 'start of month', '+1 month', '-1 day')) - julianday(date)) < ${closingDays}`;
+      riskQueryConds.push(closingCond);
+    }
+    const riskWhereStr = riskQueryConds.length > 0 ? `COALESCE((${riskQueryConds.join(" OR ")}), 0)` : "0";
+    return { weekendCond, holidayConds, closingCond, riskWhereStr, includeWeekend };
+  }
+  /** Criteria hit counts for the settings screen; selects no rows. */
+  async previewRisk(config) {
+    const ctt = Number(config.clearlyTrivialThreshold) || 0;
+    const { weekendCond, holidayConds, closingCond, riskWhereStr, includeWeekend } = _SamplingService.buildRiskConditions(config);
+    const countWhere = async (cond) => {
+      if (!cond) return 0;
+      const rows = await this.db.query(
+        `SELECT COUNT(*) as cnt FROM population WHERE ABS(amount) >= ? AND COALESCE((${cond}), 0)`,
+        [ctt]
+      );
+      return rows[0]?.cnt || 0;
+    };
+    const eligibleRows = await this.db.query(
+      `SELECT COUNT(*) as cnt FROM population WHERE ABS(amount) >= ?`,
+      [ctt]
+    );
+    return {
+      eligible: eligibleRows[0]?.cnt || 0,
+      matched: await countWhere(riskWhereStr),
+      hits: {
+        weekend: includeWeekend ? await countWhere(weekendCond) : 0,
+        holiday: holidayConds.length > 0 ? await countWhere(holidayConds.join(" OR ")) : 0,
+        closing: await countWhere(closingCond)
+      }
+    };
+  }
   /**
    * Draws `sampleSize` items at random from the rows matching `whereClause`.
    * Seeded from config.seed via Mulberry32 so a sample can be reproduced and
@@ -64692,8 +64830,8 @@ var SamplingService = class {
     const ctt = Number(config.clearlyTrivialThreshold) || 0;
     const isAnomalyDisabled = config.anomalyMethod === "None";
     const isMUSKeyExtract = config.method === "MUS" && tm > 0;
-    const allowedMethodsForKeyItems = ["Random", "FixedRandom", "CVS", "Cluster", "RiskAssessment"];
-    const excludeKeyItems = isMUSKeyExtract || !isAnomalyDisabled && tm > 0 && allowedMethodsForKeyItems.includes(config.method);
+    const allowedMethodsForKeyItems = ["Random", "FixedRandom", "CVS", "Cluster"];
+    const excludeKeyItems = config.method !== "RiskAssessment" && (isMUSKeyExtract || !isAnomalyDisabled && tm > 0 && allowedMethodsForKeyItems.includes(config.method));
     const upperLimit = excludeKeyItems ? tm : 999999999999;
     let trivialCount = 0;
     let trivialValue = 0;
@@ -64727,36 +64865,39 @@ var SamplingService = class {
     const remPopValue = popValue - keyItemsValue - Math.abs(trivialValue);
     const rf = getReliabilityFactor(config.confidenceLevel);
     let sampleItems = [];
+    let riskCriteriaHits;
+    let riskCriteriaSelected;
+    let riskMatchedTotal;
     await updateProgress("Applying sampling method...");
     if (config.method === "RiskAssessment") {
-      const closingDays = config.riskClosingDays ?? 5;
-      const includeWeekend = config.riskWeekend !== false;
-      const includeHoliday = config.riskHoliday !== false;
-      const riskQueryConds = [];
-      if (includeWeekend) {
-        riskQueryConds.push(`CAST(strftime('%w', date) AS INTEGER) IN (0, 6)`);
-      }
-      if (includeHoliday) {
-        const configured = sanitizeHolidays(config.holidays);
-        const holidayList = configured.length > 0 ? configured : DEFAULT_HOLIDAYS;
-        const { recurring, specific } = splitHolidays(holidayList);
-        if (recurring.length > 0) {
-          riskQueryConds.push(`strftime('%m-%d', date) IN (${recurring.map((h) => `'${h}'`).join(", ")})`);
-        }
-        if (specific.length > 0) {
-          riskQueryConds.push(`date IN (${specific.map((h) => `'${h}'`).join(", ")})`);
-        }
-      }
-      if (closingDays > 0) {
-        riskQueryConds.push(`(julianday(date(date, 'start of month', '+1 month', '-1 day')) - julianday(date)) <= ${closingDays}`);
-      }
-      const riskWhereStr = riskQueryConds.length > 0 ? `COALESCE((${riskQueryConds.join(" OR ")}), 0)` : "0";
-      const riskMatchedQuery = `
-          SELECT * FROM population 
+      const { weekendCond, holidayConds, closingCond, riskWhereStr, includeWeekend } = _SamplingService.buildRiskConditions(config);
+      const flagRows = await this.db.query(`
+          SELECT rowid AS rid,
+                 ${includeWeekend ? `COALESCE((${weekendCond}), 0)` : "0"} AS w,
+                 ${holidayConds.length > 0 ? `COALESCE((${holidayConds.join(" OR ")}), 0)` : "0"} AS h,
+                 ${closingCond ? `COALESCE((${closingCond}), 0)` : "0"} AS c
+          FROM population
           WHERE ABS(amount) < ? AND ABS(amount) >= ? AND ${riskWhereStr}
-          LIMIT 5000
-        `;
-      const riskMatched = await this.db.query(riskMatchedQuery, [upperLimit, ctt]);
+        `, [upperLimit, ctt]);
+      const flagsOf = (r) => ({ weekend: !!r.w, holiday: !!r.h, closing: !!r.c });
+      riskCriteriaHits = {
+        weekend: flagRows.filter((r) => r.w).length,
+        holiday: flagRows.filter((r) => r.h).length,
+        closing: flagRows.filter((r) => r.c).length
+      };
+      riskMatchedTotal = flagRows.length;
+      const cap = Number(config.riskMaxByCriteria) || 0;
+      const allocation = allocateRiskSample(flagRows, flagsOf, cap, seed);
+      riskCriteriaSelected = allocation.selected;
+      const reasonById = /* @__PURE__ */ new Map();
+      for (const r of allocation.picked) reasonById.set(r.rid, riskReasonLabel(flagsOf(r)));
+      const pickedIds = allocation.picked.map((r) => r.rid);
+      const riskMatched = [];
+      for (let i = 0; i < pickedIds.length; i += 500) {
+        const chunk = pickedIds.slice(i, i + 500);
+        const rows = await this.db.query(`SELECT rowid AS rid, * FROM population WHERE rowid IN (${chunk.join(",")})`);
+        riskMatched.push(...rows);
+      }
       for (const item of riskMatched) {
         sampleItems.push({
           ...item,
@@ -64765,11 +64906,16 @@ var SamplingService = class {
           difference: item.amount,
           tainting: 1,
           isSampled: true,
-          selectionReason: "Risk Criteria"
+          selectionReason: reasonById.get(item.rid) || "Risk Criteria"
         });
       }
-      const randomCount = config.riskRandomCount ?? 5;
       const riskUnmatchedWhere = `ABS(amount) < ? AND ABS(amount) >= ? AND NOT ${riskWhereStr}`;
+      const nonRiskAgg = await this.db.query(
+        `SELECT COUNT(*) as cnt FROM population WHERE ${riskUnmatchedWhere}`,
+        [upperLimit, ctt]
+      );
+      const nonRiskSize = nonRiskAgg[0]?.cnt || 0;
+      const randomCount = config.riskRandomAuto === false ? config.riskRandomCount ?? 5 : autoRandomCount(nonRiskSize);
       const randomMatched = await this.getRandomSample(riskUnmatchedWhere, [upperLimit, ctt], randomCount, seed);
       for (const item of randomMatched) {
         sampleItems.push({
@@ -64993,7 +65139,10 @@ var SamplingService = class {
       samplingItems: sampleItems,
       excludedItems: trivialItems,
       projectedMisstatement: 0,
-      upperMisstatementBound: 0
+      upperMisstatementBound: 0,
+      riskCriteriaHits,
+      riskCriteriaSelected,
+      riskMatchedTotal
     };
     return this.calculateExtrapolation(preResult, config, rf);
   }
@@ -65256,7 +65405,11 @@ var AppOrchestrator = class {
         await workbook.xlsx.readFile(filePath);
         const sampleSheet = workbook.getWorksheet("\u0412\u0438\u0431\u0456\u0440\u043A\u0430") || workbook.getWorksheet("Sample");
         if (!sampleSheet) return null;
-        const summarySheet = workbook.getWorksheet("\u041E\u043F\u0438\u0441 \u0442\u0430 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442") || workbook.getWorksheet("Description and Result") || workbook.getWorksheet("__AuditSampleData");
+        const summarySheets = [
+          workbook.getWorksheet("\u041E\u043F\u0438\u0441 \u0442\u0430 \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442"),
+          workbook.getWorksheet("Description and Result"),
+          workbook.getWorksheet("__AuditSampleData")
+        ].filter(Boolean);
         const getCellValue = (v) => {
           if (v === null || v === void 0) return null;
           if (typeof v === "object" && "result" in v) return v.result;
@@ -65277,12 +65430,12 @@ var AppOrchestrator = class {
           }
           return parseFloat(s) || 0;
         };
-        const extractSummaryInfo = (sheet) => {
-          if (!sheet) return null;
+        const extractSummaryInfo = (sheets) => {
+          if (!sheets.length) return null;
           let populationSize = 0, populationValue = 0, projectedMisstatement = 0, upperMisstatementBound = 0, sampleSize = 0, trivialCount = 0, tolerableMisstatement = 0, confidenceLevel = 95, methodStr = "MUS";
           let configJson = null;
           let resultsSnapshot = null;
-          sheet.eachRow((row) => {
+          for (const sheet of sheets) sheet.eachRow((row) => {
             const lbl = String(getCellValue(row.getCell(1).value) || "").trim();
             const val = getCellValue(row.getCell(2).value);
             if (lbl === "__AUDITSAMPLE_CONFIG__" && val) {
@@ -65362,7 +65515,7 @@ var AppOrchestrator = class {
           }
           return { items, headers: sourceHeaders };
         };
-        const summaryData = extractSummaryInfo(summarySheet);
+        const summaryData = extractSummaryInfo(summarySheets);
         const sampleData = extractSheet(sampleSheet);
         const keySheet = workbook.getWorksheet("\u041A\u043B\u044E\u0447\u043E\u0432\u0456") || workbook.getWorksheet("Key");
         const keyData = extractSheet(keySheet);
@@ -65468,6 +65621,9 @@ var AppOrchestrator = class {
       return await this.samplingService.runSampling(config, (stage) => {
         event.sender.send("sampling:progress", stage);
       });
+    });
+    import_electron.ipcMain.handle("sampling:previewRisk", async (_event, config) => {
+      return await this.samplingService.previewRisk(config);
     });
     import_electron.ipcMain.handle("export:project", async (_event, state) => {
       console.log("IPC export:project received");

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getCalculationDetails } from './resultsUtils';
+import { getCalculationDetails, getDynamicMethodDescription } from './resultsUtils';
 import { SamplingConfig, SamplingResult } from '../types';
 
 const mkResult = (over: Partial<SamplingResult> = {}): SamplingResult => ({
@@ -15,7 +15,8 @@ describe('getCalculationDetails: RiskAssessment', () => {
     // Left over from another method — must not surface in this card.
     tolerableMisstatement: 43585, riskFactor: 'Moderate',
     expectedMisstatement: 0, clearlyTrivialThreshold: 0,
-    seed: 7, riskClosingDays: 5, riskWeekend: true, riskHoliday: false, riskRandomCount: 5
+    seed: 7, riskClosingDays: 5, riskWeekend: true, riskHoliday: false,
+    riskRandomCount: 5, riskRandomAuto: false
   } as unknown as SamplingConfig;
 
   const results = mkResult({
@@ -41,6 +42,25 @@ describe('getCalculationDetails: RiskAssessment', () => {
     expect(vars['Відібрано за критеріями ризику:']).toBe(2);
     expect(vars['Додано випадкових (контроль):']).toBe('1 / 5');
     expect(vars['Кількість відібраних елементів (n):']).toBe(3);
+    // Not configured here, so it must not be reported as a parameter.
+    expect(keys.some(k => k.includes('Поріг ключових'))).toBe(false);
+  });
+
+  it('reports coverage when the criteria selection was capped', () => {
+    const capped = { ...config, riskMaxByCriteria: 2 } as SamplingConfig;
+    const withHits = mkResult({
+      samplingItems: [
+        { selectionReason: 'Risk: weekend' }, { selectionReason: 'Risk: closing' },
+        { selectionReason: 'Random (Risk)' }
+      ] as any,
+      riskCriteriaHits: { weekend: 9, holiday: 0, closing: 282 },
+      riskCriteriaSelected: { weekend: 1, holiday: 0, closing: 1 },
+      riskMatchedTotal: 288
+    });
+    const { vars, subst } = getCalculationDetails(capped, withHits, 'ua');
+    expect(vars['Відібрано за критеріями ризику:']).toBe('2 з 288 збігів (ліміт 2)');
+    expect(subst).toContain('вихідні дні — 1 з 9');
+    expect(subst).toContain('останні 5 дн. місяця — 1 з 282');
   });
 
   it('spells out the enabled criteria and how the sample adds up', () => {
@@ -55,5 +75,35 @@ describe('getCalculationDetails: RiskAssessment', () => {
     const off = { ...config, riskWeekend: false, riskHoliday: false, riskClosingDays: 0 } as SamplingConfig;
     const { subst } = getCalculationDetails(off, mkResult(), 'ua');
     expect(subst).toContain('критерії вимкнено');
+  });
+});
+
+describe('getDynamicMethodDescription: RiskAssessment', () => {
+  const cfg = {
+    method: 'RiskAssessment', anomalyMethod: 'None', confidenceLevel: 95,
+    tolerableMisstatement: 0, expectedMisstatement: 0, clearlyTrivialThreshold: 0,
+    riskFactor: 'Moderate', seed: 7, riskClosingDays: 3,
+    riskWeekend: true, riskHoliday: true, holidays: ['01-01', '2025-05-01']
+  } as unknown as SamplingConfig;
+
+  it('names the configured holidays instead of a fixed list', () => {
+    const desc = getDynamicMethodDescription(cfg, 'ua');
+    expect(desc).toContain('за списком з налаштувань (2)');
+    expect(desc).toContain('01.01');
+    expect(desc).toContain('01.05.2025');
+    expect(desc).toContain('останні 3 дн. кожного місяця');
+  });
+
+  it('leaves out criteria that are switched off', () => {
+    const desc = getDynamicMethodDescription({ ...cfg, riskHoliday: false, riskWeekend: false } as SamplingConfig, 'ua');
+    expect(desc).not.toContain('святков');
+    expect(desc).not.toContain('вихідні');
+    expect(desc).toContain('останні 3 дн.');
+  });
+
+  it('states whether the sample size was capped', () => {
+    expect(getDynamicMethodDescription(cfg, 'ua')).toContain('Обмеження обсягу не задано');
+    expect(getDynamicMethodDescription({ ...cfg, riskMaxByCriteria: 25 } as SamplingConfig, 'ua'))
+      .toContain('обмежено 25 елементами');
   });
 });

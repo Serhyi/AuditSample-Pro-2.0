@@ -2,9 +2,79 @@ import { DatabaseService } from './DatabaseService';
 import { getReliabilityFactor, getZScore, getExpansionFactor } from '../../statistics/reliabilityFactor';
 import { Mulberry32 } from '../../statistics/prng';
 import { DEFAULT_HOLIDAYS, sanitizeHolidays, splitHolidays } from '../../utils/holidays';
+import { allocateRiskSample, autoRandomCount, riskReasonLabel, RiskFlags, RiskCounts } from '../../utils/riskSelection';
 
 export class SamplingService {
   constructor(private db: DatabaseService) {}
+
+  /**
+   * SQL for the risk criteria, one condition per criterion. Shared by the run
+   * and by the settings preview so the counts shown before running are the
+   * counts the run will use.
+   */
+  static buildRiskConditions(config: any) {
+    const closingDays = config.riskClosingDays ?? 5;
+    const includeWeekend = config.riskWeekend !== false;
+    const includeHoliday = config.riskHoliday !== false;
+
+    const riskQueryConds: string[] = [];
+    const weekendCond = `CAST(strftime('%w', date) AS INTEGER) IN (0, 6)`;
+    const holidayConds: string[] = [];
+    let closingCond = '';
+
+    if (includeWeekend) riskQueryConds.push(weekendCond);
+    if (includeHoliday) {
+      // sanitizeHolidays() is what makes inlining these safe: it accepts only
+      // 'MM-DD' / 'YYYY-MM-DD', so nothing else can reach the SQL.
+      const configured = sanitizeHolidays(config.holidays);
+      const holidayList = configured.length > 0 ? configured : DEFAULT_HOLIDAYS;
+      const { recurring, specific } = splitHolidays(holidayList);
+      if (recurring.length > 0) {
+        holidayConds.push(`strftime('%m-%d', date) IN (${recurring.map(h => `'${h}'`).join(', ')})`);
+      }
+      if (specific.length > 0) {
+        holidayConds.push(`date IN (${specific.map(h => `'${h}'`).join(', ')})`);
+      }
+      riskQueryConds.push(...holidayConds);
+    }
+    if (closingDays > 0) {
+      // SQLite last_day logic using start of next month - 1 day. "Last N days"
+      // means exactly N days, so the comparison is strict.
+      closingCond = `(julianday(date(date, 'start of month', '+1 month', '-1 day')) - julianday(date)) < ${closingDays}`;
+      riskQueryConds.push(closingCond);
+    }
+
+    // COALESCE: strftime/julianday return NULL for unparseable dates; such rows
+    // must count as non-risk (eligible for the random pick), otherwise both
+    // NULL and NOT NULL filter them out and the sample comes back empty.
+    const riskWhereStr = riskQueryConds.length > 0 ? `COALESCE((${riskQueryConds.join(' OR ')}), 0)` : '0';
+    return { weekendCond, holidayConds, closingCond, riskWhereStr, includeWeekend };
+  }
+
+  /** Criteria hit counts for the settings screen; selects no rows. */
+  async previewRisk(config: any): Promise<{ eligible: number; matched: number; hits: { weekend: number; holiday: number; closing: number } }> {
+    const ctt = Number(config.clearlyTrivialThreshold) || 0;
+    const { weekendCond, holidayConds, closingCond, riskWhereStr, includeWeekend } = SamplingService.buildRiskConditions(config);
+
+    const countWhere = async (cond: string): Promise<number> => {
+      if (!cond) return 0;
+      const rows: { cnt: number }[] = await this.db.query(
+        `SELECT COUNT(*) as cnt FROM population WHERE ABS(amount) >= ? AND COALESCE((${cond}), 0)`, [ctt]);
+      return rows[0]?.cnt || 0;
+    };
+    const eligibleRows: { cnt: number }[] = await this.db.query(
+      `SELECT COUNT(*) as cnt FROM population WHERE ABS(amount) >= ?`, [ctt]);
+
+    return {
+      eligible: eligibleRows[0]?.cnt || 0,
+      matched: await countWhere(riskWhereStr),
+      hits: {
+        weekend: includeWeekend ? await countWhere(weekendCond) : 0,
+        holiday: holidayConds.length > 0 ? await countWhere(holidayConds.join(' OR ')) : 0,
+        closing: await countWhere(closingCond)
+      }
+    };
+  }
 
     /**
      * Draws `sampleSize` items at random from the rows matching `whereClause`.
@@ -81,8 +151,11 @@ export class SamplingService {
     // For other variable/stratified methods, key items are extracted only when
     // anomaly detection is active.
     const isMUSKeyExtract = config.method === 'MUS' && tm > 0;
-    const allowedMethodsForKeyItems = ['Random', 'FixedRandom', 'CVS', 'Cluster', 'RiskAssessment'];
-    const excludeKeyItems = isMUSKeyExtract || (!isAnomalyDisabled && tm > 0 && allowedMethodsForKeyItems.includes(config.method));
+    const allowedMethodsForKeyItems = ['Random', 'FixedRandom', 'CVS', 'Cluster'];
+    // RiskAssessment never splits off key items: it is not a value-based
+    // method, so an amount alone says nothing about the risk of an entry.
+    const excludeKeyItems = config.method !== 'RiskAssessment'
+      && (isMUSKeyExtract || (!isAnomalyDisabled && tm > 0 && allowedMethodsForKeyItems.includes(config.method)));
     const upperLimit = excludeKeyItems ? tm : 999999999999;
 
     // 2. Trivial items
@@ -123,48 +196,49 @@ export class SamplingService {
     const rf = getReliabilityFactor(config.confidenceLevel);
 
     let sampleItems: any[] = [];
+    let riskCriteriaHits: RiskCounts | undefined;
+    let riskCriteriaSelected: RiskCounts | undefined;
+    let riskMatchedTotal: number | undefined;
     
     await updateProgress('Applying sampling method...');
     if (config.method === 'RiskAssessment') {
-        const closingDays = config.riskClosingDays ?? 5;
-        const includeWeekend = config.riskWeekend !== false;
-        const includeHoliday = config.riskHoliday !== false;
-        
-        const riskQueryConds = [];
-        if (includeWeekend) {
-            riskQueryConds.push(`CAST(strftime('%w', date) AS INTEGER) IN (0, 6)`);
-        }
-        if (includeHoliday) {
-            // sanitizeHolidays() is what makes inlining these safe: it accepts
-            // only 'MM-DD' / 'YYYY-MM-DD', so nothing else can reach the SQL.
-            const configured = sanitizeHolidays(config.holidays);
-            const holidayList = configured.length > 0 ? configured : DEFAULT_HOLIDAYS;
-            const { recurring, specific } = splitHolidays(holidayList);
-            if (recurring.length > 0) {
-                riskQueryConds.push(`strftime('%m-%d', date) IN (${recurring.map(h => `'${h}'`).join(', ')})`);
-            }
-            if (specific.length > 0) {
-                riskQueryConds.push(`date IN (${specific.map(h => `'${h}'`).join(', ')})`);
-            }
-        }
-        if (closingDays > 0) {
-            // SQLite last_day logic using start of next month - 1 day
-            riskQueryConds.push(`(julianday(date(date, 'start of month', '+1 month', '-1 day')) - julianday(date)) <= ${closingDays}`);
-        }
-        
-        // COALESCE: strftime/julianday return NULL for unparseable dates; such
-        // rows must count as non-risk (eligible for the random pick), otherwise
-        // both NULL and NOT NULL filter them out and the sample comes back empty.
-        const riskWhereStr = riskQueryConds.length > 0 ? `COALESCE((${riskQueryConds.join(' OR ')}), 0)` : '0';
-        
-        // Find risk matched
-        const riskMatchedQuery = `
-          SELECT * FROM population 
+        const { weekendCond, holidayConds, closingCond, riskWhereStr, includeWeekend } = SamplingService.buildRiskConditions(config);
+
+        // Fetch only the ids and the per-criterion flags first: the selection
+        // is then capped and drawn in JS, shared with the in-memory engine, so
+        // both produce the same sample from the same seed.
+        const flagRows: any[] = await this.db.query(`
+          SELECT rowid AS rid,
+                 ${includeWeekend ? `COALESCE((${weekendCond}), 0)` : '0'} AS w,
+                 ${holidayConds.length > 0 ? `COALESCE((${holidayConds.join(' OR ')}), 0)` : '0'} AS h,
+                 ${closingCond ? `COALESCE((${closingCond}), 0)` : '0'} AS c
+          FROM population
           WHERE ABS(amount) < ? AND ABS(amount) >= ? AND ${riskWhereStr}
-          LIMIT 5000
-        `;
-        const riskMatched: any[] = await this.db.query(riskMatchedQuery, [upperLimit, ctt]);
-        
+        `, [upperLimit, ctt]);
+
+        const flagsOf = (r: any): RiskFlags => ({ weekend: !!r.w, holiday: !!r.h, closing: !!r.c });
+        riskCriteriaHits = {
+            weekend: flagRows.filter(r => r.w).length,
+            holiday: flagRows.filter(r => r.h).length,
+            closing: flagRows.filter(r => r.c).length
+        };
+        riskMatchedTotal = flagRows.length;
+
+        const cap = Number(config.riskMaxByCriteria) || 0;
+        const allocation = allocateRiskSample(flagRows, flagsOf, cap, seed);
+        riskCriteriaSelected = allocation.selected;
+
+        const reasonById = new Map<number, string>();
+        for (const r of allocation.picked) reasonById.set(r.rid, riskReasonLabel(flagsOf(r)));
+
+        const pickedIds = allocation.picked.map(r => r.rid);
+        const riskMatched: any[] = [];
+        for (let i = 0; i < pickedIds.length; i += 500) {
+            const chunk = pickedIds.slice(i, i + 500);
+            const rows = await this.db.query(`SELECT rowid AS rid, * FROM population WHERE rowid IN (${chunk.join(',')})`);
+            riskMatched.push(...rows);
+        }
+
         for (const item of riskMatched) {
             sampleItems.push({
                 ...item,
@@ -173,13 +247,18 @@ export class SamplingService {
                 difference: item.amount,
                 tainting: 1,
                 isSampled: true,
-                selectionReason: 'Risk Criteria'
+                selectionReason: reasonById.get(item.rid) || 'Risk Criteria'
             });
         }
-        
+
         // Find risk unmatched (random ones)
-        const randomCount = config.riskRandomCount ?? 5;
         const riskUnmatchedWhere = `ABS(amount) < ? AND ABS(amount) >= ? AND NOT ${riskWhereStr}`;
+        const nonRiskAgg: { cnt: number }[] = await this.db.query(
+            `SELECT COUNT(*) as cnt FROM population WHERE ${riskUnmatchedWhere}`, [upperLimit, ctt]);
+        const nonRiskSize = nonRiskAgg[0]?.cnt || 0;
+        const randomCount = config.riskRandomAuto === false
+            ? (config.riskRandomCount ?? 5)
+            : autoRandomCount(nonRiskSize);
         const randomMatched: any[] = await this.getRandomSample(riskUnmatchedWhere, [upperLimit, ctt], randomCount, seed);
         
         for (const item of randomMatched) {
@@ -437,7 +516,10 @@ export class SamplingService {
       samplingItems: sampleItems,
       excludedItems: trivialItems,
       projectedMisstatement: 0,
-      upperMisstatementBound: 0
+      upperMisstatementBound: 0,
+      riskCriteriaHits,
+      riskCriteriaSelected,
+      riskMatchedTotal
     };
     
     // Defer complex extrapolation to the same code path or replicate here
