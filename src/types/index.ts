@@ -74,6 +74,15 @@ export interface SamplingConfig {
   riskRandomCount?: number;
   riskWeekend?: boolean;
   riskHoliday?: boolean;
+  // Cap on how many criteria matches enter the sample (0 = take them all).
+  riskMaxByCriteria?: number;
+  // Own key-item threshold: the method is not value-based, so it does not
+  // borrow materiality the way the variable-sampling methods do (0 = none).
+  riskKeyThreshold?: number;
+  // Whether the clearly-trivial cut-off applies before the risk criteria.
+  riskApplyCtt?: boolean;
+  // Derive the number of random control items from the non-risk pool size.
+  riskRandomAuto?: boolean;
   /** Holidays copied from global settings at run time (see utils/holidays.ts). */
   holidays?: string[];
 }
@@ -144,6 +153,10 @@ export interface SamplingResult {
   // How many population items each enabled risk criterion matched. Reported
   // next to the criteria so the description cannot drift from the selection.
   riskCriteriaHits?: { weekend: number; holiday: number; closing: number };
+  // How many of those matches actually entered the sample, per criterion, and
+  // the totals behind the coverage figure shown in the calculation card.
+  riskCriteriaSelected?: { weekend: number; holiday: number; closing: number };
+  riskMatchedTotal?: number;
   statisticalStats?: {
     mean: number;
     stdDev: number;

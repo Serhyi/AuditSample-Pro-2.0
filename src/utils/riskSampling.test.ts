@@ -19,7 +19,7 @@ const base = {
   riskHoliday: false, holidays: []
 } as unknown as SamplingConfig;
 
-const byCriteria = (r: any) => r.samplingItems.filter((i: any) => i.selectionReason === 'Risk Criteria').length;
+const byCriteria = (r: any) => r.samplingItems.filter((i: any) => String(i.selectionReason).startsWith('Risk')  && !String(i.selectionReason).startsWith('Random')).length;
 
 describe('RiskAssessment criteria', () => {
   it('drops weekend matches when weekends are switched off', () => {
@@ -41,5 +41,65 @@ describe('RiskAssessment criteria', () => {
 
     const on = runSampling(population, { ...base, riskWeekend: true });
     expect(getCalculationDetails({ ...base, riskWeekend: true }, on, 'ua').subst).toContain('вихідні дні — 8');
+  });
+});
+
+describe('capped criteria selection', () => {
+  // 300 month-end entries against 9 weekend entries: the rare criterion must
+  // survive the cap instead of being drowned out by the broad one.
+  const many: TransactionItem[] = [
+    ...Array.from({ length: 9 }, (_, i) => ({ id: `w${i}`, date: '2025-07-05', amount: 100, originalRow: [] })),
+    ...Array.from({ length: 300 }, (_, i) => ({ id: `c${i}`, date: '2025-07-31', amount: 100, originalRow: [] }))
+  ] as any;
+
+  const capped = { ...base, riskWeekend: true, riskMaxByCriteria: 30, riskRandomAuto: false, riskRandomCount: 0 } as SamplingConfig;
+
+  it('keeps the quota proportional and never starves a criterion', () => {
+    const r = runSampling(many, capped);
+    expect(r.riskMatchedTotal).toBe(309);
+    expect(byCriteria(r)).toBe(30);
+    expect(r.riskCriteriaSelected!.weekend).toBeGreaterThanOrEqual(1);
+    expect(r.riskCriteriaSelected!.weekend + r.riskCriteriaSelected!.closing).toBe(30);
+  });
+
+  it('is reproducible from the seed and different for another seed', () => {
+    const ids = (c: SamplingConfig) => runSampling(many, c).samplingItems.map(i => i.id).sort().join(',');
+    expect(ids(capped)).toBe(ids({ ...capped }));
+    expect(ids(capped)).not.toBe(ids({ ...capped, seed: 99 }));
+  });
+
+  it('takes everything when no cap is set', () => {
+    const r = runSampling(many, { ...capped, riskMaxByCriteria: 0 });
+    expect(byCriteria(r)).toBe(309);
+  });
+
+  it('names the criterion that selected each item', () => {
+    const r = runSampling(many, { ...capped, riskMaxByCriteria: 0 });
+    expect(r.samplingItems.some(i => i.selectionReason === 'Risk: weekend')).toBe(true);
+    expect(r.samplingItems.some(i => i.selectionReason === 'Risk: closing')).toBe(true);
+  });
+});
+
+describe('key items and the trivial cut', () => {
+  const withAmounts: TransactionItem[] = [
+    { id: 'big', date: '2025-07-05', amount: 90000, originalRow: [] },
+    { id: 'small', date: '2025-07-05', amount: 50, originalRow: [] },
+    { id: 'mid', date: '2025-07-05', amount: 5000, originalRow: [] }
+  ] as any;
+
+  const cfg = { ...base, riskWeekend: true, riskClosingDays: 0, clearlyTrivialThreshold: 100,
+                riskRandomAuto: false, riskRandomCount: 0, tolerableMisstatement: 43585 } as SamplingConfig;
+
+  it('uses its own key threshold, not materiality', () => {
+    expect(runSampling(withAmounts, cfg).keyItems).toHaveLength(0);
+    const withKey = runSampling(withAmounts, { ...cfg, riskKeyThreshold: 10000 });
+    expect(withKey.keyItems.map(i => i.id)).toEqual(['big']);
+  });
+
+  it('can consider trivial amounts when the CTT cut is switched off', () => {
+    expect(runSampling(withAmounts, cfg).samplingItems.map(i => i.id)).not.toContain('small');
+    const noCtt = runSampling(withAmounts, { ...cfg, riskApplyCtt: false });
+    expect(noCtt.samplingItems.map(i => i.id)).toContain('small');
+    expect(noCtt.trivialCount).toBe(0);
   });
 });

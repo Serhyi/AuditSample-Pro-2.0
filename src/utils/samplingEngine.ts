@@ -3,6 +3,7 @@ import { Mulberry32 } from '../statistics/prng';
 import { DEFAULT_HOLIDAYS, sanitizeHolidays, isHoliday } from '../utils/holidays';
 import { formatIsoDate, formatNumber } from '../utils/locale';
 import { getReliabilityFactor, getZScore, getExpansionFactor } from '../statistics/reliabilityFactor';
+import { allocateRiskSample, autoRandomCount, riskReasonLabel, RiskFlags, RiskCounts } from './riskSelection';
 
 export const methodsSupportingAnomalies = ['MUS', 'CVS', 'Random', 'FixedRandom'];
 
@@ -125,7 +126,33 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
     let trivialCount = 0;
     let trivialValue = 0;
     
+    // RiskAssessment is not a value-based method: it uses its own key-item
+    // threshold instead of borrowing materiality, and the clearly-trivial cut
+    // can be switched off so a small entry on a holiday is still considered.
+    const isRisk = config.method === 'RiskAssessment';
+    const riskKeyThreshold = Number(config.riskKeyThreshold) || 0;
+    const riskApplyCtt = config.riskApplyCtt !== false;
+
     population.forEach((item) => {
+        if (isRisk) {
+            if (riskApplyCtt && config.clearlyTrivialThreshold && Math.abs(item.amount) < config.clearlyTrivialThreshold) {
+                if (trivialItems.length < 10) trivialItems.push(item);
+                trivialCount++;
+                trivialValue += item.amount;
+            } else if (riskKeyThreshold > 0 && Math.abs(item.amount) >= riskKeyThreshold) {
+                keyItems.push({
+                    ...item,
+                    bookValue: item.amount,
+                    auditedValue: '',
+                    difference: item.amount,
+                    tainting: 1,
+                    isKeyItem: true
+                });
+            } else {
+                regularItems.push(item);
+            }
+            return;
+        }
         if (config.clearlyTrivialThreshold && Math.abs(item.amount) < config.clearlyTrivialThreshold) {
             if (trivialItems.length < 10) trivialItems.push(item);
             trivialCount++;
@@ -173,7 +200,9 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
     const remPopValue = popValue - keyItems.reduce((acc, curr) => acc + Math.abs(curr.amount), 0) - Math.abs(trivialValue);
 
     let sampleItems: SampledItem[] = [];
-    let riskCriteriaHits: { weekend: number; holiday: number; closing: number } | undefined;
+    let riskCriteriaHits: RiskCounts | undefined;
+    let riskCriteriaSelected: RiskCounts | undefined;
+    let riskMatchedTotal: number | undefined;
 
     const getRandomSamples = <T>(array: T[], count: number): T[] => {
         const result: T[] = [];
@@ -219,8 +248,11 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
         // criterion is evaluated for every item, so an item can hit several.
         const criteriaHits = { weekend: 0, holiday: 0, closing: 0 };
         
+        const matchedFlags = new Map<TransactionItem, RiskFlags>();
+
         regularItems.forEach(item => {
-            let isRisk = false;
+            const flags: RiskFlags = { weekend: false, holiday: false, closing: false };
+            let matched = false;
             
             if (item.date && item.date.length >= 10) {
                 const yyyy = parseInt(item.date.substring(0, 4), 10);
@@ -232,11 +264,12 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
                     let y = yyyy;
                     if (mm < 3) y -= 1;
                     const dow = Math.floor(y + Math.floor(y/4) - Math.floor(y/100) + Math.floor(y/400) + t[mm-1] + dd) % 7;
-                    if (dow === 0 || dow === 6) { isRisk = true; criteriaHits.weekend++; }
+                    if (dow === 0 || dow === 6) { matched = true; flags.weekend = true; criteriaHits.weekend++; }
                 }
                 
                 if (includeHoliday && isHoliday(item.date, holidayList)) {
-                    isRisk = true;
+                    matched = true;
+                    flags.holiday = true;
                     criteriaHits.holiday++;
                 }
                 
@@ -246,33 +279,51 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
                     // "Last N days" means exactly N days: for N=2 in a 31-day
                     // month that is the 30th and the 31st, not the 29th too.
                     if ((dim - dd) < closingDays) {
-                        isRisk = true;
+                        matched = true;
+                        flags.closing = true;
                         criteriaHits.closing++;
                     }
                 }
             }
             
-            if (isRisk) {
+            if (matched) {
                 riskMatched.push(item);
+                matchedFlags.set(item, flags);
             } else {
                 riskUnmatched.push(item);
             }
         });
         riskCriteriaHits = criteriaHits;
+        riskMatchedTotal = riskMatched.length;
 
-        const riskSampled = riskMatched.slice(0, 5000).map(item => ({
+        // Cap the criteria selection instead of truncating it: a plain slice
+        // would cut chronologically and silently drop the tail of the year.
+        const cap = Number(config.riskMaxByCriteria) || 0;
+        const allocation = allocateRiskSample(
+            riskMatched,
+            item => matchedFlags.get(item) || { weekend: false, holiday: false, closing: false },
+            cap,
+            config.seed ?? 0
+        );
+        riskCriteriaSelected = allocation.selected;
+
+        const riskSampled = allocation.picked.map(item => ({
             ...item,
             bookValue: item.amount,
             auditedValue: '' as const,
             difference: item.amount,
             tainting: 1,
             isSampled: true,
-            selectionReason: 'Risk Criteria'
+            selectionReason: riskReasonLabel(matchedFlags.get(item) || { weekend: false, holiday: false, closing: false })
         }));
         
         sampleItems = sampleItems.concat(riskSampled as any);
         
-        const randomCount = config.riskRandomCount ?? 5;
+        // The control group scales with the untouched part of the population
+        // unless the auditor pinned an explicit number.
+        const randomCount = config.riskRandomAuto === false
+            ? (config.riskRandomCount ?? 5)
+            : autoRandomCount(riskUnmatched.length);
         const randomSampled = getRandomSamples(riskUnmatched, randomCount).map(item => ({
             ...item,
             bookValue: item.amount,
@@ -418,7 +469,9 @@ export function runSampling(population: TransactionItem[], config: SamplingConfi
         excludedItems: trivialItems,
         projectedMisstatement: 0,
         upperMisstatementBound: 0,
-        riskCriteriaHits
+        riskCriteriaHits,
+        riskCriteriaSelected,
+        riskMatchedTotal
     };
 
     const calculated = calculateExtrapolation(preResult, config);

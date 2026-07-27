@@ -413,6 +413,18 @@ const App: React.FC = () => {
     // The holiday list lives in global settings but the engines receive only the
     // config, so copy it in. It also ends up in the exported config snapshot,
     // which is what makes a risk-based sample reproducible later.
+    // Risk parameters are written out explicitly so the exported snapshot and
+    // the run cannot disagree about a flag that was left at its default.
+    if (finalConfig.method === 'RiskAssessment') {
+        finalConfig.riskWeekend = finalConfig.riskWeekend !== false;
+        finalConfig.riskHoliday = finalConfig.riskHoliday !== false;
+        finalConfig.riskApplyCtt = finalConfig.riskApplyCtt !== false;
+        finalConfig.riskRandomAuto = finalConfig.riskRandomAuto !== false;
+        finalConfig.riskClosingDays = finalConfig.riskClosingDays ?? 5;
+        finalConfig.riskRandomCount = finalConfig.riskRandomCount ?? 5;
+        finalConfig.riskMaxByCriteria = Number(finalConfig.riskMaxByCriteria) || 0;
+        finalConfig.riskKeyThreshold = Number(finalConfig.riskKeyThreshold) || 0;
+    }
     finalConfig.holidays = sanitizeHolidays(settings.holidays);
     if (finalConfig.holidays.length === 0) finalConfig.holidays = DEFAULT_HOLIDAYS;
     if (finalConfig.clearlyTrivialThreshold === undefined || finalConfig.clearlyTrivialThreshold === null) {
