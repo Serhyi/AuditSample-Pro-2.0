@@ -5,7 +5,7 @@ import { METHOD_PREFIX_MAP } from '../resultsUtils';
 import { Calculator, Target, PlayCircle, Network, BarChart3, PieChart, ArrowDownUp, AlertTriangle, Siren, ListChecks, ListFilter, MoveHorizontal, Sigma, Lock } from 'lucide-react';
 import { LicenseTier } from '../../licensing/LicenseTypes';
 
-export const FREE_METHODS = ['StopOrGo', 'Benford', 'Grubbs', 'Pareto', 'Percentile', 'Systematic'];
+export const FREE_METHODS = ['StopOrGo', 'Benford', 'Grubbs', 'Pareto', 'Percentile', 'Systematic', 'RiskAssessment'];
 
 interface MethodSelectorProps {
   currentMethod: string;
