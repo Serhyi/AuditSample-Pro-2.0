@@ -49,8 +49,9 @@ describe('export normalization', () => {
     expect(v(r1,1)).toBe(1);                              // '1.0' -> number
     expect(v(r1,2)).toBe(800);
     expect(v(r1,3)).toBeInstanceOf(Date);                 // ISO from import
-    expect((v(r1,3) as Date).getMonth()).toBe(6);         // July
-    expect((v(r1,3) as Date).getDate()).toBe(1);
+    // UTC midnight, not local: ExcelJS serialises by UTC timestamp, so a local
+    // midnight east of Greenwich would land Excel on the previous day.
+    expect((v(r1,3) as Date).toISOString()).toBe('2025-07-01T00:00:00.000Z');
     expect(v(r1,4)).toBe('Реалізація ТБ00-01/07-01');     // text stays text
     expect(v(r1,5)).toBe(361);
     expect(v(r1,6)).toBe('007123');                       // leading zero preserved
@@ -61,10 +62,8 @@ describe('export normalization', () => {
     expect(v(r2,4)).toBe(-100.5);                         // parentheses negative
     expect(v(r2,5)).toBe(1234567.89);                     // dot thousands, comma decimal
     expect(v(r2,6)).toBe('123456789012345678');           // 18 digits -> text
-    expect(v(r2,8)).toBeInstanceOf(Date);
     // A first part above 12 is unambiguously the day in any locale.
-    expect((v(r2,8) as Date).getMonth()).toBe(6);
-    expect((v(r2,8) as Date).getDate()).toBe(25);
+    expect((v(r2,8) as Date).toISOString()).toBe('2025-07-25T00:00:00.000Z');
 
     // The date format follows the OS locale, not a setting.
     expect(r1.getCell(3).numFmt).toBe(getExcelDateFormat());

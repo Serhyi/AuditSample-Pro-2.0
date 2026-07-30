@@ -65320,11 +65320,14 @@ function parseNumericText(str) {
   const signed = sign * num;
   return negative ? -Math.abs(signed) : signed;
 }
+function dateToIso(date) {
+  const isUtcMidnight = date.getUTCHours() === 0 && date.getUTCMinutes() === 0 && date.getUTCSeconds() === 0 && date.getUTCMilliseconds() === 0;
+  const [y, m, d] = isUtcMidnight ? [date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate()] : [date.getFullYear(), date.getMonth() + 1, date.getDate()];
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
 function toIsoDate(raw, monthFirst = isMonthFirstLocale()) {
   if (raw === void 0 || raw === null || raw === "") return "";
-  if (raw instanceof Date) {
-    return `${raw.getFullYear()}-${String(raw.getMonth() + 1).padStart(2, "0")}-${String(raw.getDate()).padStart(2, "0")}`;
-  }
+  if (raw instanceof Date) return dateToIso(raw);
   if (typeof raw === "object" && "text" in raw) return toIsoDate(raw.text, monthFirst);
   if (typeof raw === "object" && "result" in raw) return toIsoDate(raw.result, monthFirst);
   const str = String(raw).trim();

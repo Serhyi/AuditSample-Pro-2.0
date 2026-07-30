@@ -322,9 +322,12 @@ export async function exportToExcel(
   const dateNumFmt = getExcelDateFormat();
   const monthFirst = isMonthFirstLocale();
 
+  // UTC midnight, not local midnight: ExcelJS serialises a date by its UTC
+  // timestamp, so local midnight east of Greenwich becomes 21:00 of the
+  // previous day and Excel then shows the date one day earlier.
   const isoToDate = (iso: string): Date => {
     const [y, m, d] = iso.split('-').map(Number);
-    return new Date(y, m - 1, d);
+    return new Date(Date.UTC(y, m - 1, d));
   };
 
   // Returns the value to write plus the number format it needs (if any).
