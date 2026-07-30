@@ -111,15 +111,30 @@ export function parseNumericText(str: string): number | null {
 }
 
 /**
+ * The calendar day a Date stands for, whichever zone it was built in.
+ *
+ * A date-only cell is midnight somewhere: spreadsheet readers produce UTC
+ * midnight, while a Date built from local parts is midnight local time. Taking
+ * UTC parts breaks the second case west of Greenwich, local parts break the
+ * first east of it, so the zone is chosen by which one lands on midnight.
+ */
+export function dateToIso(date: Date): string {
+  const isUtcMidnight = date.getUTCHours() === 0 && date.getUTCMinutes() === 0
+    && date.getUTCSeconds() === 0 && date.getUTCMilliseconds() === 0;
+  const [y, m, d] = isUtcMidnight
+    ? [date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate()]
+    : [date.getFullYear(), date.getMonth() + 1, date.getDate()];
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+/**
  * Converts the value of the designated date column to 'YYYY-MM-DD'.
  * Unlike normalizeCellValue this also accepts bare numbers as Excel serial
  * dates — safe only because the column is known to hold dates.
  */
 export function toIsoDate(raw: any, monthFirst = isMonthFirstLocale()): string {
   if (raw === undefined || raw === null || raw === '') return '';
-  if (raw instanceof Date) {
-    return `${raw.getFullYear()}-${String(raw.getMonth() + 1).padStart(2, '0')}-${String(raw.getDate()).padStart(2, '0')}`;
-  }
+  if (raw instanceof Date) return dateToIso(raw);
   if (typeof raw === 'object' && 'text' in raw) return toIsoDate((raw as any).text, monthFirst);
   if (typeof raw === 'object' && 'result' in raw) return toIsoDate((raw as any).result, monthFirst);
 

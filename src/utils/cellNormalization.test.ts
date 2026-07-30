@@ -85,3 +85,18 @@ describe('parseDateText', () => {
     expect(parseDateText('29.02.2024')).toBe('2024-02-29'); // leap year
   });
 });
+
+describe('timezone safety', () => {
+  it('keeps a Date on its own day whichever zone built it', () => {
+    // ExcelJS hands over a date cell as UTC midnight; a Date built from local
+    // parts is midnight local time. Neither may drift by a day.
+    expect(toIsoDate(new Date(Date.UTC(2025, 6, 1)))).toBe('2025-07-01');
+    expect(toIsoDate(new Date(2025, 6, 1))).toBe('2025-07-01');
+    expect(normalizeCellValue(new Date(Date.UTC(2025, 0, 1)))).toBe('2025-01-01');
+    expect(normalizeCellValue(new Date(2025, 0, 1))).toBe('2025-01-01');
+  });
+
+  it('keeps an Excel serial date on its own day', () => {
+    expect(toIsoDate(45839)).toBe('2025-07-01');
+  });
+});
