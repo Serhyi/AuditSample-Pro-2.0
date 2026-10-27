@@ -6,32 +6,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FinDiscounting Pro — Марінченко і Партнери</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root {
-  /* Neutral — Slate (brand guide) */
-  --bg:      #0C1118;  /* 950 */
-  --surface: #141B26;  /* 900 */
-  --surface2:#1E293B;  /* 800 */
-  --border:  #334155;  /* 700 */
-  --muted:   #64748B;  /* 500 */
-  --text:    #F1F5F9;  /* 100 */
+  /* Brand Guide v2.2 — Neutral (Slate) */
+  --bg:      #F8FAFC;  /* N50  */
+  --surface: #FFFFFF;
+  --surface2:#F1F5F9;  /* N100 */
+  --border:  #CBD5E1;  /* N300 — межі карток і таблиць */
+  --border-soft:#E2E8F0; /* N200 */
+  --border-input:#64748B; /* N500 — межі полів ≥ 3:1 */
+  --muted:   #475569;  /* N600 — другорядний текст */
+  --text:    #141B26;  /* N900 */
 
   /* Primary — Audit Green */
-  --accent:  #00854B;  /* 600 — primary */
-  --accent-h:#00A35C;  /* 500 — hover */
-  --accent-s:#EDFCF4;  /* 50  — subtle bg */
+  --p900:#003D23; --p700:#006B3C; --p600:#00854B; --p500:#00A35C; --p100:#D4F7E5; --p50:#EDFCF4;
+  --accent:  #00854B;  /* 600 — заливка, смуги, іконки */
+  --accent-t:#006B3C;  /* 700 — текст і посилання */
+  --accent-h:#006B3C;  /* hover основної кнопки */
+  --accent-s:#EDFCF4;  /* 50  — тінт */
 
-  /* Functional accents */
-  --accent2: #2563EB;  /* info / links */
-  --accent3: #DC2626;  /* error */
-  --accent4: #C49B2A;  /* gold / key items */
-  --warning: #D97706;  /* warning */
+  /* Functional accents — текстові токени 700 */
+  --accent2: #1D4ED8;  /* інформація, посилання */
+  --accent3: #B91C1C;  /* помилки */
+  --accent4: #8A6D1E;  /* key items (gold 700) */
+  --warning: #B45309;  /* попередження */
 
-  /* Typography */
-  --display: 'DM Serif Display', Georgia, serif;
-  --sans:    'Plus Jakarta Sans', sans-serif;
-  --mono:    'JetBrains Mono', monospace;
+  /* Typography — затверджені стеки */
+  --display: "Playfair Display", "Times New Roman", Georgia, serif;
+  --sans:    "Manrope", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --mono:    "JetBrains Mono", "Manrope", Consolas, monospace;
 
   /* Radii */
   --r-sm: 6px; --r-md: 10px; --r-lg: 14px;
@@ -46,33 +50,33 @@ body::before{content:'';position:fixed;inset:0;
 
 header{margin-bottom:32px;padding-bottom:22px;border-bottom:1px solid var(--border);
   display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:14px;}
-.header-label{font-family:var(--mono);font-size:9px;letter-spacing:3px;
+.header-label{font-family:var(--sans);font-size:12px;letter-spacing:.08em;
   color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
 h1{font-size:clamp(22px,3.2vw,34px);font-weight:400;line-height:1.1;
   font-family:var(--sans);letter-spacing:-0.02em;}
 .product-name{font-weight:800;color:var(--text);}
-.product-suffix{font-weight:300;color:var(--accent);}
-.subtitle{color:var(--muted);font-size:11px;font-weight:400;margin-top:5px;letter-spacing:0.01em;}
+.product-suffix{font-weight:300;color:var(--accent-t);}
+.subtitle{color:var(--muted);font-size:12px;font-weight:400;margin-top:5px;letter-spacing:0.01em;}
 
-.btn-print{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;
+.btn-print{font-family:var(--sans);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
   padding:9px 18px;border-radius:7px;border:1px solid var(--border);
   background:var(--surface2);color:var(--muted);cursor:pointer;transition:all 0.18s;
   display:flex;align-items:center;gap:7px;}
-.btn-print:hover{border-color:var(--accent);color:var(--accent);}
+.btn-print:hover{border-color:var(--accent);color:var(--accent-t);}
 
 .grid-form{display:grid;grid-template-columns:1.15fr 0.85fr;gap:18px;}
 @media(max-width:720px){.grid-form{grid-template-columns:1fr;}}
 
 .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;}
-.card-title{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--accent2);
+.card-title{font-family:var(--sans);font-size:12px;letter-spacing:.08em;color:var(--accent2);
   text-transform:uppercase;margin-bottom:16px;}
 
-label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;letter-spacing:0.3px;}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;letter-spacing:0.3px;}
 input,select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;
   color:var(--text);font-family:var(--mono);font-size:13px;padding:9px 12px;margin-bottom:13px;
   outline:none;transition:border-color 0.2s;appearance:none;}
 input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,133,75,0.12);}
-select option{background:#1c2030;}
+select option{background:#fff;color:var(--text);}
 input:disabled{opacity:0.35;cursor:not-allowed;}
 
 select optgroup{color:var(--accent4);background:var(--surface2);}
@@ -80,11 +84,11 @@ select optgroup{color:var(--accent4);background:var(--surface2);}
 .period-row{display:flex;align-items:center;justify-content:space-between;
   background:var(--surface2);border:1px solid var(--border);border-radius:8px;
   padding:9px 13px;margin-bottom:13px;}
-.pr-label{font-size:11px;color:var(--muted);}
-.pr-val{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:700;}
+.pr-label{font-size:12px;color:var(--muted);}
+.pr-val{font-family:var(--mono);font-size:13px;color:var(--accent-t);font-weight:700;}
 
-.warn-box{display:none;background:rgba(255,107,107,0.06);border:1px solid rgba(255,107,107,0.2);
-  border-radius:8px;padding:9px 13px;font-size:11px;color:var(--accent3);margin-bottom:13px;}
+.warn-box{display:none;background:rgba(220,38,38,0.06);border:1px solid rgba(220,38,38,0.2);
+  border-radius:8px;padding:9px 13px;font-size:12px;color:var(--accent3);margin-bottom:13px;}
 
 .btn-calc{width:100%;background:var(--accent);color:#fff;border:none;border-radius:var(--r-md);
   padding:13px 24px;font-family:var(--sans);font-size:14px;font-weight:700;
@@ -100,10 +104,10 @@ select optgroup{color:var(--accent4);background:var(--surface2);}
 .results-header{display:flex;align-items:center;gap:9px;margin-bottom:22px;
   padding-bottom:16px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
 .results-title{font-size:17px;font-weight:800;}
-.badge{font-family:var(--mono);font-size:10px;padding:3px 9px;border-radius:var(--r-sm);
-  background:rgba(0,133,75,0.12);color:var(--accent);border:1px solid rgba(0,133,75,0.25);}
-.badge.b2{background:rgba(77,184,255,0.08);color:var(--accent2);border-color:rgba(77,184,255,0.2);}
-.badge.b3{background:rgba(255,184,77,0.08);color:var(--accent4);border-color:rgba(255,184,77,0.2);}
+.badge{font-family:var(--sans);font-size:12px;padding:3px 9px;border-radius:var(--r-sm);
+  background:rgba(0,133,75,0.12);color:var(--accent-t);border:1px solid rgba(0,133,75,0.25);}
+.badge.b2{background:rgba(37,99,235,0.08);color:var(--accent2);border-color:rgba(37,99,235,0.2);}
+.badge.b3{background:rgba(196,155,42,0.08);color:var(--accent4);border-color:rgba(196,155,42,0.2);}
 
 .metrics-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:22px;}
 @media(max-width:900px){.metrics-grid{grid-template-columns:repeat(3,1fr);}}
@@ -114,19 +118,19 @@ select optgroup{color:var(--accent4);background:var(--surface2);}
 .metric::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;}
 .mg::before{background:var(--accent);} .mb::before{background:var(--accent2);}
 .mr::before{background:var(--accent3);} .mo::before{background:var(--accent4);}
-.metric-label{font-size:10px;color:var(--muted);margin-bottom:6px;font-family:var(--mono);
-  letter-spacing:1px;text-transform:uppercase;}
+.metric-label{font-size:12px;color:var(--muted);margin-bottom:6px;font-family:var(--sans);
+  letter-spacing:.08em;text-transform:uppercase;}
 .metric-value{font-family:var(--mono);font-size:16px;font-weight:700;}
-.mg .metric-value{color:var(--accent);} .mb .metric-value{color:var(--accent2);}
+.mg .metric-value{color:var(--accent-t);} .mb .metric-value{color:var(--accent2);}
 .mr .metric-value{color:var(--accent3);} .mo .metric-value{color:var(--accent4);}
 .mg::before{background:var(--accent)!important;}
 
-.section-title{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--accent2);
+.section-title{font-family:var(--sans);font-size:12px;letter-spacing:.08em;color:var(--accent2);
   text-transform:uppercase;margin-bottom:12px;padding-bottom:7px;border-bottom:1px solid var(--border);}
 
 /* ── Standard Tabs ── */
 .std-tabs{display:flex;gap:0;margin-bottom:18px;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
-.std-tab{flex:1;padding:9px 0;text-align:center;font-family:var(--mono);font-size:10px;letter-spacing:1.5px;
+.std-tab{flex:1;padding:9px 0;text-align:center;font-family:var(--sans);font-size:12px;letter-spacing:.08em;
   text-transform:uppercase;cursor:pointer;color:var(--muted);background:var(--surface);
   border-right:1px solid var(--border);transition:background 0.15s,color 0.15s;}
 .std-tab:last-child{border-right:none;}
@@ -135,60 +139,60 @@ select optgroup{color:var(--accent4);background:var(--surface2);}
 .std-pane{display:none;}.std-pane.active{display:block;}
 
 /* IFRS day-1 badge */
-.day1-adj{display:inline-block;font-family:var(--mono);font-size:10px;padding:3px 8px;
-  border-radius:4px;margin-left:8px;background:rgba(255,200,0,0.1);color:#f0c040;border:1px solid rgba(255,200,0,0.2);}
-.day1-adj.pos{background:rgba(79,255,176,0.1);color:var(--accent);border-color:rgba(79,255,176,0.2);}
+.day1-adj{display:inline-block;font-family:var(--sans);font-size:12px;padding:3px 8px;
+  border-radius:4px;margin-left:8px;background:rgba(217,119,6,0.1);color:#B45309;border:1px solid rgba(217,119,6,0.2);}
+.day1-adj.pos{background:rgba(0,133,75,0.1);color:var(--accent-t);border-color:rgba(0,133,75,0.2);}
 
 .table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border);margin-bottom:22px;}
 table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px;}
 thead tr{background:var(--surface2);}
-th{text-align:right;padding:10px 13px;color:var(--muted);font-size:10px;letter-spacing:1px;
+th{text-align:right;padding:10px 13px;color:var(--muted);font-size:12px;letter-spacing:.08em;
   text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap;}
 th:first-child,th:nth-child(2){text-align:left;}
-td{text-align:right;padding:9px 13px;border-bottom:1px solid rgba(42,47,66,0.45);}
+td{text-align:right;padding:9px 13px;border-bottom:1px solid var(--border-soft);}
 td:first-child,td:nth-child(2){text-align:left;}
 tr:last-child td{border-bottom:none;}
-tbody tr:hover{background:rgba(255,255,255,0.012);}
-td.tg{color:var(--accent);}td.tb{color:var(--accent2);}td.to{color:var(--accent4);}
+tbody tr:hover{background:var(--accent-s);}
+td.tg{color:var(--accent-t);}td.tb{color:var(--accent2);}td.to{color:var(--accent4);}
 
 .posting-group{margin-bottom:14px;}
 .posting-phase{font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;padding:3px 0;}
 .posting-row{background:var(--surface2);border:1px solid var(--border);border-radius:7px;
   padding:8px 12px;margin-bottom:4px;display:flex;align-items:center;
   gap:7px;font-family:var(--mono);font-size:12px;flex-wrap:wrap;}
-.pd{font-size:10px;color:var(--accent2);background:rgba(77,184,255,0.07);border-radius:4px;
+.pd{font-size:12px;color:var(--accent2);background:rgba(37,99,235,0.07);border-radius:4px;
   padding:2px 6px;min-width:80px;text-align:center;white-space:nowrap;}
-.pdt{color:var(--accent);font-weight:700;} .pkt{color:var(--accent2);font-weight:700;}
-.par{color:var(--border);} .pacc{color:var(--text);}
+.pdt{color:var(--accent-t);font-weight:700;} .pkt{color:var(--accent2);font-weight:700;}
+.par{color:var(--muted);} .pacc{color:var(--text);}
 .psum{color:var(--accent4);font-weight:600;margin-left:auto;white-space:nowrap;}
-.psum-fx{display:flex;gap:4px;align-items:baseline;margin-left:auto;white-space:nowrap;font-size:11px;}
+.psum-fx{display:flex;gap:4px;align-items:baseline;margin-left:auto;white-space:nowrap;font-size:12px;}
 .psum-fx .pfcy{color:var(--accent2);font-weight:600;}
-.psum-fx .pfx-rate{color:var(--muted);font-size:9px;}
+.psum-fx .pfx-rate{color:var(--muted);font-size:12px;}
 .psum-fx .puah{color:var(--accent4);font-weight:700;}
-.pdesc{color:var(--muted);font-size:10px;width:100%;padding-top:1px;}
+.pdesc{color:var(--muted);font-size:12px;width:100%;padding-top:1px;}
 
 /* Explanation */
 .explain-panel{margin-top:22px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
 .explain-header{padding:13px 20px;background:var(--surface2);border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;}
 .explain-header-left{display:flex;align-items:center;gap:10px;}
-.explain-title{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent2);}
-.explain-toggle{font-family:var(--mono);font-size:18px;color:var(--muted);transition:transform 0.2s;line-height:1;}
+.explain-title{font-family:var(--sans);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent2);}
+.explain-toggle{font-family:var(--sans);font-size:18px;color:var(--muted);transition:transform 0.2s;line-height:1;}
 .explain-toggle.open{transform:rotate(180deg);}
 .explain-body{display:none;padding:18px;}
 .explain-body.open{display:block;}
 .explain-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 @media(max-width:680px){.explain-grid{grid-template-columns:1fr;}}
 .explain-block{background:var(--surface2);border-radius:8px;padding:14px;}
-.eb-title{font-size:11px;font-weight:700;color:var(--accent);margin-bottom:8px;}
+.eb-title{font-size:12px;font-weight:700;color:var(--accent-t);margin-bottom:8px;}
 .eb-text{font-size:12px;color:var(--muted);line-height:1.65;}
 .eb-text strong{color:var(--text);}
 .eb-formula{font-family:var(--mono);font-size:12px;color:var(--accent4);
-  background:rgba(255,184,77,0.06);border:1px solid rgba(255,184,77,0.14);
+  background:rgba(196,155,42,0.06);border:1px solid rgba(196,155,42,0.14);
   border-radius:6px;padding:8px 11px;margin-top:8px;}
 
-.disclaimer{margin-top:18px;padding:12px;background:rgba(255,107,107,0.04);
-  border:1px solid rgba(255,107,107,0.15);border-radius:8px;font-size:11px;color:var(--muted);}
+.disclaimer{margin-top:18px;padding:12px;background:rgba(220,38,38,0.04);
+  border:1px solid rgba(220,38,38,0.15);border-radius:8px;font-size:12px;color:var(--muted);}
 .disclaimer strong{color:var(--accent3);}
 
 
@@ -197,70 +201,70 @@ td.tg{color:var(--accent);}td.tb{color:var(--accent2);}td.to{color:var(--accent4
 .fx-schedule-block{margin-top:12px;margin-bottom:6px;}
 .fx-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;}
 .fx-chip{display:flex;align-items:center;gap:6px;padding:5px 8px;
-  background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:11px;}
-.fx-chip-date{font-family:var(--mono);color:var(--accent2);min-width:72px;font-size:10px;}
-.fx-chip-type{font-size:9px;color:var(--muted);min-width:14px;text-align:center;}
-.fx-chip input[type="number"]{width:72px;padding:2px 4px;font-size:11px;text-align:right;
+  background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:12px;}
+.fx-chip-date{font-family:var(--mono);color:var(--accent2);min-width:72px;font-size:12px;}
+.fx-chip-type{font-size:12px;color:var(--muted);min-width:14px;text-align:center;}
+.fx-chip input[type="number"]{width:72px;padding:2px 4px;font-size:12px;text-align:right;
   background:var(--surface);border:1px solid var(--border);border-radius:4px;
   color:var(--text);font-family:var(--mono);}
 .fx-chip input:focus{border-color:var(--accent2);outline:none;}
-.fx-chip-src{font-size:8px;color:var(--muted);font-family:var(--mono);margin-left:auto;}
-.fx-chip-src.nbu{color:var(--accent);}
-.fx-chip.purchase{background:rgba(77,184,255,0.06);border-color:rgba(77,184,255,0.2);}
-.fx-chip .fx-chip-val{font-family:var(--mono);font-size:11px;color:var(--accent);min-width:62px;text-align:right;}
+.fx-chip-src{font-size:12px;color:var(--muted);font-family:var(--mono);margin-left:auto;}
+.fx-chip-src.nbu{color:var(--accent-t);}
+.fx-chip.purchase{background:rgba(37,99,235,0.06);border-color:rgba(37,99,235,0.2);}
+.fx-chip .fx-chip-val{font-family:var(--mono);font-size:12px;color:var(--accent-t);min-width:62px;text-align:right;}
 .fx-recalc-btn{
-  margin-top:8px;padding:6px 16px;font-size:11px;font-weight:600;
-  background:rgba(77,184,255,0.12);color:var(--accent2);border:1px solid rgba(77,184,255,0.25);
-  border-radius:6px;cursor:pointer;font-family:var(--mono);
+  margin-top:8px;padding:6px 16px;font-size:12px;font-weight:600;
+  background:rgba(37,99,235,0.12);color:var(--accent2);border:1px solid rgba(37,99,235,0.25);
+  border-radius:6px;cursor:pointer;font-family:var(--sans);
 }
-.fx-recalc-btn:hover{background:rgba(77,184,255,0.2);}
+.fx-recalc-btn:hover{background:rgba(37,99,235,0.2);}
 .fx-fetch-btn{
-  padding:6px 16px;font-size:11px;font-weight:600;
-  background:rgba(79,255,176,0.12);color:var(--accent);border:1px solid rgba(79,255,176,0.25);
-  border-radius:6px;cursor:pointer;font-family:var(--mono);
+  padding:6px 16px;font-size:12px;font-weight:600;
+  background:rgba(0,133,75,0.12);color:var(--accent-t);border:1px solid rgba(0,133,75,0.25);
+  border-radius:6px;cursor:pointer;font-family:var(--sans);
 }
-.fx-fetch-btn:hover{background:rgba(79,255,176,0.22);}
+.fx-fetch-btn:hover{background:rgba(0,133,75,0.22);}
 .fx-fetch-btn:disabled{opacity:0.5;cursor:wait;}
-.fx-fetch-status{font-size:10px;font-family:var(--mono);color:var(--muted);}
-.fx-fetch-status.ok{color:var(--accent);}
-.fx-fetch-status.err{color:#ff6b6b;}
+.fx-fetch-status{font-size:12px;font-family:var(--mono);color:var(--muted);}
+.fx-fetch-status.ok{color:var(--accent-t);}
+.fx-fetch-status.err{color:#B91C1C;}
 /* ── DUAL-CURRENCY AMORT TABLE ── */
 .dual-ccy-sep{
-  background:rgba(77,184,255,0.06)!important;
-  color:var(--accent2)!important;font-size:9px!important;
-  text-align:center!important;font-weight:700;letter-spacing:1.5px;
-  border-left:2px solid rgba(77,184,255,0.3)!important;
+  background:rgba(37,99,235,0.06)!important;
+  color:var(--accent2)!important;font-size:12px!important;
+  text-align:center!important;font-weight:700;letter-spacing:.08em;
+  border-left:2px solid rgba(37,99,235,0.3)!important;
 }
-.uah-col{border-left:2px solid rgba(77,184,255,0.15)!important;}
-.fx-rate-col{background:rgba(255,184,77,0.04)!important;font-family:var(--mono);font-size:10px;text-align:center;}
-.er-pos{color:var(--accent)!important;font-weight:600;}
-.er-neg{color:#ff6b6b!important;font-weight:600;}
+.uah-col{border-left:2px solid rgba(37,99,235,0.15)!important;}
+.fx-rate-col{background:rgba(196,155,42,0.04)!important;font-family:var(--mono);font-size:12px;text-align:center;}
+.er-pos{color:var(--accent-t)!important;font-weight:600;}
+.er-neg{color:#B91C1C!important;font-weight:600;}
 
 /* ── LEASE PANEL ── */
 #leasePanel label{margin-top:10px;}
 #leasePanel .grid-2-eq{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 #leasePanel .grid-2-eq label{margin-top:0;}
-.lease-reclassify-note{font-family:var(--mono);font-size:10px;color:var(--accent4);
-  background:rgba(255,184,77,0.06);border:1px solid rgba(255,184,77,0.14);
+.lease-reclassify-note{font-family:var(--mono);font-size:12px;color:var(--accent4);
+  background:rgba(196,155,42,0.06);border:1px solid rgba(196,155,42,0.14);
   border-radius:6px;padding:8px 11px;margin:12px 0 6px 0;line-height:1.55;}
 
 /* ── LEASE MODIFICATION ── */
 .lease-mod-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;
-  cursor:pointer;user-select:none;background:rgba(255,184,77,0.05);
-  border:1px solid rgba(255,184,77,0.15);border-radius:10px;padding:10px 14px;
+  cursor:pointer;user-select:none;background:rgba(196,155,42,0.05);
+  border:1px solid rgba(196,155,42,0.15);border-radius:10px;padding:10px 14px;
   margin-top:14px;transition:border-color .2s,background .2s;}
-.lease-mod-toggle:hover{background:rgba(255,184,77,0.09);border-color:rgba(255,184,77,0.3);}
+.lease-mod-toggle:hover{background:rgba(196,155,42,0.09);border-color:rgba(196,155,42,0.3);}
 .lease-mod-toggle-text{display:flex;flex-direction:column;gap:2px;}
 .lease-mod-toggle-title{font-size:12px;font-weight:700;color:var(--accent4);}
-.lease-mod-toggle-sub{font-size:10px;color:var(--muted);font-family:var(--mono);}
-.lease-mod-fields{display:none;margin-top:12px;padding:14px;background:rgba(255,184,77,0.03);
-  border:1px solid rgba(255,184,77,0.12);border-radius:10px;}
+.lease-mod-toggle-sub{font-size:12px;color:var(--muted);font-family:var(--sans);}
+.lease-mod-fields{display:none;margin-top:12px;padding:14px;background:rgba(196,155,42,0.03);
+  border:1px solid rgba(196,155,42,0.12);border-radius:10px;}
 .lease-mod-fields.show{display:block;}
-.lease-mod-fields label{margin-top:8px;display:block;font-size:11px;}
+.lease-mod-fields label{margin-top:8px;display:block;font-size:12px;}
 .lease-mod-fields input,.lease-mod-fields select{margin-bottom:2px;}
-.lease-mod-divider{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--accent4);
-  text-transform:uppercase;margin:12px 0 8px 0;padding-top:10px;border-top:1px solid rgba(255,184,77,0.15);}
-.mod-highlight-row{background:rgba(255,184,77,0.08)!important;}
+.lease-mod-divider{font-family:var(--sans);font-size:12px;letter-spacing:.08em;color:var(--accent4);
+  text-transform:uppercase;margin:12px 0 8px 0;padding-top:10px;border-top:1px solid rgba(196,155,42,0.15);}
+.mod-highlight-row{background:rgba(196,155,42,0.08)!important;}
 /* ── PRINT ── */
 .print-pane-label{display:none;}
 @media print {
@@ -307,17 +311,17 @@ td.tg{color:var(--accent);}td.tb{color:var(--accent2);}td.to{color:var(--accent4
   #pane-ifrs { page-break-before: always; margin-top: 0; }
   .print-pane-label {
     display: block !important;
-    font-family: var(--mono);
+    font-family: var(--sans);
     font-size: 14px;
     font-weight: 800;
-    letter-spacing: 2px;
+    letter-spacing:.08em;
     text-transform: uppercase;
     padding: 10px 0 14px 0;
     border-bottom: 2px solid #000;
     margin-bottom: 16px;
   }
-  #pane-npsbo .print-pane-label { color: #1a6b3c; }
-  #pane-ifrs .print-pane-label { color: #2563eb; }
+  #pane-npsbo .print-pane-label { color: #006B3C; }
+  #pane-ifrs .print-pane-label { color: #1D4ED8; }
 
   /* ── Layout ── */
   .container { padding: 0 !important; max-width: 100% !important; }
@@ -327,43 +331,43 @@ td.tg{color:var(--accent);}td.tb{color:var(--accent2);}td.to{color:var(--accent4
 
 /* ── OVDP PANEL ── */
 .ovdp-nbu-header{display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:14px;padding:8px 12px;background:rgba(79,255,176,0.06);
-  border:1px solid rgba(79,255,176,0.2);border-radius:8px;font-size:12px;font-weight:700;color:var(--accent);}
-.ovdp-nbu-link{font-family:var(--mono);font-size:10px;color:var(--accent2);text-decoration:none;
-  border:1px solid rgba(77,184,255,0.3);border-radius:4px;padding:2px 7px;transition:all 0.15s;}
-.ovdp-nbu-link:hover{background:rgba(77,184,255,0.1);}
-.btn-ccy-toggle{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:0.5px;
-  background:rgba(255,200,0,0.08);color:#f0c040;border:1px solid rgba(255,200,0,0.3);
+  margin-bottom:14px;padding:8px 12px;background:rgba(0,133,75,0.06);
+  border:1px solid rgba(0,133,75,0.2);border-radius:8px;font-size:12px;font-weight:700;color:var(--accent-t);}
+.ovdp-nbu-link{font-family:var(--mono);font-size:12px;color:var(--accent2);text-decoration:none;
+  border:1px solid rgba(37,99,235,0.3);border-radius:4px;padding:2px 7px;transition:all 0.15s;}
+.ovdp-nbu-link:hover{background:rgba(37,99,235,0.1);}
+.btn-ccy-toggle{font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:0.5px;
+  background:rgba(217,119,6,0.08);color:#B45309;border:1px solid rgba(217,119,6,0.3);
   border-radius:6px;padding:5px 12px;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
-.btn-ccy-toggle:hover{background:rgba(255,200,0,0.16);}
-.btn-ccy-toggle.is-fx{background:rgba(77,184,255,0.08);color:var(--accent2);border-color:rgba(77,184,255,0.3);}
-.btn-ccy-toggle.is-fx:hover{background:rgba(77,184,255,0.16);}
-.ovdp-divider{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase;
-  color:var(--accent4);margin:14px 0 10px;padding-bottom:6px;border-bottom:1px solid rgba(255,184,77,0.2);}
+.btn-ccy-toggle:hover{background:rgba(217,119,6,0.16);}
+.btn-ccy-toggle.is-fx{background:rgba(37,99,235,0.08);color:var(--accent2);border-color:rgba(37,99,235,0.3);}
+.btn-ccy-toggle.is-fx:hover{background:rgba(37,99,235,0.16);}
+.ovdp-divider{font-family:var(--sans);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent4);margin:14px 0 10px;padding-bottom:6px;border-bottom:1px solid rgba(196,155,42,0.2);}
 .ovdp-summary{background:var(--surface2);border:1px solid var(--border);border-radius:8px;
   padding:11px 13px;margin-bottom:13px;}
 .ovdp-sum-row{display:flex;justify-content:space-between;align-items:center;
-  font-family:var(--mono);font-size:11px;padding:3px 0;border-bottom:1px solid rgba(42,47,66,0.5);}
+  font-family:var(--mono);font-size:12px;padding:3px 0;border-bottom:1px solid var(--border-soft);}
 .ovdp-sum-row:last-child{border-bottom:none;}
 .ovdp-sum-row span:first-child{color:var(--muted);}
-.ovdp-sum-row span:last-child{color:var(--accent);font-weight:700;}
+.ovdp-sum-row span:last-child{color:var(--accent-t);font-weight:700;}
 .grid-2-eq{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .grid-2-eq input,.grid-2-eq label{width:100%;}
 
 /* -- OVDP FETCH -- */
 .ovdp-fetch-row{display:flex;gap:8px;margin-bottom:13px;align-items:flex-end;}
 .ovdp-fetch-row input{margin-bottom:0;flex:1;}
-.btn-fetch{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;
-  padding:9px 14px;border-radius:8px;border:1px solid rgba(79,255,176,0.4);
-  background:rgba(79,255,176,0.07);color:var(--accent);cursor:pointer;transition:all 0.18s;
+.btn-fetch{font-family:var(--sans);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  padding:9px 14px;border-radius:8px;border:1px solid rgba(0,133,75,0.4);
+  background:rgba(0,133,75,0.07);color:var(--accent-t);cursor:pointer;transition:all 0.18s;
   white-space:nowrap;flex-shrink:0;}
-.btn-fetch:hover{background:rgba(79,255,176,0.15);border-color:var(--accent);}
+.btn-fetch:hover{background:rgba(0,133,75,0.15);border-color:var(--accent);}
 .btn-fetch:disabled{opacity:0.4;cursor:not-allowed;}
-.fetch-status{font-family:var(--mono);font-size:10px;margin-bottom:10px;padding:7px 10px;
+.fetch-status{font-family:var(--mono);font-size:12px;margin-bottom:10px;padding:7px 10px;
   border-radius:6px;display:none;line-height:1.5;}
-.fetch-status.ok{display:block;background:rgba(79,255,176,0.08);color:var(--accent);border:1px solid rgba(79,255,176,0.2);}
-.fetch-status.warn{display:block;background:rgba(255,200,0,0.08);color:#f0c040;border:1px solid rgba(255,200,0,0.25);}
-.fetch-status.err{display:block;background:rgba(255,107,107,0.08);color:var(--accent3);border:1px solid rgba(255,107,107,0.2);}
+.fetch-status.ok{display:block;background:rgba(0,133,75,0.08);color:var(--accent-t);border:1px solid rgba(0,133,75,0.2);}
+.fetch-status.warn{display:block;background:rgba(217,119,6,0.08);color:#B45309;border:1px solid rgba(217,119,6,0.25);}
+.fetch-status.err{display:block;background:rgba(220,38,38,0.08);color:var(--accent3);border:1px solid rgba(220,38,38,0.2);}
 /* ── Header logo ── */
 header { align-items: center; }
 .header-logo { display:flex; align-items:center; gap:14px; }
@@ -382,7 +386,7 @@ header { align-items: center; }
   display:flex; justify-content:space-between; align-items:center;
   padding:11px 16px; cursor:pointer;
   font-size:12px; font-weight:600; letter-spacing:.04em;
-  color:var(--accent);
+  color:var(--accent-t);
   background:rgba(0,133,75,0.04);
   user-select:none;
   border-bottom:1px solid transparent;
@@ -390,7 +394,7 @@ header { align-items: center; }
 }
 .about-header:hover { background:rgba(0,133,75,0.09); }
 .about-panel.open .about-header { border-bottom-color:var(--border); }
-.about-chevron { transition:transform .2s; font-size:10px; color:var(--muted); }
+.about-chevron { transition:transform .2s; font-size:12px; color:var(--muted); }
 .about-panel.open .about-chevron { transform:rotate(180deg); }
 .about-body {
   display:none; padding:20px 20px 18px;
@@ -400,13 +404,13 @@ header { align-items: center; }
 .about-logo svg { width:90px; height:auto; flex-shrink:0; }
 .about-text { flex:1; }
 .about-title { font-size:14px; font-weight:700; color:var(--text); margin-bottom:3px; }
-.about-sub { font-size:10px; color:var(--muted); margin-bottom:14px; }
+.about-sub { font-size:12px; color:var(--muted); margin-bottom:14px; }
 .about-meta { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
-.about-row { display:flex; gap:10px; font-size:11px; }
+.about-row { display:flex; gap:10px; font-size:12px; }
 .about-label { color:var(--muted); min-width:110px; }
 .about-value { color:var(--text); font-weight:600; }
 .about-disclaimer-note {
-  font-size:10px; color:var(--muted); line-height:1.5;
+  font-size:12px; color:var(--muted); line-height:1.5;
   border-top:1px solid var(--border); padding-top:10px; margin-top:4px;
 }
 @media(max-width:540px){
@@ -418,16 +422,16 @@ header { align-items: center; }
 .rel-toggle-label{
   display:flex;align-items:center;justify-content:space-between;
   gap:12px;cursor:pointer;user-select:none;
-  background:rgba(77,184,255,0.05);
-  border:1px solid rgba(77,184,255,0.15);
+  background:rgba(37,99,235,0.05);
+  border:1px solid rgba(37,99,235,0.15);
   border-radius:10px;padding:10px 14px;
   margin-top:4px;margin-bottom:14px;
   transition:border-color .2s,background .2s;
 }
-.rel-toggle-label:hover{background:rgba(77,184,255,0.09);border-color:rgba(77,184,255,0.3);}
+.rel-toggle-label:hover{background:rgba(37,99,235,0.09);border-color:rgba(37,99,235,0.3);}
 .rel-toggle-text{display:flex;flex-direction:column;gap:2px;}
 .rel-toggle-title{font-size:12px;font-weight:600;color:var(--text);}
-.rel-toggle-sub{font-size:10px;color:var(--muted);}
+.rel-toggle-sub{font-size:12px;color:var(--muted);}
 /* Switch track */
 .rel-switch-wrap{position:relative;flex-shrink:0;}
 .rel-switch-wrap input[type=checkbox]{position:absolute;opacity:0;width:0;height:0;}
@@ -446,10 +450,10 @@ header { align-items: center; }
 .rel-switch-wrap input:checked ~ .rel-switch-track{background:var(--accent);}
 .rel-switch-wrap input:checked ~ .rel-switch-track .rel-switch-thumb{transform:translateX(20px);}
 .rel-toggle-label:has(input:checked){
-  border-color:rgba(77,184,255,0.5);
-  background:rgba(77,184,255,0.1);
+  border-color:rgba(37,99,235,0.5);
+  background:rgba(37,99,235,0.1);
 }
-.fetch-status.loading{display:block;background:rgba(77,184,255,0.08);color:var(--accent2);border:1px solid rgba(77,184,255,0.2);}
+.fetch-status.loading{display:block;background:rgba(37,99,235,0.08);color:var(--accent2);border:1px solid rgba(37,99,235,0.2);}
 /* Coupon schedule */
 #ovdpCouponSchedule{display:none;}
 
@@ -458,44 +462,44 @@ header { align-items: center; }
 #manualCouponBlock.show{display:block;}
 .manual-cpn-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;}
 .btn-add-coupon{background:var(--surface2);border:1px solid var(--border);border-radius:6px;
-  padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:10px;color:var(--accent2);
+  padding:5px 12px;cursor:pointer;font-family:var(--sans);font-size:12px;color:var(--accent2);
   display:inline-flex;align-items:center;gap:5px;transition:all .2s;}
 .btn-add-coupon:hover{background:var(--accent2);color:#fff;border-color:var(--accent2);}
 .btn-manual-toggle{background:none;border:1px solid var(--border);border-radius:6px;
-  padding:5px 12px;cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:1px;
+  padding:5px 12px;cursor:pointer;font-family:var(--sans);font-size:12px;letter-spacing:.08em;
   color:var(--accent4);transition:all .2s;}
 .btn-manual-toggle:hover{background:var(--accent4);color:#fff;border-color:var(--accent4);}
 .manual-cpn-input-row{display:flex;gap:6px;align-items:center;margin-bottom:8px;}
 .manual-cpn-input-row input[type="date"]{flex:1;padding:7px 10px;border:1px solid var(--border);
-  border-radius:6px;background:var(--surface2);color:var(--text);font-family:var(--mono);font-size:11px;}
+  border-radius:6px;background:var(--surface2);color:var(--text);font-family:var(--mono);font-size:12px;}
 .manual-cpn-input-row input[type="date"]:focus{outline:none;border-color:var(--accent2);}
 .manual-cpn-list{display:flex;flex-direction:column;gap:3px;}
-.manual-cpn-row{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;
+.manual-cpn-row{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;
   background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;}
-.manual-cpn-row .cpn-num{color:var(--muted);min-width:20px;text-align:right;font-size:10px;}
+.manual-cpn-row .cpn-num{color:var(--muted);min-width:20px;text-align:right;font-size:12px;}
 .manual-cpn-row .cpn-date{color:var(--accent2);flex:1;}
 .btn-cpn-del{background:none;border:none;cursor:pointer;color:var(--accent3);font-size:14px;
   padding:0 4px;line-height:1;opacity:.6;transition:opacity .2s;}
 .btn-cpn-del:hover{opacity:1;}
-.manual-cpn-hint{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px;
+.manual-cpn-hint{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:6px;
   font-style:italic;}
 
 /* ── FOOTER VERSION ── */
 .app-footer{margin-top:32px;padding:14px 0 4px 0;border-top:1px solid var(--border);
-  text-align:right;font-family:var(--mono);font-size:9px;letter-spacing:1.5px;
+  text-align:right;font-family:var(--sans);font-size:12px;letter-spacing:.08em;
   color:var(--muted);text-transform:uppercase;}
 @media print{.app-footer{color:#999!important;border-color:#ccc!important;}}
 .cpn-list{display:flex;flex-direction:column;gap:3px;margin-bottom:4px;}
-.cpn-row{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;
+.cpn-row{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;
   background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;}
-.cpn-num{color:var(--muted);min-width:20px;text-align:right;font-size:10px;}
+.cpn-num{color:var(--muted);min-width:20px;text-align:right;font-size:12px;}
 .cpn-date{color:var(--accent2);min-width:82px;}
-.cpn-days{color:var(--muted);min-width:58px;font-size:10px;}
+.cpn-days{color:var(--muted);min-width:58px;font-size:12px;}
 .cpn-sum{color:var(--accent4);margin-left:auto;font-weight:600;}
 
 /* ── SETTINGS PANEL ── */
 .btn-settings{background:var(--surface2);border:1px solid var(--border);border-radius:8px;
-  padding:7px 14px;cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:1.5px;
+  padding:7px 14px;cursor:pointer;font-family:var(--sans);font-size:12px;letter-spacing:.08em;
   color:var(--muted);display:inline-flex;align-items:center;gap:6px;transition:all .2s;}
 .btn-settings:hover{background:var(--accent2);color:#fff;border-color:var(--accent2);}
 .btn-settings svg{width:13px;height:13px;}
@@ -507,43 +511,43 @@ header { align-items: center; }
   padding:28px 32px;width:min(560px,92vw);max-height:85vh;overflow-y:auto;
   box-shadow:0 12px 40px rgba(0,0,0,.25);animation:fadeUp .25s ease;}
 .settings-panel.show{display:block;}
-.settings-panel h2{font-family:var(--mono);font-size:11px;letter-spacing:2px;
+.settings-panel h2{font-family:var(--sans);font-size:12px;letter-spacing:.08em;
   color:var(--accent2);text-transform:uppercase;margin:0 0 18px 0;}
-.settings-panel label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:1px;
+.settings-panel label{display:block;font-family:var(--sans);font-size:12px;letter-spacing:.08em;
   color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
 .settings-panel input[type="url"]{width:100%;padding:10px 12px;border:1px solid var(--border);
   border-radius:8px;background:var(--surface2);color:var(--text);font-family:var(--mono);
   font-size:12px;box-sizing:border-box;}
 .settings-panel input[type="url"]:focus{outline:none;border-color:var(--accent2);
   box-shadow:0 0 0 3px rgba(99,102,241,.15);}
-.settings-hint{font-size:11px;color:var(--muted);line-height:1.55;margin-top:8px;}
+.settings-hint{font-size:12px;color:var(--muted);line-height:1.55;margin-top:8px;}
 .settings-hint code{background:var(--surface2);padding:1px 5px;border-radius:4px;
-  font-family:var(--mono);font-size:10px;color:var(--accent4);}
+  font-family:var(--mono);font-size:12px;color:var(--accent4);}
 .settings-actions{display:flex;gap:10px;margin-top:22px;justify-content:flex-end;}
-.settings-actions button{padding:8px 20px;border-radius:8px;font-family:var(--mono);
-  font-size:10px;letter-spacing:1px;cursor:pointer;border:1px solid var(--border);
+.settings-actions button{padding:8px 20px;border-radius:8px;font-family:var(--sans);
+  font-size:12px;letter-spacing:.08em;cursor:pointer;border:1px solid var(--border);
   background:var(--surface2);color:var(--text);transition:all .2s;}
 .settings-actions .btn-save{background:var(--accent2);color:#fff;border-color:var(--accent2);}
 .settings-actions .btn-save:hover{filter:brightness(1.1);}
 .settings-actions .btn-close:hover{background:var(--surface);border-color:var(--muted);}
-.settings-saved{display:none;font-family:var(--mono);font-size:10px;color:var(--accent3);
+.settings-saved{display:none;font-family:var(--mono);font-size:12px;color:var(--accent3);
   margin-top:10px;text-align:right;}
 .settings-saved.show{display:block;animation:fadeIn .3s ease;}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .settings-howto{margin-top:20px;padding:16px;background:var(--surface2);border:1px solid var(--border);
   border-radius:10px;}
-.settings-howto summary{font-family:var(--mono);font-size:10px;letter-spacing:1px;
+.settings-howto summary{font-family:var(--sans);font-size:12px;letter-spacing:.08em;
   color:var(--accent4);cursor:pointer;text-transform:uppercase;}
 .settings-howto summary:hover{color:var(--accent2);}
-.settings-howto .howto-body{margin-top:12px;font-size:11px;color:var(--muted);line-height:1.65;}
+.settings-howto .howto-body{margin-top:12px;font-size:12px;color:var(--muted);line-height:1.65;}
 .settings-howto .howto-body ol{padding-left:18px;margin:8px 0;}
 .settings-howto .howto-body li{margin-bottom:6px;}
 .settings-howto pre{background:var(--bg);border:1px solid var(--border);border-radius:8px;
-  padding:12px;margin:10px 0;overflow-x:auto;font-family:var(--mono);font-size:10px;
+  padding:12px;margin:10px 0;overflow-x:auto;font-family:var(--mono);font-size:12px;
   line-height:1.6;color:var(--text);white-space:pre;tab-size:2;}
 .btn-copy-code{position:absolute;top:18px;right:8px;z-index:2;background:var(--surface2);
   border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;
-  font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--accent2);
+  font-family:var(--sans);font-size:12px;letter-spacing:.08em;color:var(--accent2);
   transition:all .2s;opacity:.7;}
 .btn-copy-code:hover{opacity:1;background:var(--accent2);color:#fff;border-color:var(--accent2);}
 .btn-copy-code.copied{background:var(--accent);color:#fff;border-color:var(--accent);opacity:1;}
@@ -551,7 +555,7 @@ header { align-items: center; }
 
 /* ── GUIDE PANEL ── */
 .btn-guide{background:var(--surface2);border:1px solid var(--border);border-radius:8px;
-  padding:7px 14px;cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:1.5px;
+  padding:7px 14px;cursor:pointer;font-family:var(--sans);font-size:12px;letter-spacing:.08em;
   color:var(--muted);display:inline-flex;align-items:center;gap:6px;transition:all .2s;}
 .btn-guide:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
 .btn-guide svg{width:13px;height:13px;}
@@ -566,8 +570,8 @@ header { align-items: center; }
 @keyframes guideSlide{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
 .guide-close{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;
   padding:16px 24px;background:var(--surface);border-bottom:1px solid var(--border);}
-.guide-close-title{font-family:var(--mono);font-size:10px;letter-spacing:2px;
-  color:var(--accent);text-transform:uppercase;}
+.guide-close-title{font-family:var(--sans);font-size:12px;letter-spacing:.08em;
+  color:var(--accent-t);text-transform:uppercase;}
 .guide-close-btn{background:var(--surface2);border:1px solid var(--border);border-radius:6px;
   width:30px;height:30px;display:flex;align-items:center;justify-content:center;
   cursor:pointer;color:var(--muted);font-size:16px;transition:all .15s;}
@@ -576,39 +580,157 @@ header { align-items: center; }
 .guide-content h2{font-size:15px;font-weight:700;color:var(--text);margin:28px 0 10px;
   padding-left:12px;border-left:3px solid var(--accent);}
 .guide-content h2:first-child{margin-top:0;}
-.guide-content h3{font-size:12px;font-weight:700;color:var(--accent);margin:18px 0 8px;
+.guide-content h3{font-size:12px;font-weight:700;color:var(--accent-t);margin:18px 0 8px;
   letter-spacing:.5px;}
-.guide-content h4{font-size:11px;font-weight:600;color:var(--muted);margin:14px 0 6px;
-  text-transform:uppercase;letter-spacing:.5px;font-family:var(--mono);}
+.guide-content h4{font-size:12px;font-weight:600;color:var(--muted);margin:14px 0 6px;
+  text-transform:uppercase;letter-spacing:.5px;font-family:var(--sans);}
 .guide-content p{font-size:12px;color:var(--text);line-height:1.65;margin-bottom:8px;opacity:.88;}
 .guide-content ul,.guide-content ol{font-size:12px;color:var(--text);line-height:1.65;
   margin:4px 0 10px 18px;opacity:.88;}
 .guide-content li{margin-bottom:4px;}
-.guide-content table{width:100%;border-collapse:collapse;margin:8px 0 14px;font-size:11px;}
+.guide-content table{width:100%;border-collapse:collapse;margin:8px 0 14px;font-size:12px;}
 .guide-content th{background:var(--accent);color:#fff;font-weight:600;text-align:left;
-  padding:7px 10px;font-size:10px;letter-spacing:.3px;}
+  padding:7px 10px;font-size:12px;letter-spacing:.3px;}
 .guide-content td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text);
   vertical-align:top;}
 .guide-content tbody tr:nth-child(even){background:var(--surface2);}
-.guide-content code{font-family:var(--mono);font-size:10px;background:var(--surface2);
+.guide-content code{font-family:var(--mono);font-size:12px;background:var(--surface2);
   padding:1px 5px;border-radius:3px;color:var(--accent4);}
-.guide-cat{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.5px;
+.guide-cat{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.5px;
   text-transform:uppercase;padding:2px 9px;border-radius:12px;margin-bottom:6px;}
-.guide-cat.a{background:rgba(0,133,75,.12);color:var(--accent);}
+.guide-cat.a{background:rgba(0,133,75,.12);color:var(--accent-t);}
 .guide-cat.l{background:rgba(37,99,235,.12);color:var(--accent2);}
 .guide-cat.o{background:rgba(196,155,42,.12);color:var(--accent4);}
 .guide-info{background:rgba(0,133,75,.06);border-left:3px solid var(--accent);
-  border-radius:0 6px 6px 0;padding:8px 12px;margin:10px 0;font-size:11px;color:var(--text);opacity:.9;}
-.guide-info strong{color:var(--accent);font-weight:700;}
+  border-radius:0 6px 6px 0;padding:8px 12px;margin:10px 0;font-size:12px;color:var(--text);opacity:.9;}
+.guide-info strong{color:var(--accent-t);font-weight:700;}
 .guide-warn{background:rgba(217,119,6,.08);border-left:3px solid #D97706;
-  border-radius:0 6px 6px 0;padding:8px 12px;margin:10px 0;font-size:11px;color:var(--text);opacity:.9;}
+  border-radius:0 6px 6px 0;padding:8px 12px;margin:10px 0;font-size:12px;color:var(--text);opacity:.9;}
 .guide-warn strong{color:#D97706;font-weight:700;}
 .guide-divider{border:none;border-top:1px solid var(--border);margin:22px 0;}
 .guide-steps{counter-reset:gs;list-style:none;margin-left:0;padding-left:0;}
 .guide-steps li{counter-increment:gs;padding:3px 0 3px 30px;position:relative;font-size:12px;}
 .guide-steps li::before{content:counter(gs);position:absolute;left:0;top:3px;width:20px;height:20px;
-  background:var(--accent);color:#fff;border-radius:50%;text-align:center;font-size:10px;
+  background:var(--accent);color:#fff;border-radius:50%;text-align:center;font-size:12px;
   font-weight:700;line-height:20px;font-family:var(--mono);}
+
+/* ══ Brand Guide v2.2 · МІП — фірмовий стиль інтерфейсу ══ */
+body{font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+body::before{display:none;}
+table,.metric-value,.pr-val,.psum,.psum-fx,.cpn-sum,.ovdp-sum-row,.fx-chip-val,input[type=number],.pd{font-variant-numeric:tabular-nums;}
+:focus-visible{outline:2px solid var(--p600);outline-offset:2px;}
+a{color:var(--accent-t);}
+
+/* Шапка: логотип → роздільник → lockup продукту */
+header{align-items:center;border-bottom:2px solid var(--p600);padding-bottom:20px;}
+.header-logo{gap:16px;}
+.logo-svg svg{width:auto;height:44px;display:block;}
+.lockup-div{width:1px;align-self:stretch;min-height:44px;background:var(--border-soft);}
+h1{font-family:var(--sans);font-size:24px;line-height:1.25;letter-spacing:-.01em;font-weight:800;}
+.product-name{font-weight:800;color:var(--text);}
+.product-suffix{font-weight:300;color:var(--p600);}
+.brand-entity{font-family:var(--display);font-weight:700;font-size:15px;line-height:1.3;color:var(--p700);margin-top:2px;}
+.subtitle{font-size:13px;color:var(--muted);margin-top:4px;}
+.header-label{font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--muted);margin:6px 0 0;}
+
+/* Кнопки — Primary / Secondary */
+.btn-calc{border-radius:var(--r-sm);min-height:44px;font-size:15px;letter-spacing:0;}
+.btn-calc:hover{background:var(--accent-h);transform:none;box-shadow:none;}
+.btn-print,.btn-settings,.btn-guide{background:var(--surface);color:var(--text);border:1px solid var(--border);
+  border-radius:var(--r-sm);min-height:40px;font-size:12px;font-weight:600;letter-spacing:.04em;}
+.btn-print:hover{background:var(--surface2);color:var(--text);border-color:var(--border);}
+.btn-settings:hover,.btn-guide:hover{background:var(--accent-s);color:var(--accent-t);border-color:var(--p600);}
+
+/* Картки й поля */
+.card{border-color:var(--border-soft);border-radius:var(--r-md);box-shadow:0 1px 2px rgba(20,27,38,.05);}
+.card-title,.section-title,.explain-title,.guide-close-title,.settings-panel h2{
+  font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:.08em;color:var(--p700);}
+label{font-size:13px;font-weight:600;color:var(--text);letter-spacing:0;}
+input,select{background:#fff;border-color:var(--border-input);border-radius:var(--r-sm);color:var(--text);}
+input:focus,select:focus{border-color:var(--p600);box-shadow:none;outline:2px solid var(--p600);outline-offset:1px;}
+input:disabled{background:var(--surface2);color:#94A3B8;opacity:1;}
+select optgroup{color:var(--accent4);background:#fff;}
+.period-row,.ovdp-summary{background:var(--accent-s);border-color:var(--p100);}
+.pr-label{color:var(--muted);font-size:13px;}
+
+/* Показники */
+.metric{border-color:var(--border-soft);background:var(--surface);}
+.metric-label{font-family:var(--sans);font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.06em;}
+.metric-value{font-size:17px;}
+.mo::before{background:#C49B2A;}
+
+/* Статус-бейджі: текст 700/800 на тінті 50 */
+.badge{font-family:var(--sans);font-weight:700;font-size:12px;border-radius:999px;background:var(--p50);color:var(--p700);border-color:var(--p100);}
+.badge.b2{background:#DBEAFE;color:#1D4ED8;border-color:#BFDBFE;}
+.badge.b3{background:#F5E6B8;color:#7A6019;border-color:#E9D48F;}
+.day1-adj{background:#FEF3C7;color:#B45309;border-color:#FDE68A;}
+.day1-adj.pos{background:var(--p50);color:var(--p700);border-color:var(--p100);}
+
+/* Вкладки стандартів */
+.std-tabs{border-color:var(--border);border-radius:var(--r-sm);}
+.std-tab{font-family:var(--sans);font-size:13px;font-weight:600;color:var(--muted);background:var(--surface);}
+.std-tab.active{background:var(--p600);color:#fff;}
+.std-tab:hover:not(.active){background:var(--accent-s);color:var(--accent-t);}
+
+/* Таблиця даних: шапка N100, межі N200, чергування N50 */
+.table-wrap{border-color:var(--border-soft);background:var(--surface);}
+thead tr{background:var(--surface2);}
+th{font-family:var(--sans);color:#334155;font-weight:800;font-size:12px;letter-spacing:.02em;border-bottom:1px solid var(--border);}
+tbody tr:nth-child(even){background:var(--bg);}
+tbody tr:hover{background:var(--accent-s);}
+
+/* Проведення */
+.posting-row{background:var(--surface);border-color:var(--border-soft);}
+.pd{background:#DBEAFE;color:#1D4ED8;}
+.pdesc{font-family:var(--sans);font-size:12px;}
+
+/* Пояснення, дисклеймер */
+.explain-panel{background:var(--surface);border-color:var(--border-soft);}
+.explain-header{background:var(--surface2);}
+.explain-block{background:var(--bg);border:1px solid var(--border-soft);}
+.eb-title{color:var(--p700);font-size:13px;}
+.eb-text{color:#334155;font-size:13px;}
+.eb-formula{background:#FBF5E3;border-color:#E9D48F;color:#7A6019;}
+.disclaimer{background:#FEF2F2;border-color:#FECACA;color:#334155;font-size:12px;}
+
+/* Про програму, футер */
+.about-panel{background:var(--surface);border-color:var(--border-soft);}
+.about-header{color:var(--p700);background:var(--accent-s);font-size:13px;}
+.about-header:hover{background:var(--p100);}
+.about-logo svg{width:auto;height:40px;}
+.about-sub,.about-row,.about-disclaimer-note{font-size:12px;}
+.app-footer{font-family:var(--sans);font-size:12px;letter-spacing:.04em;text-transform:none;color:var(--muted);}
+
+/* Панелі налаштувань і довідки */
+.settings-panel,.guide-panel{background:var(--surface);box-shadow:0 12px 40px rgba(20,27,38,.18);}
+.settings-actions .btn-save{background:var(--p600);border-color:var(--p600);}
+.settings-actions .btn-save:hover{background:var(--p700);filter:none;}
+.guide-close{background:var(--surface);}
+.guide-content h2{font-family:var(--display);font-size:20px;line-height:1.3;color:var(--text);border-left-color:var(--p600);}
+.guide-content h3{font-size:15px;color:var(--p700);letter-spacing:0;}
+.guide-content h4{font-family:var(--sans);font-size:12px;color:var(--muted);}
+.guide-content p,.guide-content ul,.guide-content ol,.guide-steps li{font-size:14px;opacity:1;}
+.guide-content th{background:var(--surface2);color:#334155;font-weight:800;font-size:12px;border-bottom:1px solid var(--border);}
+.guide-content tbody tr:nth-child(even){background:var(--bg);}
+.guide-info{background:var(--accent-s);opacity:1;font-size:13px;}
+.guide-warn{background:#FEF3C7;border-left-color:#D97706;opacity:1;font-size:13px;}
+.guide-warn strong{color:#B45309;}
+.guide-cat.a{background:var(--p50);color:var(--p700);}
+.guide-cat.l{background:#DBEAFE;color:#1D4ED8;}
+.guide-cat.o{background:#F5E6B8;color:#7A6019;}
+
+@media(max-width:540px){.logo-svg svg{height:32px;}.lockup-div{min-height:32px;}h1{font-size:20px;}}
+@media print{
+  header{border-bottom-color:#00854B !important;}
+  .brand-entity{color:#006B3C !important;}
+  .product-suffix{color:#00854B !important;}
+  tbody tr:nth-child(even){background:#F8FAFC !important;}
+  .table-wrap{overflow:visible !important;}
+  table{font-size:7.5pt !important;}
+  th,td{padding:4px 5px !important;}
+  th{white-space:normal !important;}
+  td{white-space:nowrap;}
+}
 </style>
 </head>
 <body>
@@ -1006,7 +1128,7 @@ export default {
 
 <header>
   <div class="header-logo">
-    <div class="logo-svg"><svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" x="0" y="0" viewBox="0 0 300 114.3" style="enable-background:new 0 0 300 114.3">
+    <div class="logo-svg"><svg version="1.1" id="logo-header" role="img" aria-label="Марінченко і Партнери" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 114.3">
   <style>.st0{fill:#00854b}.st1{fill:#fff}</style>
   <path class="st0" d="M 146.1 0 L 146.1 113 L 29 113 L 68.6 74.8 L 76.937 66.762 L 71.4 72.2 L 125.6 72.2 L 125.6 66.7 L 77.001 66.7 L 83.328 60.6 L 125.6 60.6 L 125.6 55.2 L 88.929 55.2 L 83.328 60.6 L 83.3 60.6 L 88.9 55.2 L 88.928 55.2 L 98.306 46.158 L 94.7 49.7 L 125.6 49.7 L 125.6 44.2 L 100.335 44.2 Z M 98.306 46.158 L 100.3 44.2 L 100.335 44.2 L 99.3 45.2 Z M 77 66.7 L 76.937 66.762 L 77.002 66.7 Z"/>
   <path class="st0" d="m94.7 49.7 5.6-5.5H25.2v5.5z"/>
@@ -1017,10 +1139,12 @@ export default {
   <path class="st0" d="M300 67.4h-48.1c-.3 1.8-.8 3.6-1.3 5.4H300v-5.4z"/>
   <path class="st0" d="M299.6 49.5V44h-48.4c.4 1.8.8 3.6 1 5.4h47.4z"/>
 </svg></div>
+    <div class="lockup-div" aria-hidden="true"></div>
     <div>
-      <div class="header-label">Марінченко і Партнери &middot; НП(С)БО 10 &middot; 11 &middot; 13 &middot; 28 &middot; МСФЗ 9 &middot; МСФЗ 16 &middot; МСБО 20 &middot; 32 &middot; 39</div>
-    <h1><span class="product-name">FinDiscounting</span><span class="product-suffix"> Pro</span></h1>
-    <div class="subtitle">Дисконтування фінансових інструментів &middot; Оренда &middot; PV &middot; EIR &middot; Амортизація &middot; Проведення</div>
+      <h1><span class="product-name">FinDiscounting</span><span class="product-suffix"> Pro</span></h1>
+      <div class="brand-entity">ТОВ «АФ «Марінченко і партнери»»</div>
+      <div class="subtitle">Дисконтування фінансових інструментів &middot; Оренда &middot; PV &middot; EIR &middot; Амортизація &middot; Проведення</div>
+      <div class="header-label">НП(С)БО 10 &middot; 11 &middot; 13 &middot; 28 &middot; МСФЗ 9 &middot; МСФЗ 16 &middot; МСБО 20 &middot; 32 &middot; 39</div>
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
@@ -1092,10 +1216,10 @@ export default {
         <input type="number" id="nomRate" value="0" min="0" max="100" step="0.1">
       </div>
 
-      <label>Ринкова / ефективна ставка (% річних) <span style="color:var(--muted);font-size:9px">для дисконтування</span></label>
+      <label>Ринкова / ефективна ставка (% річних) <span style="color:var(--muted);font-size:12px">для дисконтування</span></label>
       <input type="number" id="marketRate" value="15" min="0.1" max="99" step="0.1">
 
-      <label>Комісія при придбанні / видачі (грн) <span style="color:var(--muted);font-size:9px">включається в балансову вартість</span></label>
+      <label>Комісія при придбанні / видачі (грн) <span style="color:var(--muted);font-size:12px">включається в балансову вартість</span></label>
       <input type="number" id="commission" value="0" min="0" step="0.01" placeholder="0.00">
     </div>
 
@@ -1133,7 +1257,7 @@ export default {
       <label>Термін обігу (днів) — з реєстру НБУ</label>
       <input type="number" id="ovdpDays" value="1095" min="1" step="1" oninput="ovdpSync()">
 
-      <label>Комісія при придбанні (грн, загальна) <span style="color:var(--muted);font-size:9px">включається в балансову вартість</span></label>
+      <label>Комісія при придбанні (грн, загальна) <span style="color:var(--muted);font-size:12px">включається в балансову вартість</span></label>
       <input type="number" id="ovdpCommission" value="0" min="0" step="0.01" oninput="ovdpSync()" placeholder="0.00">
 
       <div class="grid-2-eq">
@@ -1151,12 +1275,12 @@ export default {
 
       <div class="grid-2-eq" style="align-items:start;">
         <div>
-          <label style="min-height:2.6em;display:block;">Фактична ціна 1 обл. <span style="color:var(--accent4);font-size:9px">(основа для EIR)</span></label>
+          <label style="min-height:2.6em;display:block;">Фактична ціна 1 обл. <span style="color:var(--accent4);font-size:12px">(основа для EIR)</span></label>
           <input type="number" id="ovdpBuyPrice" value="1000" min="0.01" step="0.01" oninput="ovdpSync()">
-          <div id="ovdpFairYieldEir" style="font-family:var(--mono);font-size:10px;color:var(--accent2);margin-top:-10px;margin-bottom:13px;padding:3px 0;line-height:1.5;"></div>
+          <div id="ovdpFairYieldEir" style="font-family:var(--mono);font-size:12px;color:var(--accent2);margin-top:-10px;margin-bottom:13px;padding:3px 0;line-height:1.5;"></div>
         </div>
         <div>
-          <label style="min-height:2.6em;display:block;">Справедлива вартість НБУ (грн / 1 обл.) <span style="color:var(--muted);font-size:9px">з реєстру НБУ</span></label>
+          <label style="min-height:2.6em;display:block;">Справедлива вартість НБУ (грн / 1 обл.) <span style="color:var(--muted);font-size:12px">з реєстру НБУ</span></label>
           <input type="number" id="ovdpFairYield" value="1000" min="0.01" step="0.01" placeholder="ціна з реєстру НБУ" oninput="ovdpSync()">
         </div>
       </div>
@@ -1234,16 +1358,16 @@ export default {
         </div>
       </div>
 
-      <label>Ставка дисконтування (% річних) <span style="color:var(--muted);font-size:9px">гранична ставка запозичення або ставка в оренді · МСФЗ 16.26</span></label>
+      <label>Ставка дисконтування (% річних) <span style="color:var(--muted);font-size:12px">гранична ставка запозичення або ставка в оренді · МСФЗ 16.26</span></label>
       <input type="number" id="leaseRate" value="12" min="0.01" max="99" step="0.01" oninput="leaseSync()">
 
-      <label>Початкові прямі витрати (грн) <span style="color:var(--muted);font-size:9px">МСФЗ 16.24(d)</span></label>
+      <label>Початкові прямі витрати (грн) <span style="color:var(--muted);font-size:12px">МСФЗ 16.24(d)</span></label>
       <input type="number" id="leaseInitCosts" value="0" min="0" step="0.01">
 
-      <label>Отримані стимули від орендодавця (грн) <span style="color:var(--muted);font-size:9px">МСФЗ 16.24(b)</span></label>
+      <label>Отримані стимули від орендодавця (грн) <span style="color:var(--muted);font-size:12px">МСФЗ 16.24(b)</span></label>
       <input type="number" id="leaseIncentives" value="0" min="0" step="0.01">
 
-      <label>Резерв на демонтаж / відновлення (грн) <span style="color:var(--muted);font-size:9px">МСФЗ 16.24(d), МСБО 37</span></label>
+      <label>Резерв на демонтаж / відновлення (грн) <span style="color:var(--muted);font-size:12px">МСФЗ 16.24(d), МСБО 37</span></label>
       <input type="number" id="leaseDismantling" value="0" min="0" step="0.01">
 
       <!-- Modification toggle -->
@@ -1264,13 +1388,13 @@ export default {
 
         <div class="lease-mod-divider">Нові умови (після модифікації)</div>
 
-        <label>Новий орендний платіж (грн за період) <span style="color:var(--muted);font-size:9px">порожнє = без змін</span></label>
+        <label>Новий орендний платіж (грн за період) <span style="color:var(--muted);font-size:12px">порожнє = без змін</span></label>
         <input type="number" id="leaseModPayment" value="" min="0" step="0.01" placeholder="без змін">
 
-        <label>Нова дата закінчення оренди <span style="color:var(--muted);font-size:9px">порожнє = без змін</span></label>
+        <label>Нова дата закінчення оренди <span style="color:var(--muted);font-size:12px">порожнє = без змін</span></label>
         <input type="date" id="leaseModEndDate" value="">
 
-        <label>Нова ставка дисконтування (% річних) <span style="color:var(--muted);font-size:9px">гранична ставка на дату модифікації</span></label>
+        <label>Нова ставка дисконтування (% річних) <span style="color:var(--muted);font-size:12px">гранична ставка на дату модифікації</span></label>
         <input type="number" id="leaseModRate" value="" min="0.01" max="99" step="0.01" placeholder="обов'язкове поле">
 
         <div class="grid-2-eq" style="margin-top:10px">
@@ -1282,7 +1406,7 @@ export default {
             </select>
           </div>
           <div>
-            <label>% зменшення обсягу <span style="color:var(--muted);font-size:9px">(для 16.46a)</span></label>
+            <label>% зменшення обсягу <span style="color:var(--muted);font-size:12px">(для 16.46a)</span></label>
             <input type="number" id="leaseModScopeDecr" value="0" min="0" max="100" step="1" placeholder="0">
           </div>
         </div>
@@ -1320,7 +1444,7 @@ export default {
         </div>
       </div>
 
-      <label>Ринкова ставка для МСФЗ (% річних) <span style="color:var(--muted);font-size:9px">ставка аналогічного кредиту без державної підтримки (МСФЗ 9 B5.1.1)</span></label>
+      <label>Ринкова ставка для МСФЗ (% річних) <span style="color:var(--muted);font-size:12px">ставка аналогічного кредиту без державної підтримки (МСФЗ 9 B5.1.1)</span></label>
       <input type="number" id="credit579MarketRate" value="20" min="0.1" max="99" step="0.1">
 
       <div class="grid-2-eq">
@@ -1356,7 +1480,7 @@ export default {
       <input type="date" id="emissionDate" value="2025-01-01" onchange="updatePeriod()">
     </div>
 
-    <label id="startDateLabel">Дата первісного визнання <span style="color:var(--muted);font-size:10px">(дата купівлі)</span></label>
+    <label id="startDateLabel">Дата первісного визнання <span style="color:var(--muted);font-size:12px">(дата купівлі)</span></label>
     <input type="date" id="startDate" value="2025-01-01" onchange="updatePeriod()">
 
     <label id="endDateLabel">Дата погашення</label>
@@ -1492,7 +1616,7 @@ export default {
       <span class="about-chevron">▼</span>
     </div>
     <div class="about-body">
-      <div class="about-logo"><svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" x="0" y="0" viewBox="0 0 300 114.3" style="enable-background:new 0 0 300 114.3">
+      <div class="about-logo"><svg version="1.1" id="logo-about" role="img" aria-label="Марінченко і Партнери" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 114.3">
   <style>.st0{fill:#00854b}.st1{fill:#fff}</style>
   <path class="st0" d="M 146.1 0 L 146.1 113 L 29 113 L 68.6 74.8 L 76.937 66.762 L 71.4 72.2 L 125.6 72.2 L 125.6 66.7 L 77.001 66.7 L 83.328 60.6 L 125.6 60.6 L 125.6 55.2 L 88.929 55.2 L 83.328 60.6 L 83.3 60.6 L 88.9 55.2 L 88.928 55.2 L 98.306 46.158 L 94.7 49.7 L 125.6 49.7 L 125.6 44.2 L 100.335 44.2 Z M 98.306 46.158 L 100.3 44.2 L 100.335 44.2 L 99.3 45.2 Z M 77 66.7 L 76.937 66.762 L 77.002 66.7 Z"/>
   <path class="st0" d="m94.7 49.7 5.6-5.5H25.2v5.5z"/>
@@ -1504,7 +1628,7 @@ export default {
   <path class="st0" d="M299.6 49.5V44h-48.4c.4 1.8.8 3.6 1 5.4h47.4z"/>
 </svg></div>
       <div class="about-text">
-        <div class="about-title"><span style="font-weight:800">FinDiscounting</span><span style="font-weight:300;color:var(--accent)"> Pro</span></div>
+        <div class="about-title"><span style="font-weight:800">FinDiscounting</span><span style="font-weight:300;color:var(--p600)"> Pro</span></div>
         <div class="about-sub">Дисконтування фінансових інструментів · Оренда · Кредити 5-7-9% · НП(С)БО · МСФЗ 9 · МСФЗ 16 · МСБО 20, 32, 39</div>
         <div class="about-meta">
           <div class="about-row">
@@ -1513,7 +1637,7 @@ export default {
           </div>
           <div class="about-row">
             <span class="about-label">Організація</span>
-            <span class="about-value">ТОВ&nbsp;"АФ&nbsp;"Марінченко і партнери"</span>
+            <span class="about-value">ТОВ&nbsp;«АФ&nbsp;«Марінченко і партнери»»</span>
           </div>
           <div class="about-row">
             <span class="about-label">Нормативна база</span>
@@ -1524,8 +1648,8 @@ export default {
           Програма має інформаційно-довідковий характер і призначена лише для допоміжних фінансових розрахунків. Усі результати потребують професійної перевірки; розробник не несе відповідальності за їх використання.
         </div>
         <div class="about-promo" style="margin-top:12px;padding:10px 14px;background:rgba(0,133,75,0.06);
-          border:1px solid rgba(0,133,75,0.15);border-radius:8px;font-size:11px;line-height:1.6;">
-          <strong style="color:var(--accent);">ТОВ «АФ «Марінченко і партнери»</strong> —
+          border:1px solid rgba(0,133,75,0.15);border-radius:8px;font-size:12px;line-height:1.6;">
+          <strong style="color:var(--accent-t);">ТОВ «АФ «Марінченко і партнери»»</strong> —
           аудиторська фірма з багаторічним досвідом проведення аудиту фінансової звітності за НП(С)БО та МСФЗ,
           верифікації грантових видатків (ЄС, ISRS 4400, ISA 800/805),
           аудиту резидентів Дія.Сіті (ISAE 3000) та консультування НПО.
@@ -2017,13 +2141,13 @@ function onTypeChange() {
   const sdLabel = document.getElementById('startDateLabel');
   const edLabel = document.getElementById('endDateLabel');
   if (isLease) {
-    if(sdLabel) sdLabel.innerHTML = 'Дата початку оренди <span style="color:var(--muted);font-size:10px">(комменсмент)</span>';
+    if(sdLabel) sdLabel.innerHTML = 'Дата початку оренди <span style="color:var(--muted);font-size:12px">(комменсмент)</span>';
     if(edLabel) edLabel.textContent = 'Дата закінчення оренди';
   } else if (is579) {
-    if(sdLabel) sdLabel.innerHTML = 'Дата отримання кредиту <span style="color:var(--muted);font-size:10px">(дата видачі)</span>';
+    if(sdLabel) sdLabel.innerHTML = 'Дата отримання кредиту <span style="color:var(--muted);font-size:12px">(дата видачі)</span>';
     if(edLabel) edLabel.textContent = 'Дата погашення кредиту';
   } else {
-    if(sdLabel) sdLabel.innerHTML = 'Дата первісного визнання <span style="color:var(--muted);font-size:10px">(дата купівлі)</span>';
+    if(sdLabel) sdLabel.innerHTML = 'Дата первісного визнання <span style="color:var(--muted);font-size:12px">(дата купівлі)</span>';
     if(edLabel) edLabel.textContent = 'Дата погашення';
   }
   if (isLease) leaseSync();
@@ -2208,7 +2332,7 @@ function ovdpSync(){
         : '';
       const pvWC = Math.round((buyPrice * qty + commission) * 100) / 100;
       const pvWCNote = commission > 0 ? ` + комісія ` + commission.toLocaleString('uk-UA',{minimumFractionDigits:2}) + ` грн` : '';
-      eirHint.textContent = 'EIR: ' + eir.toFixed(4) + `% річних (PV ` + pvWC.toLocaleString('uk-UA',{minimumFractionDigits:2}) + ` грн` + pvWCNote + ')' + fairTxt;
+      eirHint.textContent = 'EIR: ' + eir.toFixed(4).replace('.',',') + ` % річних (PV ` + pvWC.toLocaleString('uk-UA',{minimumFractionDigits:2}) + ` грн` + pvWCNote + ')' + fairTxt;
       eirHint.style.display = 'block';
     } else {
       eirHint.style.display = 'none';
@@ -2327,7 +2451,7 @@ function parseLocalDate(str) {
   return new Date(+y, +m-1, +d);
 }
 
-const fmt = n => n.toLocaleString('uk-UA',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt = n => { const s = Math.abs(n).toLocaleString('uk-UA',{minimumFractionDigits:2,maximumFractionDigits:2}); return (n < 0 && s !== '0,00') ? '(' + s + ')' : s; };
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const fmtD = d => `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
 const addM = (d,m) => {
@@ -2369,7 +2493,7 @@ function renderCouponSchedule(couponDatesAfterPurchase, startDate, endDate) {
     <div class="ovdp-divider" style="margin-top:13px">
       📅 Графік купонних виплат — після дати купівлі
     </div>
-    <div style="font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:8px;">
+    <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:8px;">
       ${couponDatesAfterPurchase.length} виплат · ${couponPB > 0 ? fmt(couponPB) + ' грн/обл.' : 'без купону'}
       ${qty > 0 && totalCpn > 0 ? ' · разом: ' + fmt(totalCpn) + ' грн' : ''}
     </div>
@@ -2410,7 +2534,7 @@ function leaseSync() {
   const totalInt = Math.round((totalPay - pvLiability - prepay) * 100) / 100;
   const f = v => v.toLocaleString('uk-UA', {minimumFractionDigits:2, maximumFractionDigits:2});
   document.getElementById('leaseNPeriods').textContent = nPeriods;
-  document.getElementById('leaseRPeriod').textContent  = (rPeriod * 100).toFixed(4) + '%';
+  document.getElementById('leaseRPeriod').textContent  = (rPeriod * 100).toFixed(4).replace('.',',') + ' %';
   document.getElementById('leasePV').textContent       = f(pvLiability) + ' грн';
   document.getElementById('leaseROU').textContent      = f(rouAsset) + ' грн';
   document.getElementById('leaseTotalPay').textContent  = f(totalPay) + ' грн';
@@ -2586,7 +2710,7 @@ function calculateLease() {
   document.getElementById('results').classList.add('show');
   document.getElementById('badgeType').textContent  = 'Оренда · МСФЗ 16' + (hasMod ? ' · Модифікація' : '');
   document.getElementById('badgePeriod').textContent = effTotalMonths + ' міс. (' + allRows.length + ' пер.)';
-  document.getElementById('badgeRate').textContent   = (rAnnual*100).toFixed(2) + '%' + (hasMod ? ' → ' + (modNewRate*100).toFixed(2) + '%' : '');
+  document.getElementById('badgeRate').textContent   = (rAnnual*100).toFixed(2).replace('.',',') + ' %' + (hasMod ? ' → ' + (modNewRate*100).toFixed(2).replace('.',',') + ' %' : '');
 
   const mArr = [['mg','Зобов\u0027язання (початк.)',f(pvLiability)],['mb','ППКО (початк.)',f(rouAsset)]];
   if (hasMod) {
@@ -2682,7 +2806,7 @@ function calculateLease() {
     ph += `<div class="posting-phase" style="color:var(--accent4)">⚡ Модифікація оренди — ${fmtD(modDate)} (МСФЗ 16.44-46)</div>`;
     if (modType === 'scope_decrease' && modScopeDecr > 0) {
       const pL = Math.round(modOldLiab*modScopeDecr*100)/100, pR = Math.round(modOldROU*modScopeDecr*100)/100;
-      ph += mkP(fmtD(modDate),liabAcc,'Зобов. (зменш. обсягу)',rouAcc,rouShort+' (зменш. обсягу)',f(pR),'Часткове припинення (' + (modScopeDecr*100).toFixed(0) + '%) — МСФЗ 16.46(a)');
+      ph += mkP(fmtD(modDate),liabAcc,'Зобов. (зменш. обсягу)',rouAcc,rouShort+' (зменш. обсягу)',f(pR),'Часткове припинення (' + (modScopeDecr*100).toFixed(0).replace('.',',') + ' %) — МСФЗ 16.46(a)');
       ph += mkP(fmtD(modDate),liabAcc,'Зобов.',(modGainLoss >= 0 ? '746' : '977'),(modGainLoss >= 0 ? 'Інші доходи' : 'Інші витрати'),f(Math.abs(modGainLoss)),
         (modGainLoss >= 0 ? 'Прибуток' : 'Збиток') + ' від зменшення обсягу');
     }
@@ -2691,7 +2815,7 @@ function calculateLease() {
     } else if (modAdj < 0) {
       ph += mkP(fmtD(modDate),liabAcc,'Зобов. (зменш.)',rouAcc,rouShort+' (зменш.)',f(Math.abs(modAdj)),'Зменшення: нове PV ' + f(modNewLiab) + ' (МСФЗ 16.45)');
     }
-    ph += `<div class="lease-reclassify-note" style="margin:8px 0">📋 <strong>Після модифікації:</strong> Зобов.: ${f(modNewLiab)} · ППКО: ${f(modNewROU)} · Ставка: ${(modNewRate*100).toFixed(2)}% · Аморт.: ${f(modMonthlyDep)}/міс.</div>`;
+    ph += `<div class="lease-reclassify-note" style="margin:8px 0">📋 <strong>Після модифікації:</strong> Зобов.: ${f(modNewLiab)} · ППКО: ${f(modNewROU)} · Ставка: ${(modNewRate*100).toFixed(2).replace('.',',')} % · Аморт.: ${f(modMonthlyDep)}/міс.</div>`;
     ph += `</div>`;
 
     // Post-mod periods
@@ -2700,7 +2824,7 @@ function calculateLease() {
       const r = p2Rows[i], pr = Math.round((r.payment - r.interest)*100)/100;
       const dep = (i === p2Rows.length-1) ? Math.round(rouBP*100)/100 : modPeriodDep;
       ph += `<div class="posting-group"><div class="posting-phase">${r.event} — ${fmtD(r.date)}</div>`;
-      ph += mkP(fmtD(r.date),'9521','Фін. витрати за орендою',liabAcc,liabShort,f(r.interest),'#15 Нарахування відсотків (нова ставка '+(modNewRate*100).toFixed(2)+'%)');
+      ph += mkP(fmtD(r.date),'9521','Фін. витрати за орендою',liabAcc,liabShort,f(r.interest),'#15 Нарахування відсотків (нова ставка '+(modNewRate*100).toFixed(2).replace('.',',')+' %)');
       ph += mkP(fmtD(r.date),liabAcc,liabShort,'311','Поточні рахунки',f(pr),'#18 Погашення основної суми');
       ph += mkP(fmtD(r.date),'9521','Фін. витрати за орендою','311','Поточні рахунки',f(r.interest),'#21 Сплата відсотків');
       ph += mkP(fmtD(r.date),depExpAcc,depShort,depAcc,depAccShort,f(dep),'#10-14 Амортизація ППКО'+(i===p2Rows.length-1?' (залишок)':''));
@@ -2726,7 +2850,7 @@ function calculateLease() {
 
   // ── 10. Попередження про виключення ────────────────────────────────────
   if (effTotalMonths <= 12) {
-    ph += `<div class="lease-reclassify-note" style="background:rgba(255,107,107,0.06);border-color:rgba(255,107,107,0.15)">
+    ph += `<div class="lease-reclassify-note" style="background:rgba(220,38,38,0.06);border-color:rgba(220,38,38,0.15)">
       ⚠ <strong>Увага (МСФЗ 16.5):</strong> Строк оренди ≤12 місяців — можливе застосування виключення
       для короткострокових оренд. У цьому випадку визнання ППКО та зобов'язання <strong>не потрібне</strong>,
       платежі визнаються витратами рівномірно: <strong>Дт 92 — Кт 631</strong> (#34).
@@ -2783,8 +2907,8 @@ function calculateLease() {
   document.getElementById('explainGrid').innerHTML = `
     <div class="explain-block"><div class="eb-title">Зобов'язання з оренди</div><div class="eb-text">PV орендних платежів за граничною ставкою запозичення. МСФЗ 16.26.</div><div class="eb-formula">PV = PMT × [(1−(1+r)<sup>−n</sup>) / r]</div></div>
     <div class="explain-block"><div class="eb-title">ППКО (ROU asset)</div><div class="eb-text">Право користування орендованим активом. Первісна вартість = Зобов. з оренди + передоплати + прямі витрати − стимули + резерв демонтажу (МСФЗ 16.24).</div><div class="eb-formula">${f(pvLiability)} + ${f(prepay)} + ${f(initCosts)} − ${f(incentives)} + ${f(dismantling)} = ${f(rouAsset)}</div></div>
-    <div class="explain-block"><div class="eb-title">Ефективна ставка</div><div class="eb-text">Відсотки = Баланс × ставка за період. Різниця з платежем = основна сума.</div><div class="eb-formula">r = ${(rPeriod*100).toFixed(4)}% / ${freqLabel}</div></div>
-    ${hasMod ? `<div class="explain-block"><div class="eb-title">⚡ Модифікація (МСФЗ 16.44-46)</div><div class="eb-text">Залишок зобов. перераховується як PV нових платежів за <strong>новою</strong> ставкою (${(modNewRate*100).toFixed(2)}%). Різниця коригує ППКО.${modType==='scope_decrease' ? ' При зменшенні обсягу — пропорційне списання, різниця → P&L (МСФЗ 16.46a).' : ''}</div><div class="eb-formula">Нове PV: ${f(modNewLiab)} · Δ = ${f(modAdj)}</div></div>` : ''}
+    <div class="explain-block"><div class="eb-title">Ефективна ставка</div><div class="eb-text">Відсотки = Баланс × ставка за період. Різниця з платежем = основна сума.</div><div class="eb-formula">r = ${(rPeriod*100).toFixed(4).replace('.',',')} % / ${freqLabel}</div></div>
+    ${hasMod ? `<div class="explain-block"><div class="eb-title">⚡ Модифікація (МСФЗ 16.44-46)</div><div class="eb-text">Залишок зобов. перераховується як PV нових платежів за <strong>новою</strong> ставкою (${(modNewRate*100).toFixed(2).replace('.',',')} %). Різниця коригує ППКО.${modType==='scope_decrease' ? ' При зменшенні обсягу — пропорційне списання, різниця → P&L (МСФЗ 16.46a).' : ''}</div><div class="eb-formula">Нове PV: ${f(modNewLiab)} · Δ = ${f(modAdj)}</div></div>` : ''}
     <div class="explain-block"><div class="eb-title">Амортизація ППКО</div><div class="eb-text">Straight-line за строком оренди${hasMod ? '. Після модифікації — перерахунок за новим залишковим строком' : ''}.</div><div class="eb-formula">${f(rouAsset)} ÷ ${totalMonths} міс. = ${f(monthlyDep)}/міс${hasMod ? '<br>Після мод.: '+f(modNewROU)+' ÷ '+((modEndDate.getFullYear()-modDate.getFullYear())*12+(modEndDate.getMonth()-modDate.getMonth()))+' міс. = '+f(modMonthlyDep)+'/міс' : ''}</div></div>`;
   document.getElementById('explainGridIfrs').innerHTML = `
     <div class="explain-block"><div class="eb-title">Виключення (МСФЗ 16.5-8)</div><div class="eb-text">Короткострокові (≤12 міс.) та малоцінні оренди — витрати рівномірно.</div></div>
@@ -3062,15 +3186,15 @@ function calculateCredit579() {
 
   // ── Update summary panel ──
   const rateDiffPct = ((bankRate - subRate) * 100).toFixed(2);
-  document.getElementById('c579RateDiff').textContent = rateDiffPct + '% (базова ' + (bankRate * 100).toFixed(1) + '% − пільгова ' + (subRate * 100).toFixed(0) + '%)';
+  document.getElementById('c579RateDiff').textContent = rateDiffPct + '% (базова ' + (bankRate * 100).toFixed(1).replace('.',',') + ' % − пільгова ' + (subRate * 100).toFixed(0).replace('.',',') + ' %)';
   document.getElementById('c579FairValue').textContent = fmt(fairValue) + ' грн';
   document.getElementById('c579Grant').textContent = fmt(grant) + ' грн';
-  document.getElementById('c579EirDaily').textContent = (rDmkt * 100).toFixed(6) + '%';
+  document.getElementById('c579EirDaily').textContent = (rDmkt * 100).toFixed(6).replace('.',',') + ' %';
 
   // ── Badges ──
-  document.getElementById('badgeType').textContent = 'Кредит 5-7-9% (пільгова ' + (subRate * 100).toFixed(0) + '%)';
+  document.getElementById('badgeType').textContent = 'Кредит 5-7-9% (пільгова ' + (subRate * 100).toFixed(0).replace('.',',') + ' %)';
   document.getElementById('badgePeriod').textContent = days < 365 ? days + ' дн.' : Math.floor(days / 365) + ' р. (' + days + ' дн.)';
-  document.getElementById('badgeRate').textContent = 'Ринкова ' + (mktRate * 100).toFixed(2) + '% · Базова ' + (bankRate * 100).toFixed(1) + '% · Пільгова ' + (subRate * 100).toFixed(0) + '%';
+  document.getElementById('badgeRate').textContent = 'Ринкова ' + (mktRate * 100).toFixed(2).replace('.',',') + ' % · Базова ' + (bankRate * 100).toFixed(1).replace('.',',') + ' % · Пільгова ' + (subRate * 100).toFixed(0).replace('.',',') + ' %';
 
   // ── Metrics ──
   const totalIntSub = qRowsNpsbo.reduce((s, r) => s + r.intSub, 0);
@@ -3080,33 +3204,33 @@ function calculateCredit579() {
     <div class="metric mg"><div class="metric-label">Сума кредиту</div><div class="metric-value">${fmt(nominal)}</div></div>
     <div class="metric mr"><div class="metric-label">Державний грант (МСФЗ)</div><div class="metric-value">${fmt(grant)}</div></div>
     <div class="metric mb"><div class="metric-label">Справедлива вартість (МСФЗ)</div><div class="metric-value">${fmt(fairValue)}</div></div>
-    <div class="metric mo"><div class="metric-label">Відсотки за пільговою (${(subRate*100).toFixed(0)}%)</div><div class="metric-value">${fmt(Math.round(totalIntSub*100)/100)}</div></div>
-    <div class="metric mo"><div class="metric-label">Відсотки за базовою (${(bankRate*100).toFixed(1)}%)</div><div class="metric-value">${fmt(Math.round(totalIntBank*100)/100)}</div></div>
+    <div class="metric mo"><div class="metric-label">Відсотки за пільговою (${(subRate*100).toFixed(0).replace('.',',')} %)</div><div class="metric-value">${fmt(Math.round(totalIntSub*100)/100)}</div></div>
+    <div class="metric mo"><div class="metric-label">Відсотки за базовою (${(bankRate*100).toFixed(1).replace('.',',')} %)</div><div class="metric-value">${fmt(Math.round(totalIntBank*100)/100)}</div></div>
     <div class="metric mg"><div class="metric-label">Субсидія Фонду</div><div class="metric-value">${fmt(Math.round(totalComp*100)/100)}</div></div>
-    <div class="metric mo"><div class="metric-label">Щоденна ставка за МСФЗ</div><div class="metric-value">${(rDmkt*100).toFixed(6)}%</div></div>`;
+    <div class="metric mo"><div class="metric-label">Щоденна ставка за МСФЗ</div><div class="metric-value">${(rDmkt*100).toFixed(6).replace('.',',')} %</div></div>`;
 
   // ── НП(С)БО amortization table ──
   const amortHead = document.getElementById('amortHead');
   if (amortHead) amortHead.innerHTML = '<tr><th>Дата</th><th>Період</th><th>Залишок тіла</th><th>% за базовою</th><th>% пільгові</th><th>Субсидія Фонду</th><th>Погашення тіла</th><th>Залишок кін.</th></tr>';
 
   let tbody = '';
-  tbody += '<tr style="background:rgba(77,184,255,0.04);border-bottom:1px solid rgba(77,184,255,0.15)">'
+  tbody += '<tr style="background:rgba(37,99,235,0.04);border-bottom:1px solid rgba(37,99,235,0.15)">'
     + '<td style="color:var(--accent2)">' + fmtD(sDate) + '</td>'
     + '<td style="color:var(--accent2)">📌 Отримання кредиту</td>'
     + '<td style="color:var(--muted)">—</td><td style="color:var(--muted)">—</td>'
     + '<td style="color:var(--muted)">—</td><td style="color:var(--muted)">—</td>'
-    + '<td style="font-weight:700;font-family:var(--mono);color:var(--accent)">+' + fmt(nominal) + '</td>'
+    + '<td style="font-weight:700;font-family:var(--mono);color:var(--accent-t)">+' + fmt(nominal) + '</td>'
     + '<td style="color:var(--accent2)">' + fmt(nominal) + '</td></tr>';
 
   qRowsNpsbo.forEach(row => {
-    const hl = row.isLast ? ' style="background:rgba(79,255,176,0.03);border-top:1px solid rgba(79,255,176,0.1)"' : '';
+    const hl = row.isLast ? ' style="background:rgba(0,133,75,0.03);border-top:1px solid rgba(0,133,75,0.1)"' : '';
     tbody += '<tr' + hl + '>'
       + '<td style="color:var(--accent2)">' + row.date + '</td>'
       + '<td style="color:' + (row.isLast ? 'var(--accent)' : 'var(--muted)') + '">' + row.qLabel + (row.isLast ? ' ★' : '') + '</td>'
       + '<td>' + fmt(row.openBal) + '</td>'
       + '<td class="tg">+' + fmt(row.intBank) + '</td>'
-      + '<td style="color:#ff6b6b">−' + fmt(row.intSub) + '</td>'
-      + '<td style="color:var(--accent)">+' + fmt(row.compensation) + '</td>'
+      + '<td style="color:#B91C1C">('+fmt(row.intSub)+')</td>'
+      + '<td style="color:var(--accent-t)">+' + fmt(row.compensation) + '</td>'
       + '<td class="tb">' + (row.principal > 0 ? fmt(row.principal) : '—') + '</td>'
       + '<td>' + fmt(row.closeBalance) + '</td></tr>';
   });
@@ -3120,23 +3244,23 @@ function calculateCredit579() {
   if (amortHeadI) amortHeadI.innerHTML = '<tr><th>Дата</th><th>Період</th><th>Зобов’язання поч.</th><th>Фінансові витрати (ЕСВ)</th><th>Фактична виплата</th><th>Амортизація гранту</th><th>Зобов’язання кін.</th></tr>';
 
   let tbodyI = '';
-  tbodyI += '<tr style="background:rgba(77,184,255,0.04);border-bottom:1px solid rgba(77,184,255,0.15)">'
+  tbodyI += '<tr style="background:rgba(37,99,235,0.04);border-bottom:1px solid rgba(37,99,235,0.15)">'
     + '<td style="color:var(--accent2)">' + fmtD(sDate) + '</td>'
     + '<td style="color:var(--accent2)">📌 Первісне визнання · МСФЗ</td>'
     + '<td style="color:var(--muted)">—</td><td style="color:var(--muted)">—</td>'
-    + '<td style="font-weight:700;font-family:var(--mono);color:var(--accent)">+' + fmt(nominal) + '</td>'
+    + '<td style="font-weight:700;font-family:var(--mono);color:var(--accent-t)">+' + fmt(nominal) + '</td>'
     + '<td style="color:var(--muted)">—</td>'
     + '<td style="color:var(--accent2)">' + fmt(fairValue) + '</td></tr>';
 
   qRowsIfrs.forEach(row => {
-    const hl = row.isLast ? ' style="background:rgba(79,255,176,0.03);border-top:1px solid rgba(79,255,176,0.1)"' : '';
+    const hl = row.isLast ? ' style="background:rgba(0,133,75,0.03);border-top:1px solid rgba(0,133,75,0.1)"' : '';
     tbodyI += '<tr' + hl + '>'
       + '<td style="color:var(--accent2)">' + row.date + '</td>'
       + '<td style="color:' + (row.isLast ? 'var(--accent)' : 'var(--muted)') + '">' + row.qLabel + (row.isLast ? ' ★' : '') + '</td>'
       + '<td>' + fmt(row.openBal) + '</td>'
       + '<td class="tg">+' + fmt(row.interest) + '</td>'
       + '<td class="tb">' + fmt(row.cf) + '</td>'
-      + '<td style="color:var(--accent)">' + (row.grantAmort > 0 ? '+' + fmt(row.grantAmort) : '—') + '</td>'
+      + '<td style="color:var(--accent-t)">' + (row.grantAmort > 0 ? '+' + fmt(row.grantAmort) : '—') + '</td>'
       + '<td>' + fmt(row.closeBalance) + '</td></tr>';
   });
   document.getElementById('amortBodyIfrs').innerHTML = tbodyI;
@@ -3205,9 +3329,9 @@ function buildPostings579Ifrs(acc, nominal, fairValue, grant, qRows, sDate, eDat
   ].filter(Boolean));
 
   html += byYear(qRows, (yr, yR) => GRP(
-    '📆 ' + yr + ' · МСФЗ 9 — фінансові витрати за ЕСВ (' + (mktRate * 100).toFixed(2) + '%) та амортизація гранту',
+    '📆 ' + yr + ' · МСФЗ 9 — фінансові витрати за ЕСВ (' + (mktRate * 100).toFixed(2).replace('.',',') + ' %) та амортизація гранту',
     yR.flatMap(q => [
-      PR(q.date, '952', acc, q.interest, q.qLabel + ' — фінансові витрати за ЕСВ (ринкова ' + (mktRate * 100).toFixed(2) + '%)'),
+      PR(q.date, '952', acc, q.interest, q.qLabel + ' — фінансові витрати за ЕСВ (ринкова ' + (mktRate * 100).toFixed(2).replace('.',',') + ' %)'),
       PR(q.date, acc, '684', q.intSub, q.qLabel + ' — нараховано відсотки за пільговою ставкою'),
       PR(q.date, '684', '311', q.intSub, q.qLabel + ' — сплачено пільгову частину відсотків'),
       q.grantAmort > 0.005
@@ -3244,8 +3368,8 @@ function buildExplain579Npsbo(bankRatePct, subRatePct) {
       <div class="explain-card-title">📘 Метод обліку</div>
       <div class="explain-card-text">
         Кредит «Доступні кредити 5-7-9%» за НП(С)БО обліковується <strong>без дисконтування</strong>.<br>
-        Банк нараховує відсотки за базовою ставкою (${bankRatePct.toFixed(1)}%), а позичальник сплачує лише пільгову частину (${subRatePct.toFixed(0)}%).<br>
-        Різницю (${(bankRatePct - subRatePct).toFixed(1)}%) компенсує Фонд розвитку підприємництва — це <strong>цільове фінансування</strong>.
+        Банк нараховує відсотки за базовою ставкою (${bankRatePct.toFixed(1).replace('.',',')} %), а позичальник сплачує лише пільгову частину (${subRatePct.toFixed(0).replace('.',',')} %).<br>
+        Різницю (${(bankRatePct - subRatePct).toFixed(1).replace('.',',')} %) компенсує Фонд розвитку підприємництва — це <strong>цільове фінансування</strong>.
       </div>
     </div>
     <div class="explain-card">
@@ -3260,9 +3384,9 @@ function buildExplain579Npsbo(bankRatePct, subRatePct) {
     <div class="explain-card">
       <div class="explain-card-title">⚙ Схема руху коштів</div>
       <div class="explain-card-text">
-        1. Банк нараховує відсотки за базовою ставкою (${bankRatePct.toFixed(1)}%).<br>
-        2. Позичальник сплачує лише пільгову частину (${subRatePct.toFixed(0)}%).<br>
-        3. Фонд перераховує різницю (${(bankRatePct - subRatePct).toFixed(1)}%) безпосередньо банку.<br>
+        1. Банк нараховує відсотки за базовою ставкою (${bankRatePct.toFixed(1).replace('.',',')} %).<br>
+        2. Позичальник сплачує лише пільгову частину (${subRatePct.toFixed(0).replace('.',',')} %).<br>
+        3. Фонд перераховує різницю (${(bankRatePct - subRatePct).toFixed(1).replace('.',',')} %) безпосередньо банку.<br>
         4. У бухобліку: повні відсоткові витрати (рах. 951), субсидія Фонду — як дохід (рах. 718).
       </div>
     </div>`;
@@ -3288,8 +3412,8 @@ function buildExplain579Ifrs(mktPct, rDpct, grant, fairValue, nominal) {
     <div class="explain-card">
       <div class="explain-card-title">📐 Формула розрахунку</div>
       <div class="explain-card-text">
-        <strong>Справедлива вартість</strong> = Σ CF<sub>i</sub> / (1 + r<sub>D</sub>)<sup>d<sub>i</sub></sup>, де r<sub>D</sub> = (1+${mktPct.toFixed(2)}%)<sup>1/365</sup> − 1 = ${rDpct.toFixed(6)}%<br>
-        <strong>ЕСВ</strong> = ринкова ставка = ${mktPct.toFixed(2)}% річних<br>
+        <strong>Справедлива вартість</strong> = Σ CF<sub>i</sub> / (1 + r<sub>D</sub>)<sup>d<sub>i</sub></sup>, де r<sub>D</sub> = (1+${mktPct.toFixed(2).replace('.',',')} %)<sup>1/365</sup> − 1 = ${rDpct.toFixed(6).replace('.',',')} %<br>
+        <strong>ЕСВ</strong> = ринкова ставка = ${mktPct.toFixed(2).replace('.',',')} % річних<br>
         <strong>Фінансові витрати</strong> = Баланс зобов'язання × ((1+r<sub>D</sub>)<sup>днів</sup> − 1)<br>
         <strong>Амортизація гранту</strong> = Фінансові витрати за ЕСВ − Фактична сплата за пільговою ставкою
       </div>
@@ -3546,7 +3670,7 @@ function calculate() {
   if(!isOvdp) {
     const _subLabel = (nomRate < 0.001)
       ? ` — безвідсоткова`
-      : (discount > 0.01) ? ` — договірна ${_nomRatePct.toFixed(2)}% (нижче ринку)` : '';
+      : (discount > 0.01) ? ` — договірна ${_nomRatePct.toFixed(2).replace('.',',')} % (нижче ринку)` : '';
     typeLabel = _baseLabel + _subLabel;
   }
   document.getElementById('badgeType').textContent=typeLabel.length>44?typeLabel.slice(0,44)+'…':typeLabel;
@@ -3555,14 +3679,14 @@ function calculate() {
   if(isOvdp && isinV) document.getElementById('badgeType').textContent = isinV;
   document.getElementById('badgeRate').textContent = isOvdp
     ? `PV (справедлива вартість) = ` + fmt(pv) + ` грн`
-    : 'EIR = ' + (r*100).toFixed(2) + `% річних`;
+    : 'EIR = ' + (r*100).toFixed(2).replace('.',',') + ` % річних`;
 
   // Metrics
   document.getElementById('metrics').innerHTML=`
     <div class="metric mg"><div class="metric-label">Теперішня вартість PV</div><div class="metric-value">${fmt(pv)}</div></div>
     <div class="metric ${isPrem?'mo':'mr'}"><div class="metric-label">${isPrem?'Премія':'Дисконт'}</div><div class="metric-value">${fmt(Math.abs(discount))}</div></div>
     <div class="metric mb"><div class="metric-label">Номінал</div><div class="metric-value">${fmt(nominal)}</div></div>
-    <div class="metric mo"><div class="metric-label">Щоденна ставка · НП(С)БО</div><div class="metric-value">${(rD*100).toFixed(6)}%</div></div>
+    <div class="metric mo"><div class="metric-label">Щоденна ставка · НП(С)БО</div><div class="metric-value">${(rD*100).toFixed(6).replace('.',',')} %</div></div>
     ${isOvdp ? '<div class="metric mo" id="metricIfrsRate"><div class="metric-label">Щоденна ставка · МСФЗ 9</div><div class="metric-value" id="metricIfrsRateVal">—</div></div>' : ''}
     ${isFx ? '<div class="metric mo" id="metricFxInfo"><div class="metric-label">Валюта</div><div class="metric-value">' + (document.getElementById('fxCurrency').value||'USD') + ' · курс купівлі ' + (parseFloat(document.getElementById('fxRate').value)||1).toFixed(4) + '</div></div>' : ''}`;
 
@@ -3598,7 +3722,7 @@ function calculate() {
         +'<td class="uah-col" style="color:var(--muted)">—</td>'
         +'<td class="uah-col" style="color:var(--muted)">—</td>'
         +'<td class="uah-col" style="color:var(--muted)">—</td>'
-        +'<td class="uah-col" style="color:#ff6b6b;font-weight:700;font-family:var(--mono)">−'+fmt(uahBal)+'</td>'
+        +'<td class="uah-col" style="color:#B91C1C;font-weight:700;font-family:var(--mono)">('+fmt(uahBal)+')</td>'
         +'<td class="uah-col" style="color:var(--accent2)">'+fmt(uahBal)+'</td>';
     }
     var rNow = getFxRateForDateKey(row._dateKey || '');
@@ -3610,7 +3734,7 @@ function calculate() {
     var uahClose = Math.round(row.closeBalance * rNow * 100) / 100;
     var erCls = exchDiff > 0.005 ? 'er-pos' : exchDiff < -0.005 ? 'er-neg' : '';
     var erVal = Math.abs(exchDiff) > 0.005 ? (exchDiff > 0 ? '+' : '') + fmt(exchDiff) : '—';
-    var cfU = uahCf > 0 ? '<td class="uah-col tb">'+fmt(uahCf)+'</td>' : '<td class="uah-col" style="color:var(--border)">—</td>';
+    var cfU = uahCf > 0 ? '<td class="uah-col tb">'+fmt(uahCf)+'</td>' : '<td class="uah-col" style="color:var(--muted)">—</td>';
     return '<td class="fx-rate-col">'+rNow.toFixed(4)+'</td>'
       +'<td class="uah-col">'+fmt(uahOpen)+'</td>'
       +'<td class="uah-col tg">'+(uahInt>=0?'+':'')+fmt(uahInt)+'</td>'
@@ -3624,10 +3748,10 @@ function calculate() {
     const _initOut  = /^loan_out/.test(type) || isOvdp;
     const _initNone = false;
     const _initAmt  = /^loan_out/.test(type) ? nominal : pv;
-    const _initCf   = _initNone ? '<td style="color:var(--border)">—</td>'
-                    : _initOut  ? '<td style="color:#ff6b6b;font-weight:700;font-family:var(--mono)">−' + fmt(_initAmt) + '</td>'
-                    :             '<td style="font-weight:700;font-family:var(--mono);color:var(--accent)">+' + fmt(_initAmt) + '</td>';
-    tbody += '<tr style="background:rgba(77,184,255,0.04);border-bottom:1px solid rgba(77,184,255,0.15)">'
+    const _initCf   = _initNone ? '<td style="color:var(--muted)">—</td>'
+                    : _initOut  ? '<td style="color:#B91C1C;font-weight:700;font-family:var(--mono)">('+fmt(_initAmt)+')</td>'
+                    :             '<td style="font-weight:700;font-family:var(--mono);color:var(--accent-t)">+' + fmt(_initAmt) + '</td>';
+    tbody += '<tr style="background:rgba(37,99,235,0.04);border-bottom:1px solid rgba(37,99,235,0.15)">'
       +'<td style="color:var(--accent2)">'+fmtD(sDate)+'</td>'
       +'<td style="color:var(--accent2)">📌 Первісне визнання</td>'
       +'<td style="color:var(--muted)">—</td><td style="color:var(--muted)">—</td>'
@@ -3648,8 +3772,8 @@ function calculate() {
 
   // ── Data rows ──
   qRows.forEach(function(row){
-    var hl=row.isLast?' style="background:rgba(79,255,176,0.03);border-top:1px solid rgba(79,255,176,0.1)"':'';
-    var cfC=row.cf>0?'<td class="tb">'+fmt(row.cf)+'</td>':'<td style="color:var(--border)">—</td>';
+    var hl=row.isLast?' style="background:rgba(0,133,75,0.03);border-top:1px solid rgba(0,133,75,0.1)"':'';
+    var cfC=row.cf>0?'<td class="tb">'+fmt(row.cf)+'</td>':'<td style="color:var(--muted)">—</td>';
     tbody+='<tr'+hl+'><td style="color:var(--accent2)">'+row.date+'</td>'
       +'<td style="color:'+(row.isLast?'var(--accent)':'var(--muted)')+'">'+row.qLabel+(row.isLast?' ★':'')+'</td>'
       +'<td>'+fmt(row.openBal)+'</td><td class="tg">'+(row.interest>=0?'+':'')+fmt(row.interest)+'</td>'+cfC+'<td>'+fmt(row.closeBalance)+'</td>'
@@ -3717,7 +3841,7 @@ function calculate() {
           rIfrs  = eirPctIfrs / 100;
           rDifrs = Math.pow(1 + rIfrs, 1/365) - 1;
           const sign = eirPctIfrs < 0 ? '⚠ ' : '';
-          ifrsRateNote = '% (' + sign + 'EIR МСФЗ: ' + eirPctIfrs.toFixed(4) + '% річн.)';
+          ifrsRateNote = '% (' + sign + 'EIR МСФЗ: ' + eirPctIfrs.toFixed(4).replace('.',',') + ' % річн.)';
         } else {
           ifrsRateNote = '% (розрахунок EIR не зійшовся, ≈ НП(С)БО)';
           rIfrs  = r;
@@ -3783,15 +3907,15 @@ function calculate() {
       const _initAmtI = /^loan_out/.test(type) ? nominal : pv;
       const _initOutI = /^loan_out/.test(type) || isOvdp;
       const _initCfI  = _initOutI
-        ? '<td style="color:#ff6b6b;font-weight:700;font-family:var(--mono)">−' + fmt(_initAmtI) + '</td>'
-        : '<td style="font-weight:700;font-family:var(--mono);color:var(--accent)">+' + fmt(_initAmtI) + '</td>';
+        ? '<td style="color:#B91C1C;font-weight:700;font-family:var(--mono)">('+fmt(_initAmtI)+')</td>'
+        : '<td style="font-weight:700;font-family:var(--mono);color:var(--accent-t)">+' + fmt(_initAmtI) + '</td>';
       var _uahInitI = isFx ? '<td class="fx-rate-col">'+_fxR0ifrs.toFixed(4)+'</td>'
         +'<td class="uah-col" style="color:var(--muted)">—</td>'
         +'<td class="uah-col" style="color:var(--muted)">—</td>'
         +'<td class="uah-col" style="color:var(--muted)">—</td>'
-        +'<td class="uah-col" style="color:#ff6b6b;font-weight:700;font-family:var(--mono)">−'+fmt(Math.round(fairPvTotal*_fxR0ifrs*100)/100)+'</td>'
+        +'<td class="uah-col" style="color:#B91C1C;font-weight:700;font-family:var(--mono)">('+fmt(Math.round(fairPvTotal*_fxR0ifrs*100)/100)+')</td>'
         +'<td class="uah-col" style="color:var(--accent2)">'+fmt(Math.round(fairPvTotal*_fxR0ifrs*100)/100)+'</td>' : '';
-      tbodyI += `<tr style="background:rgba(77,184,255,0.04);border-bottom:1px solid rgba(77,184,255,0.15)">
+      tbodyI += `<tr style="background:rgba(37,99,235,0.04);border-bottom:1px solid rgba(37,99,235,0.15)">
         <td style="color:var(--accent2)">${fmtD(sDate)}</td>
         <td style="color:var(--accent2)">📌 Первісне визнання</td>
         <td style="color:var(--muted)">—</td>
@@ -3803,8 +3927,8 @@ function calculate() {
       if (isFx) tbodyI = tbodyI.replace(/<\/tr>\s*$/, '') + _uahInitI + '</tr>';
     }
     qRowsIfrs.forEach(function(row){
-      var hl=row.isLast?' style="background:rgba(79,255,176,0.03);border-top:1px solid rgba(79,255,176,0.1)"':'';
-      var cfC=row.cf>0?'<td class="tb">'+fmt(row.cf)+'</td>':'<td style="color:var(--border)">—</td>';
+      var hl=row.isLast?' style="background:rgba(0,133,75,0.03);border-top:1px solid rgba(0,133,75,0.1)"':'';
+      var cfC=row.cf>0?'<td class="tb">'+fmt(row.cf)+'</td>':'<td style="color:var(--muted)">—</td>';
       var uahI='';
       if(isFx){
         var dk=row.rawDate?dateKey(row.rawDate):'';
@@ -3817,7 +3941,7 @@ function calculate() {
         var uCl=Math.round(row.closeBalance*rN*100)/100;
         var erC=er>0.005?'er-pos':er<-0.005?'er-neg':'';
         var erV=Math.abs(er)>0.005?(er>0?'+':'')+fmt(er):'—';
-        var cfU=uC>0?'<td class="uah-col tb">'+fmt(uC)+'</td>':'<td class="uah-col" style="color:var(--border)">—</td>';
+        var cfU=uC>0?'<td class="uah-col tb">'+fmt(uC)+'</td>':'<td class="uah-col" style="color:var(--muted)">—</td>';
         uahI='<td class="fx-rate-col">'+rN.toFixed(4)+'</td>'
           +'<td class="uah-col">'+fmt(uO)+'</td>'
           +'<td class="uah-col tg">'+(uI>=0?'+':'')+fmt(uI)+'</td>'
@@ -3862,9 +3986,9 @@ function calculate() {
   if (window._amortResidualWarning && window._amortResidualWarning > 0) {
     const warnEl = document.getElementById('metrics');
     if (warnEl) {
-      warnEl.innerHTML += `<div class="metric" style="background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.3)">
-        <div class="metric-label" style="color:#ff6b6b">⚠ Нев'язка амортизації</div>
-        <div class="metric-value" style="color:#ff6b6b">${fmt(window._amortResidualWarning)} грн</div>
+      warnEl.innerHTML += `<div class="metric" style="background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.3)">
+        <div class="metric-label" style="color:#B91C1C">⚠ Нев'язка амортизації</div>
+        <div class="metric-value" style="color:#B91C1C">${fmt(window._amortResidualWarning)} грн</div>
       </div>`;
     }
     window._amortResidualWarning = 0;
@@ -4215,7 +4339,7 @@ function buildExplain(type, rPct, rDpct){
       <div class="eb-title">\ud83d\udcd0 \u0424\u043e\u0440\u043c\u0443\u043b\u0430 \u0442\u0430 \u0435\u043a\u043e\u043d\u043e\u043c\u0456\u0447\u043d\u0438\u0439 \u0437\u043c\u0456\u0441\u0442</div>
       <div class="eb-text">${(E.reason || '\u2014') + relNote}</div>
       <div class="eb-formula">${E.pv || '\u2014'}</div>
-      <div class="eb-formula" style="margin-top:6px">\u0429\u043e\u0434\u0435\u043d\u043d\u0430 \u0441\u0442\u0430\u0432\u043a\u0430 = (1 + r)^(1/365) \u2212 1 = <strong>${rDpct.toFixed(6)}%</strong></div>
+      <div class="eb-formula" style="margin-top:6px">\u0429\u043e\u0434\u0435\u043d\u043d\u0430 \u0441\u0442\u0430\u0432\u043a\u0430 = (1 + r)^(1/365) \u2212 1 = <strong>${rDpct.toFixed(6).replace('.',',')} %</strong></div>
     </div>
     <div class="explain-block">
       <div class="eb-title">\ud83d\udccb \u041d\u043e\u0440\u043c\u0430\u0442\u0438\u0432\u043d\u0430 \u0431\u0430\u0437\u0430</div>
@@ -4233,7 +4357,7 @@ function buildExplain(type, rPct, rDpct){
       <div class="eb-text"><strong>\u041d\u041f(\u0421)\u0411\u041e 13</strong> \u0432\u0438\u043c\u0430\u0433\u0430\u0454 \u0430\u043c\u043e\u0440\u0442\u0438\u0437\u0430\u0446\u0456\u0457 \u0434\u0438\u0441\u043a\u043e\u043d\u0442\u0443/\u043f\u0440\u0435\u043c\u0456\u0457 \u0437\u0430 \u043c\u0435\u0442\u043e\u0434\u043e\u043c \u0435\u0444\u0435\u043a\u0442\u0438\u0432\u043d\u043e\u0457 \u043f\u0440\u043e\u0446\u0435\u043d\u0442\u043d\u043e\u0457 \u0441\u0442\u0430\u0432\u043a\u0438:<br><br>
       <strong>\u0412\u0456\u0434\u0441\u043e\u0442\u043a\u0438_\u043f\u0435\u0440\u0456\u043e\u0434</strong> = \u0411\u0430\u043b\u0430\u043d\u0441 \xd7 \u043f\u0435\u0440\u0456\u043e\u0434\u0438\u0447\u043d\u0430 EIR<br>
       <strong>\u041d\u043e\u0432\u0438\u0439 \u0431\u0430\u043b\u0430\u043d\u0441</strong> = \u041f\u043e\u043f\u0435\u0440\u0435\u0434. \u0431\u0430\u043b\u0430\u043d\u0441 + \u0412\u0456\u0434\u0441\u043e\u0442\u043a\u0438 \u2212 \u0413\u0440\u043e\u0448. \u043f\u043e\u0442\u0456\u043a</div>
-      <div class="eb-formula">EIR \u0440\u0456\u0447\u043d\u0430 = ${rPct.toFixed(2)}%  \u2192  \u0449\u043e\u0434\u0435\u043d\u043d\u0430 = ${rDpct.toFixed(6)}%</div>
+      <div class="eb-formula">EIR \u0440\u0456\u0447\u043d\u0430 = ${rPct.toFixed(2).replace('.',',')} %  \u2192  \u0449\u043e\u0434\u0435\u043d\u043d\u0430 = ${rDpct.toFixed(6).replace('.',',')} %</div>
     </div>`;
   const b = document.getElementById('explainBody');
   const t = document.getElementById('explainToggle');
@@ -4499,8 +4623,8 @@ function buildExplainIfrs(rPct, rDpct, day1Adj, fairPv, costPv, nominal) {
       <div class="eb-title">📐 МСФЗ 9 — Метод амортизованої вартості</div>
       <div class="eb-text">ОВДП класифікуються як фінансові активи, що оцінюються за <strong>амортизованою вартістю</strong> (МСФЗ 9 п.4.1.2), якщо утримуються для отримання contractual cash flows (бізнес-модель HTC).<br><br>
       Первісно визнаються за <strong>справедливою вартістю</strong> (МСФЗ 9 п.5.1.1). Різниця між фактичною ціною придбання та СВ НБУ визнається в П&З одразу — це «день-1 прибуток/збиток».</div>
-      <div class="eb-formula">EIR (від справедливої вартості) = <strong>${rPct.toFixed(4)}%</strong> річних</div>
-      <div class="eb-formula" style="margin-top:6px">Щоденна ставка = (1 + r)^(1/365) − 1 = <strong>${rDpct.toFixed(6)}%</strong></div>
+      <div class="eb-formula">EIR (від справедливої вартості) = <strong>${rPct.toFixed(4).replace('.',',')} %</strong> річних</div>
+      <div class="eb-formula" style="margin-top:6px">Щоденна ставка = (1 + r)^(1/365) − 1 = <strong>${rDpct.toFixed(6).replace('.',',')} %</strong></div>
     </div>
     <div class="explain-block">
       <div class="eb-title">📋 Нормативна база · МСФЗ 9</div>
@@ -4523,7 +4647,7 @@ function buildExplainIfrs(rPct, rDpct, day1Adj, fairPv, costPv, nominal) {
     <div class="explain-block">
       <div class="eb-title">🔢 Різниця НП(С)БО vs МСФЗ</div>
       <div class="eb-text">
-      <table style="width:100%;font-family:var(--mono);font-size:11px;border-collapse:collapse;text-align:center;">
+      <table style="width:100%;font-family:var(--mono);font-size:12px;border-collapse:collapse;text-align:center;">
         <tr style="color:var(--muted)">
           <th style="padding:6px 8px;border-bottom:1px solid var(--border);text-align:center;width:34%">Показник</th>
           <th style="padding:6px 8px;border-bottom:1px solid var(--border);text-align:center;width:33%">НП(С)БО</th>
@@ -4532,22 +4656,22 @@ function buildExplainIfrs(rPct, rDpct, day1Adj, fairPv, costPv, nominal) {
         <tr>
           <td style="padding:5px 8px;color:var(--muted)">База для EIR</td>
           <td style="padding:5px 8px">${fmt(costPv)}</td>
-          <td style="padding:5px 8px;color:var(--accent)">${fmt(fairPv)}</td>
+          <td style="padding:5px 8px;color:var(--accent-t)">${fmt(fairPv)}</td>
         </tr>
         <tr>
           <td style="padding:5px 8px;color:var(--muted)">День-1 різниця</td>
-          <td style="padding:5px 8px;font-size:10px">поглинається<br>в дисконт / премію</td>
+          <td style="padding:5px 8px;font-size:12px">поглинається<br>в дисконт / премію</td>
           <td style="padding:5px 8px;color:${Math.abs(day1Adj)>0.005?'var(--accent4)':'var(--muted)'}"><strong>П&З: ${parseFloat(day1Abs).toLocaleString('uk-UA',{minimumFractionDigits:2})} грн</strong></td>
         </tr>
         <tr>
           <td style="padding:5px 8px;color:var(--muted)">Рахунок доходу EIR</td>
           <td style="padding:5px 8px">733</td>
-          <td style="padding:5px 8px;color:var(--accent)">732</td>
+          <td style="padding:5px 8px;color:var(--accent-t)">732</td>
         </tr>
         <tr>
           <td style="padding:5px 8px;color:var(--muted);border-top:1px solid var(--border)">Стандарт</td>
           <td style="padding:5px 8px;border-top:1px solid var(--border)">НП(С)БО 12, 13</td>
-          <td style="padding:5px 8px;border-top:1px solid var(--border);color:var(--accent)">МСФЗ 9</td>
+          <td style="padding:5px 8px;border-top:1px solid var(--border);color:var(--accent-t)">МСФЗ 9</td>
         </tr>
       </table></div>
     </div>`;
