@@ -752,6 +752,13 @@ tbody tr:hover{background:var(--accent-s);}
 .guide-content h2[id]{scroll-margin-top:70px;}
 .guide-content table,.guide-content td{font-family:var(--sans);font-size:13px;line-height:1.5;}
 @media(max-width:540px){.guide-toc{grid-template-columns:1fr;}}
+
+/* ── ОВДП: валюта поруч із перемикачем ── */
+.ovdp-nbu-header{flex-wrap:wrap;gap:8px;}
+.ovdp-hdr-ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.ovdp-ccy-select{width:auto;min-width:92px;margin:0;padding:5px 10px;font-size:12px;font-weight:700;
+  border-radius:6px;border:1px solid rgba(37,99,235,.35);color:var(--accent2);cursor:pointer;padding-right:28px;
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%231D4ED8' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 10px center;}
 </style>
 </head>
 <body>
@@ -967,7 +974,7 @@ export default {
 
 <h3>5.2 ОВДП</h3>
 <span class="guide-cat a">Фінансові активи</span>
-<p>Облігації внутрішньої державної позики — гривневі або валютні. Режим обирається перемикачем у панелі ОВДП: <strong>«₴ Гривнева»</strong> ↔ <strong>«Валютна»</strong>. У валютному режимі з’являється вибір валюти (USD або EUR) і курсу НБУ; підпис перемикача показує валюту.</p>
+<p>Облігації внутрішньої державної позики — гривневі або валютні. Режим обирається перемикачем у заголовку панелі ОВДП: <strong>«₴ Гривнева»</strong> ↔ <strong>«💱 Валютна»</strong>. У валютному режимі поруч із перемикачем з’являється вибір валюти (USD або EUR), а нижче — курс НБУ на дату купівлі.</p>
 <table><thead><tr><th>Поле</th><th>Що вводити</th></tr></thead><tbody>
 <tr><td>ISIN-код облігації</td><td>Код + кнопка «Завантажити» (дані з Мінфіну через проксі-сервер)</td></tr>
 <tr><td>Номінал 1 облігації, кількість</td><td>Номінал — у валюті облігації (зазвичай 1 000)</td></tr>
@@ -1200,7 +1207,7 @@ export default {
 </ol>
 <h4>ОВДП у доларах</h4>
 <ol class="guide-steps">
-<li>Тип → «ОВДП»; введіть ISIN і натисніть «Завантажити» — режим «Валютна · USD» увімкнеться автоматично.</li>
+<li>Тип → «ОВДП»; введіть ISIN і натисніть «Завантажити» — режим «Валютна» і валюта USD увімкнуться автоматично.</li>
 <li>Вкажіть дату купівлі, кількість, фактичну ціну і справедливу вартість НБУ; «Розрахувати».</li>
 <li>У блоці «Курси НБУ по датах» натисніть «Оновити курси НБУ», потім «Перерахувати».</li>
 </ol>
@@ -1365,10 +1372,14 @@ export default {
     <div id="ovdpPanel" style="display:none">
       <div class="ovdp-nbu-header">
         <span>&#128203; Дані ОВДП з реєстру НБУ</span>
-        <div style="display:flex;gap:8px;align-items:center;">
+        <div class="ovdp-hdr-ctrl">
           <button class="btn-ccy-toggle" id="btnCcyToggle" onclick="toggleOvdpCcy()" title="Перемкнути гривня / валюта">
             ₴ Гривнева
           </button>
+          <select id="fxCurrency" class="ovdp-ccy-select" onchange="fxCurrencyChange()" title="Валюта ОВДП" aria-label="Валюта ОВДП" style="display:none">
+            <option value="USD">$ USD</option>
+            <option value="EUR">&#8364; EUR</option>
+          </select>
           <a href="https://bank.gov.ua/ua/markets/ovdp/fair-value" target="_blank" class="ovdp-nbu-link" title="Справедлива вартість ОВДП на сайті НБУ">&#8599; Справедлива вартість НБУ</a>
         </div>
       </div>
@@ -1449,11 +1460,6 @@ export default {
       <!-- Валютні поля -->
       <div id="fxRateRow" style="display:none">
         <div class="ovdp-divider">Валютні параметри</div>
-        <label>Валюта ОВДП</label>
-        <select id="fxCurrency" onchange="fxCurrencyChange()">
-          <option value="USD">$ USD — долар США</option>
-          <option value="EUR">&#8364; EUR — євро</option>
-        </select>
         <label id="fxRateLabel">Курс НБУ на дату купівлі (грн/USD)</label>
         <input type="number" id="fxRate" value="41.50" min="0.01" step="0.01" oninput="ovdpSync()">
         <input type="hidden" id="fxRateCurrent" value="41.50">
@@ -2508,7 +2514,9 @@ function syncCcyToggleBtn() {
   if (!btn) return;
   const isFx = curType() === 'ovdp_fx';
   const ccy = (document.getElementById('fxCurrency') || {}).value || 'USD';
-  btn.textContent = isFx ? (ccy === 'EUR' ? '€' : '$') + ' Валютна · ' + ccy : '₴ Гривнева';
+  btn.textContent = isFx ? '💱 Валютна' : '₴ Гривнева';
+  const sel = document.getElementById('fxCurrency');
+  if (sel) sel.style.display = isFx ? '' : 'none';
   btn.title = isFx ? 'Перемкнути на гривневу ОВДП' : 'Перемкнути на валютну ОВДП (USD або EUR)';
   btn.classList.toggle('is-fx', isFx);
 }
