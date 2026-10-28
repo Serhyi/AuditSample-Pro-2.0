@@ -869,7 +869,7 @@ export default {
 <h4>Ліва картка — «Параметри інструменту»</h4>
 <table><thead><tr><th>Панель</th><th>Типи інструментів</th></tr></thead><tbody>
 <tr><td>Стандартні поля</td><td>Видана позика · Отримана позика · Довгострокове зобов’язання · Облігації розміщені</td></tr>
-<tr><td>Панель ОВДП</td><td>ОВДП (гривнева) · ОВДП (валютна)</td></tr>
+<tr><td>Панель ОВДП</td><td>ОВДП — гривнева або валютна (USD, EUR), режим обирається перемикачем у панелі</td></tr>
 <tr><td>Панель оренди</td><td>Оренда (МСФЗ 16)</td></tr>
 <tr><td>Панель кредиту 5-7-9%</td><td>Кредит «Доступні кредити 5-7-9%»</td></tr>
 <tr><td>Панелі версії 3.0</td><td>Векселі · розстрочка · облігації придбані · фінансова оренда в орендодавця · конвертовані облігації · резерв дебіторки · гарантії · забезпечення · форвард · своп · акції та частки</td></tr>
@@ -953,7 +953,7 @@ export default {
 </tbody></table>
 
 <!-- 3.5 -->
-<h3>3.5 ОВДП (гривнева)</h3>
+<h3>3.5 ОВДП</h3>
 <span class="guide-cat a">Фінансові активи</span>
 <p>Облігації внутрішньої державної позики в гривні: окрема панель, завантаження даних з Мінфіну, паралельний розрахунок НП(С)БО і МСФЗ 9.</p>
 
@@ -991,11 +991,12 @@ export default {
 <div class="guide-info"><strong>Безкупонні ОВДП:</strong> якщо ціна дорівнює номіналу, програма розраховує ціну розміщення P = N / (1 + y × d / 365). Єдиний грошовий потік — номінал на дату погашення.</div>
 
 <!-- 3.6 -->
-<h3>3.6 ОВДП (валютна)</h3>
+<h3>3.6 ОВДП у валюті (USD або EUR)</h3>
 <span class="guide-cat a">Фінансові активи</span>
 <p>ОВДП у доларах США або євро. Усе як для гривневої, плюс:</p>
 <table><thead><tr><th>Поле</th><th>Призначення</th></tr></thead><tbody>
-<tr><td>Валюта ОВДП</td><td>Долар США або євро</td></tr>
+<tr><td>Режим</td><td>Перемикач у панелі ОВДП: «₴ Гривнева» ↔ «Валютна». Після завантаження за ISIN режим і валюта встановлюються автоматично</td></tr>
+<tr><td>Валюта ОВДП</td><td>USD — долар США або EUR — євро; підпис перемикача показує вибрану валюту</td></tr>
 <tr><td>Курс НБУ на дату купівлі</td><td>Офіційний курс, грн за одиницю валюти</td></tr>
 <tr><td>Номінал, ціна, купон</td><td>Вводяться у валюті облігації</td></tr>
 <tr><td>Комісія</td><td>Вводиться в гривнях; для балансової вартості перераховується у валюту за курсом дати купівлі</td></tr>
@@ -1182,7 +1183,7 @@ export default {
 
 <h4>Купонна ОВДП</h4>
 <ol class="guide-steps">
-<li>Тип → <strong>«ОВДП (гривнева)»</strong></li>
+<li>Тип → <strong>«ОВДП»</strong>; для валютної облігації — перемикач «Валютна» і валюта USD або EUR</li>
 <li>Код ISIN → введіть, натисніть <strong>«Завантажити»</strong></li>
 <li>Перевірте поля, введіть справедливу вартість НБУ</li>
 <li>Натисніть <strong>«Розрахувати»</strong>, перемикайте вкладки НП(С)БО / МСФЗ</li>
@@ -1263,8 +1264,7 @@ export default {
     <select id="instrType" onchange="onTypeChange()">
       <optgroup label="── ФІНАНСОВІ АКТИВИ ──────────────────">
         <option value="loan_out">Видана позика</option>
-        <option value="ovdp">ОВДП (гривнева)</option>
-        <option value="ovdp_fx">ОВДП (валютна)</option>
+        <option value="ovdp">ОВДП (облігації внутрішньої державної позики)</option>
         <option value="corp_bond">Облігації придбані (корпоративні, муніципальні)</option>
         <option value="bill_rec">Вексель одержаний</option>
         <option value="def_sale">Продаж з відстроченням платежу</option>
@@ -1366,7 +1366,7 @@ export default {
           <input type="number" id="ovdpCouponPB" value="110" min="0" step="0.01" oninput="ovdpSync()">
         </div>
         <div>
-          <label>Номін. дохідність НБУ (%)</label>
+          <label>Номінальна дохідність НБУ, %</label>
           <input type="number" id="ovdpNomYield" value="11" min="0" max="100" step="0.01" oninput="ovdpSync()">
         </div>
       </div>
@@ -1389,7 +1389,7 @@ export default {
         <div class="ovdp-sum-row"><span>Загальний номінал:</span><span id="ovdpTotalNom">—</span></div>
         <div class="ovdp-sum-row"><span>Загальна сума купівлі:</span><span id="ovdpTotalBuy">—</span></div>
         <div class="ovdp-sum-row"><span>Комісія:</span><span id="ovdpCommissionDisplay">—</span></div>
-        <div class="ovdp-sum-row"><span>PV з комісією (НП(С)БО / МСФЗ):</span><span id="ovdpPvWithComm">—</span></div>
+        <div class="ovdp-sum-row"><span>Первісна вартість з комісією:</span><span id="ovdpPvWithComm">—</span></div>
         <div class="ovdp-sum-row"><span>Дисконт / Премія:</span><span id="ovdpDiscPrem">—</span></div>
         <div class="ovdp-sum-row"><span>Тип (авто):</span><span id="ovdpTypeAuto" style="color:var(--accent4)">—</span></div>
       </div>
@@ -2162,7 +2162,7 @@ function buildOvdpTimeline(start, end, couponDates, couponStepMonths) {
 // ─────────────────────────────────────────────────────────────────────────
 function onTypeChange() {
   window._fxAutoFetchDone = false;
-  const type    = document.getElementById('instrType').value;
+  const type    = curType();
   const isOvdp  = type === 'ovdp' || type === 'ovdp_fx';
   const isFx    = type === 'ovdp_fx';
   const isLease = type === 'lease';
@@ -2175,7 +2175,7 @@ function onTypeChange() {
   const leaseAccBlock = document.getElementById('leaseAccountsBlock');
   if (leaseAccBlock) leaseAccBlock.style.display = isLease ? 'block' : 'none';
   document.getElementById('credit579Panel').style.display = is579 ? 'block' : 'none';
-  document.getElementById('fxRateRow').style.display      = 'none'; // shown after OVDP data loads
+  document.getElementById('fxRateRow').style.display      = isFx ? 'block' : 'none'; // валютний режим ОВДП: вибір валюти й курсу
 
   // Labels for lease
   if (isLease) {
@@ -2264,6 +2264,7 @@ function onTypeChange() {
 
 function fxCurrencyChange(){
   const ccy = document.getElementById('fxCurrency').value;
+  syncCcyToggleBtn();
   const sym = ccy === 'USD' ? '$' : '€';
   document.getElementById('fxRateLabel').textContent = `Курс НБУ на дату купівлі (грн/` + ccy + ')';
   var _fxCurLbl = document.getElementById('fxRateCurLabel');
@@ -2310,7 +2311,7 @@ function ovdpSync(){
   }
 
   // Валютна ОВДП: номінал, ціна і купон — у валюті; комісію вводять у гривнях
-  const isFxS  = document.getElementById('instrType').value === 'ovdp_fx';
+  const isFxS  = curType() === 'ovdp_fx';
   const fxBuyS = isFxS ? (parseFloat(document.getElementById('fxRate').value)||1) : 1;
   const unitS  = isFxS ? (document.getElementById('fxCurrency').value || 'USD') : 'грн';
   const commInstrS = commission / fxBuyS;
@@ -2398,7 +2399,7 @@ function ovdpSync(){
   }
 
   // FX summary
-  const type = document.getElementById('instrType').value;
+  const type = curType();
   if(type === 'ovdp_fx') fxCurrencyChange();
 
   // Refresh coupon schedule panel whenever qty or couponPB changes
@@ -2450,30 +2451,27 @@ function toggleExplain() {
   const o = b.classList.toggle('open');
   t.classList.toggle('open', o);
 }
+// Режим ОВДП: гривнева або валютна (USD / EUR) — один пункт списку, перемикач у панелі
+window._ovdpFx = false;
+function curType() {
+  const v = document.getElementById('instrType').value;
+  return v === 'ovdp' && window._ovdpFx ? 'ovdp_fx' : v;
+}
 function toggleOvdpCcy() {
-  const instr = document.getElementById('instrType');
-  const isFxNow = instr.value === 'ovdp_fx';
-  const btn     = document.getElementById('btnCcyToggle');
-  if (isFxNow) {
-    // Switch to UAH
-    instr.value = 'ovdp';
-    btn.textContent = `₴ Гривнева`;
-    btn.classList.remove('is-fx');
-  } else {
-    // Switch to FX
-    instr.value = 'ovdp_fx';
-    btn.textContent = `$ Валютна`;
-    btn.classList.add('is-fx');
-  }
+  window._ovdpFx = !window._ovdpFx;
+  window._fxSchedule = null;
   onTypeChange();
+  if (window._ovdpFx) fxCurrencyChange();
 }
 
-// Sync toggle button state whenever instrType changes programmatically
+// Підпис перемикача відповідає режиму і вибраній валюті
 function syncCcyToggleBtn() {
   const btn = document.getElementById('btnCcyToggle');
   if (!btn) return;
-  const isFx = document.getElementById('instrType').value === 'ovdp_fx';
-  btn.textContent = isFx ? `$ Валютна` : `₴ Гривнева`;
+  const isFx = curType() === 'ovdp_fx';
+  const ccy = (document.getElementById('fxCurrency') || {}).value || 'USD';
+  btn.textContent = isFx ? (ccy === 'EUR' ? '€' : '$') + ' Валютна · ' + ccy : '₴ Гривнева';
+  btn.title = isFx ? 'Перемкнути на гривневу ОВДП' : 'Перемкнути на валютну ОВДП (USD або EUR)';
   btn.classList.toggle('is-fx', isFx);
 }
 
@@ -3476,7 +3474,7 @@ function buildExplain579Ifrs(mktPct, rDpct, grant, fairValue, nominal, eirPct, c
 // CALCULATE
 // ─────────────────────────────────────────────────────────────────────────
 function calculate() {
-  const type    = document.getElementById('instrType').value;
+  const type    = curType();
   if (V3.TYPES[type]) { V3.calculate(type); return; }
   if (type === 'lease') { calculateLease(); return; }
   if (type === 'credit_579') { calculateCredit579(); return; }
@@ -3708,7 +3706,7 @@ function calculate() {
   document.getElementById('badgeType').textContent=typeLabel.length>48?typeLabel.slice(0,48)+'…':typeLabel;
   document.getElementById('badgePeriod').textContent = days < 365 ? `${days} дн.` : `${Math.floor(days/365)} р. (${days} дн.)`;
   const isinV = isOvdp ? (document.getElementById('ovdpIsin')||{value:''}).value : '';
-  if(isOvdp && isinV) document.getElementById('badgeType').textContent = isinV;
+  if(isOvdp) document.getElementById('badgeType').textContent = (isinV || 'ОВДП') + (isFx ? ' · ' + (document.getElementById('fxCurrency').value || 'USD') : ' · гривня');
   const unitTxt = isFx ? (document.getElementById('fxCurrency').value||'USD') : 'грн';
   document.getElementById('badgeRate').textContent = 'ЕСВ = ' + pctTxt(rEff, 4) + ' річних'
     + (!isOvdp && commInstr > 0 ? ' · ринкова ' + pctTxt(r, 2) : '');
@@ -4358,7 +4356,7 @@ function buildPostingsIfrs(type, acc, nominal, fairPv, costPv, day1Adj, qRows, s
   // ── 1. Первісне визнання (МСФЗ 9 п.5.1.1) ─────────────────────────────
   // Первісно визнається за справедливою вартістю.
   // Якщо ціна купівлі ≠ СВ → різниця визнається в П&З (день-1 коригування).
-  var _isFxIfrsInit = (document.getElementById('instrType').value === 'ovdp_fx');
+  var _isFxIfrsInit = (curType() === 'ovdp_fx');
   var _fxR0init = _isFxIfrsInit ? (parseFloat(document.getElementById('fxRate').value)||1) : 1;
   var _ccyInit = _isFxIfrsInit ? (document.getElementById('fxCurrency').value||'USD') : '';
   var _symInit = _ccyInit === 'EUR' ? '€' : _ccyInit === 'USD' ? '$' : _ccyInit;
@@ -4392,7 +4390,7 @@ function buildPostingsIfrs(type, acc, nominal, fairPv, costPv, day1Adj, qRows, s
   ].filter(Boolean));
 
   // ── 2. Амортизація (ЕСВ від справедливої вартості) та купони ─────────────────────────────
-  var _isFxIfrs2 = (document.getElementById('instrType').value === 'ovdp_fx');
+  var _isFxIfrs2 = (curType() === 'ovdp_fx');
   var _ifrsPrevRate2 = _isFxIfrs2 ? (parseFloat(document.getElementById('fxRate').value)||1) : 1;
   var _ifrsCcy2 = _isFxIfrs2 ? (document.getElementById('fxCurrency').value||'USD') : '';
   var _ifrsSym2 = _ifrsCcy2 === 'EUR' ? '€' : _ifrsCcy2 === 'USD' ? '$' : _ifrsCcy2;
@@ -4491,7 +4489,7 @@ function buildPostingsIfrs(type, acc, nominal, fairPv, costPv, day1Adj, qRows, s
 // ─────────────────────────────────────────────────────────────────────────
 function buildExplainIfrs(rPct, rDpct, day1Adj, fairPv, costPv, nominal) {
   const acc = document.getElementById('account').value;
-  const isFx = document.getElementById('instrType').value === 'ovdp_fx';
+  const isFx = curType() === 'ovdp_fx';
   const unit = isFx ? (document.getElementById('fxCurrency').value || 'USD') : 'грн';
   const day1Abs   = Math.abs(day1Adj);
   const day1Type  = day1Adj > 0.005 ? `збиток (ціна придбання вища за справедливу вартість)` : day1Adj < -0.005 ? `дохід (ціна придбання нижча за справедливу вартість)` : `відсутня (ціна дорівнює справедливій вартості)`;
@@ -5182,13 +5180,13 @@ function applyOvdpData(d) {
   const bondIsUah = !d.currency || d.currency === 'UAH';
   if (bondIsUah) {
     setV('instrType', 'ovdp');
+    window._ovdpFx = false;
     onTypeChange();
   } else {
-    setV('instrType', 'ovdp_fx');
-    setV('fxCurrency', d.currency);
+    setV('instrType', 'ovdp');
+    window._ovdpFx = true;
+    setV('fxCurrency', d.currency === 'EUR' ? 'EUR' : 'USD');
     onTypeChange();
-    // Show FX panel after onTypeChange (which hides it by default)
-    document.getElementById('fxRateRow').style.display = 'block';
     fxCurrencyChange();
   }
 
