@@ -731,6 +731,18 @@ tbody tr:hover{background:var(--accent-s);}
   th{white-space:normal !important;}
   td{white-space:nowrap;}
 }
+
+/* ── Версія 3.0: блоки параметрів ── */
+.v3-ta{width:100%;background:#fff;border:1px solid var(--border-input);border-radius:var(--r-sm);color:var(--text);
+  font-family:var(--mono);font-size:13px;padding:9px 12px;margin-bottom:13px;resize:vertical;}
+.v3-ta:focus{outline:2px solid var(--p600);outline-offset:1px;}
+.v3-block{border:1px solid var(--border-soft);border-radius:var(--r-md);padding:12px 14px;margin:6px 0 14px;background:var(--bg);}
+.v3-block-title,.v3-block summary{font-size:13px;font-weight:700;color:var(--p700);margin-bottom:10px;cursor:pointer;}
+.v3-block-head{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--p700);cursor:pointer;margin:0;}
+.v3-block-head input[type=checkbox]{appearance:auto;-webkit-appearance:checkbox;width:18px;height:18px;min-width:18px;padding:0;margin:0;accent-color:var(--p600);cursor:pointer;}
+.v3-block-body{margin-top:10px;}
+.v3-intro{font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5;}
+.v3-acc{font-family:var(--mono);}
 </style>
 </head>
 <body>
@@ -839,7 +851,7 @@ export default {
   </div>
   <div class="guide-content">
 
-<h2>1. Призначення програми</h2>
+<h2>1. Призначення програми (версія 3.0)</h2>
 <p><strong>FinDiscounting Pro</strong> — інструмент для дисконтування фінансових інструментів та розрахунку оренди.</p>
 <ul>
   <li>Обчислення теперішньої вартості (ТВ) грошових потоків</li>
@@ -860,6 +872,7 @@ export default {
 <tr><td>Панель ОВДП</td><td>ОВДП (гривнева) · ОВДП (валютна)</td></tr>
 <tr><td>Панель оренди</td><td>Оренда (МСФЗ 16)</td></tr>
 <tr><td>Панель кредиту 5-7-9%</td><td>Кредит «Доступні кредити 5-7-9%»</td></tr>
+<tr><td>Панелі версії 3.0</td><td>Векселі · розстрочка · облігації придбані · фінансова оренда в орендодавця · конвертовані облігації · резерв дебіторки · гарантії · забезпечення · форвард · своп · акції та частки</td></tr>
 </tbody></table>
 <h4>Права картка — «Строки та рахунки»</h4>
 <p>Спільна для всіх типів: дати визнання та погашення, рахунки обліку, кнопка <strong>«Розрахувати»</strong>.</p>
@@ -1050,6 +1063,66 @@ export default {
 <div class="guide-info"><strong>МСБО 20 п.10А:</strong> вигода від державного кредиту за ставкою нижче ринкової є державним грантом. Грант = номінал − справедлива вартість; справедлива вартість — теперішня вартість фактичних платежів позичальника за ринковою ставкою. Дохід від гранту визнається у періодах, коли визнаються відсотки, які він компенсує.</div>
 <div class="guide-warn"><strong>Увага:</strong> ринкова ставка для МСФЗ має відповідати ставці аналогічного кредиту без державної підтримки з урахуванням валюти, строку та кредитного ризику позичальника.</div>
 
+
+<hr class="guide-divider">
+
+<h3>3.9 Додаткові параметри позик, векселів і розстрочки (версія 3.0)</h3>
+<p>Для виданих і отриманих позик, довгострокових зобов’язань, векселів, розстрочки, облігацій придбаних і фінансової оренди під основними полями з’являються блоки параметрів. Блоки з прапорцем вмикаються за потреби.</p>
+<table><thead><tr><th>Блок</th><th>Що задає</th></tr></thead><tbody>
+<tr><td>Графік платежів</td><td>Періодичність (місяць, квартал, півроку, рік), повернення основної суми (наприкінці, рівними частинами, ануїтет, власний графік), спосіб нарахування договірних відсотків. Власний графік вставляється з Excel: рядки «дата; сума».</td></tr>
+<tr><td>Валюта інструмента</td><td>USD або EUR, курс на дату визнання і курси на дати графіка (кнопка «Заповнити курсами НБУ»). Курсові різниці — окремо для довгострокової і поточної частини, рахунки 744 / 974.</td></tr>
+<tr><td>Змінна ставка</td><td>Базова ставка за датами (наприклад, облікова ставка НБУ) і маржа. При зміні ставки ЕСВ переглядається (МСФЗ 9 п. B5.4.5).</td></tr>
+<tr><td>Модифікація умов</td><td>Дата, нова ставка, строк, спосіб повернення, комісія і ринкова ставка. Програма виконує тест 10 % (МСФЗ 9 п. B3.3.6) і визначає: суттєва модифікація — нове визнання; несуттєва — перерахунок за первісною ЕСВ з прибутком або збитком.</td></tr>
+<tr><td>Очікувані кредитні збитки</td><td>Стадія 1–3, дата переходу, імовірність дефолту за 12 місяців і за весь строк, LGD. МСФЗ — резерв з дати визнання; НП(С)БО — резерв сумнівних боргів зі стадії 2. Для стадії 3 процентний дохід — на суму за вирахуванням резерву (МСФЗ 9 п.5.4.1(b)).</td></tr>
+<tr><td>Рахунки проведень</td><td>Рахунки доходів, витрат, резерву, курсових різниць тощо можна змінити під робочий план рахунків.</td></tr>
+</tbody></table>
+<div class="guide-info"><strong>Поточна частина:</strong> для довгострокових рахунків (501, 502, 505, 506, 55, 511, 512, 182, 183, 181) сума до погашення протягом 12 місяців переводиться на поточний рахунок (611, 612, 621, 622, 341, 342, 377) на дату визнання і на кожну дату графіка.</div>
+
+<h3>3.10 Вексель одержаний / виданий</h3>
+<span class="guide-cat a">Фінансові активи</span> <span class="guide-cat l">Фінансові зобов’язання</span>
+<p>Номінал, відсоткова ставка векселя (0 — дисконтний) і ринкова ставка. Вексель первісно визнається за теперішньою вартістю, дисконт амортизується за ЕСВ.</p>
+<p><strong>Рахунки:</strong> одержані — 182 (довгострокові), 341 / 342 (короткострокові); видані — 511 / 512, 621 / 622.</p>
+
+<h3>3.11 Продаж і купівля з відстроченням платежу</h3>
+<span class="guide-cat a">Фінансові активи</span> <span class="guide-cat l">Фінансові зобов’язання</span>
+<p>Договірна ціна без ПДВ, оплата на дату договору, ринкова ставка і графік платежів. Виручка (або вартість активу) визнається за ціною негайної оплати; різниця до договірної ціни — процентний дохід (витрати) протягом строку (МСФЗ 15 п.60–65, МСБО 16 п.23).</p>
+
+<h3>3.12 Облігації придбані (корпоративні, муніципальні)</h3>
+<span class="guide-cat a">Фінансові активи</span>
+<p>Номінал, кількість, ціна з накопиченим купонним доходом, комісія, купонна ставка і кількість купонів на рік. Дати купонів рахуються від дати погашення назад або вводяться вручну. Доступні валюта й очікувані кредитні збитки (972 / 742).</p>
+
+<h3>3.13 Фінансова оренда (орендодавець)</h3>
+<span class="guide-cat o">Оренда</span>
+<p>Платіж, періодичність, момент оплати, справедлива і залишкова вартість активу, негарантована ліквідаційна вартість, первісні прямі витрати. Ставка, закладена в оренді, розраховується автоматично. Рахунки: 181, поточна частина — 377, фінансовий дохід — 732 (МСФЗ 16 п.67–80).</p>
+
+<h3>3.14 Конвертовані облігації розміщені</h3>
+<span class="guide-cat l">Фінансові зобов’язання</span>
+<p>Складений інструмент: компонент зобов’язання — теперішня вартість купонів і номіналу за ставкою облігацій без конвертації; залишок надходжень — компонент власного капіталу (рах. 425). Витрати на розміщення розподіляються пропорційно (МСБО 32 п.28–32, 38).</p>
+
+<h3>3.15 Резерв під торговельну дебіторську заборгованість</h3>
+<span class="guide-cat a">Фінансові активи</span>
+<p>Групи заборгованості за строками непогашення («назва; сума; рівень втрат, %»), коригування на прогнозну інформацію і сальдо резерву на початок. НП(С)БО 10 — метод коефіцієнта сумнівності; МСФЗ 9 — спрощений підхід, матриця резервів (п.5.5.15, B5.5.35). Проведення: Дт 944 / Кт 38 або Дт 38 / Кт 719.</p>
+
+<h3>3.16 Фінансова гарантія видана</h3>
+<span class="guide-cat l">Фінансові зобов’язання</span>
+<p>Сума гарантованого боргу, вид винагороди (одноразова, щоквартальна, без винагороди), ринкова ставка винагороди, параметри кредитного ризику боржника. МСФЗ 9 п.4.2.1(c): первісно — за справедливою вартістю, далі — більша з сум: ОКЗ або неамортизована первісна сума. НП(С)БО — умовне зобов’язання (рах. 05), забезпечення 474 лише за ймовірного виконання.</p>
+
+<h3>3.17 Довгострокове забезпечення (МСБО 37)</h3>
+<span class="guide-cat l">Фінансові зобов’язання</span>
+<p>Очікувані виплати за датами, ставка дисконтування, віднесення на витрати або вартість активу, перегляд оцінки. МСФЗ — теперішня вартість і вивільнення дисконту (Дт 952 / Кт 474); НП(С)БО 11 — облікова оцінка без дисконтування.</p>
+
+<h3>3.18 Валютний форвард і процентний своп</h3>
+<span class="guide-cat o">Похідні інструменти</span>
+<p><strong>Форвард:</strong> сума у валюті, курс за договором, позиція, ринкові форвардні курси на звітні дати і курс розрахунку. <strong>Своп:</strong> номінал, фіксована ставка, позиція, плаваючі й ринкові своп-ставки за датами. Справедлива вартість і нетто-розрахунки — у фінансових доходах (733) або витратах (952); актив — 352, зобов’язання — 685.</p>
+
+<h3>3.19 Акції та частки (пайові інструменти)</h3>
+<span class="guide-cat a">Фінансові активи</span>
+<p>Кількість, ціна, витрати на придбання, справедлива вартість і дивіденди за датами, продаж. НП(С)БО 12 п.8 — дооцінка 746, уцінка 975; МСФЗ 9 — через прибуток або збиток чи через інший сукупний дохід (рах. 413, без рекласифікації при продажу — перенесення на 441).</p>
+
+<h3>3.20 Оренда: індексація платежів і демонтаж</h3>
+<span class="guide-cat o">Оренда</span>
+<p>Тип модифікації «Зміна платежів через індекс або ставку» переоцінює зобов’язання з незміненою ставкою (МСФЗ 16.42(b), 16.43). Забезпечення на демонтаж вводиться як очікувані витрати на кінець строку, дисконтується за ставкою оренди і поступово нараховується (Дт 952 / Кт 474).</p>
+
 <hr class="guide-divider">
 
 <h2>4. Строки та рахунки</h2>
@@ -1155,8 +1228,8 @@ export default {
     <div>
       <h1><span class="product-name">FinDiscounting</span><span class="product-suffix"> Pro</span></h1>
       <div class="brand-entity">ТОВ «АФ «Марінченко і партнери»»</div>
-      <div class="subtitle">Дисконтування фінансових інструментів &middot; Оренда &middot; Кредити 5-7-9% &middot; ЕСВ &middot; Амортизація &middot; Проведення</div>
-      <div class="header-label">НП(С)БО 10 &middot; 11 &middot; 13 &middot; 28 &middot; МСФЗ 9 &middot; МСФЗ 16 &middot; МСБО 20 &middot; 32 &middot; 39</div>
+      <div class="subtitle">Фінансові інструменти &middot; Оренда &middot; Гарантії &middot; Похідні інструменти &middot; НП(С)БО і МСФЗ</div>
+      <div class="header-label">НП(С)БО 10 &middot; 11 &middot; 12 &middot; 13 &middot; 14 &middot; 15 &middot; 21 &middot; МСФЗ 9 &middot; 15 &middot; 16 &middot; МСБО 20 &middot; 21 &middot; 32 &middot; 37</div>
     </div>
   </div>
   <div style="display:flex;gap:8px;align-items:center;">
@@ -1192,12 +1265,27 @@ export default {
         <option value="loan_out">Видана позика</option>
         <option value="ovdp">ОВДП (гривнева)</option>
         <option value="ovdp_fx">ОВДП (валютна)</option>
+        <option value="corp_bond">Облігації придбані (корпоративні, муніципальні)</option>
+        <option value="bill_rec">Вексель одержаний</option>
+        <option value="def_sale">Продаж з відстроченням платежу</option>
+        <option value="lease_lessor">Фінансова оренда (орендодавець)</option>
+        <option value="recv_matrix">Резерв під торговельну дебіторську заборгованість</option>
+        <option value="equity_inv">Акції та частки (пайові інструменти)</option>
       </optgroup>
       <optgroup label="── ФІНАНСОВІ ЗОБОВ’ЯЗАННЯ ───────────">
         <option value="loan_in">Отримана позика (кредит)</option>
         <option value="liab">Довгострокове зобов’язання</option>
         <option value="bond">Облігації розміщені</option>
         <option value="credit_579">Кредит «Доступні кредити 5-7-9%»</option>
+        <option value="bill_pay">Вексель виданий</option>
+        <option value="def_purchase">Купівля з відстроченням платежу</option>
+        <option value="conv_bond">Конвертовані облігації розміщені</option>
+        <option value="fin_guar">Фінансова гарантія видана</option>
+        <option value="provision">Довгострокове забезпечення (МСБО 37)</option>
+      </optgroup>
+      <optgroup label="── ПОХІДНІ ІНСТРУМЕНТИ ──────────────">
+        <option value="deriv_fwd">Валютний форвард</option>
+        <option value="deriv_irs">Процентний своп</option>
       </optgroup>
       <optgroup label="── ОРЕНДА ───────────────────────────">
         <option value="lease">Оренда (МСФЗ 16 / IFRS 16)</option>
@@ -1379,7 +1467,7 @@ export default {
       <label>Отримані стимули від орендодавця (грн) <span style="color:var(--muted);font-size:12px">МСФЗ 16.24(b)</span></label>
       <input type="number" id="leaseIncentives" value="0" min="0" step="0.01" oninput="leaseSync()">
 
-      <label>Забезпечення на демонтаж і відновлення (грн) <span style="color:var(--muted);font-size:12px">МСФЗ 16.24(d), МСБО 37</span></label>
+      <label>Забезпечення на демонтаж і відновлення: очікувані витрати на кінець строку (грн) <span style="color:var(--muted);font-size:12px">дисконтуються за ставкою оренди · МСФЗ 16.24(d), МСБО 37</span></label>
       <input type="number" id="leaseDismantling" value="0" min="0" step="0.01" oninput="leaseSync()">
 
       <!-- Modification toggle -->
@@ -1415,6 +1503,7 @@ export default {
             <select id="leaseModType">
               <option value="not_separate">Не окремий договір оренди (МСФЗ 16.45)</option>
               <option value="scope_decrease">Зменшення обсягу (МСФЗ 16.46(a))</option>
+              <option value="index">Зміна платежів через індекс або ставку (МСФЗ 16.42(b))</option>
             </select>
           </div>
           <div>
@@ -1481,6 +1570,7 @@ export default {
         <div class="ovdp-sum-row"><span>ЕСВ за МСФЗ (щоденна):</span><span id="c579EirDaily">—</span></div>
       </div>
     </div>
+    <div id="v3Panel" style="display:none"></div>
   </div>
 
   <!-- Права -->
@@ -1504,7 +1594,7 @@ export default {
     </div>
 
     <div class="warn-box" id="warnBox">
-      ⚠ Строк менше 1 року — дисконтування може бути несуттєвим (НП(С)БО 13 п.6).
+      ⚠ Строк менше 1 року — дисконтування може бути несуттєвим (поріг суттєвості встановлюється обліковою політикою).
     </div>
 
     <label>Рахунок обліку інструменту</label>
@@ -1627,7 +1717,7 @@ export default {
 </svg></div>
       <div class="about-text">
         <div class="about-title"><span style="font-weight:800">FinDiscounting</span><span style="font-weight:300;color:var(--p600)"> Pro</span></div>
-        <div class="about-sub">Дисконтування фінансових інструментів · Оренда · Кредити 5-7-9% · НП(С)БО · МСФЗ 9 · МСФЗ 16 · МСБО 20, 32, 39</div>
+        <div class="about-sub">Версія 3.0 · Позики, векселі, облігації, розстрочка, оренда, кредити 5-7-9%, гарантії, забезпечення, похідні та пайові інструменти · НП(С)БО і МСФЗ</div>
         <div class="about-meta">
           <div class="about-row">
             <span class="about-label">Автор</span>
@@ -1639,7 +1729,7 @@ export default {
           </div>
           <div class="about-row">
             <span class="about-label">Нормативна база</span>
-            <span class="about-value">НП(С)БО 10, 11, 12, 13, 15, 21, 23, 28 · МСФЗ 9 · МСФЗ 16 (Оренда) · МСБО 20 (Держ. гранти), 32, 39</span>
+            <span class="about-value">НП(С)БО 10, 11, 12, 13, 14, 15, 21, 23 · МСФЗ 9, 15, 16 · МСБО 1, 20, 21, 24, 32, 37</span>
           </div>
         </div>
         <div class="about-disclaimer-note">
@@ -1673,7 +1763,7 @@ export default {
 // ─────────────────────────────────────────────────────────────────────────
 // VERSION
 // ─────────────────────────────────────────────────────────────────────────
-const APP_VERSION = '1.20260315162720';
+const APP_VERSION = '3.0';
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('appVersion');
   if (el) el.textContent = APP_VERSION;
@@ -1863,10 +1953,23 @@ const ACCS = {
   loan_out: [{v:'183',l:`183 — Інша дебіторська заборгованість (довгострокова)`},{v:'377',l:`377 — Розрахунки з іншими дебіторами`}],
   ovdp:     [{v:'352',l:`352 — Інші поточні фінансові інвестиції`},{v:'143',l:`143 — Інвестиції непов’язаним сторонам (довгострокові)`}],
   ovdp_fx:  [{v:'352',l:`352 — Інші поточні фінансові інвестиції (у валюті)`},{v:'143',l:`143 — Інвестиції непов’язаним сторонам (у валюті)`}],
-  loan_in:  [{v:'501',l:`501 — Довгострокові кредити банків у національній валюті`},{v:'505',l:`505 — Інші довгострокові позики в національній валюті`},{v:'55',l:`55 — Інші довгострокові зобов’язання`},{v:'601',l:`601 — Короткострокові кредити банків у національній валюті`}],
+  loan_in:  [{v:'501',l:`501 — Довгострокові кредити банків у національній валюті`},{v:'502',l:`502 — Довгострокові кредити банків в іноземній валюті`},{v:'506',l:`506 — Інші довгострокові позики в іноземній валюті`},{v:'602',l:`602 — Короткострокові кредити банків в іноземній валюті`},{v:'505',l:`505 — Інші довгострокові позики в національній валюті`},{v:'55',l:`55 — Інші довгострокові зобов’язання`},{v:'601',l:`601 — Короткострокові кредити банків у національній валюті`}],
   liab:     [{v:'55',l:`55 — Інші довгострокові зобов’язання`},{v:'505',l:`505 — Інші довгострокові позики в національній валюті`},{v:'685',l:`685 — Розрахунки з іншими кредиторами`}],
   lease:    [{v:'531',l:`531 — Зобов’язання з фінансової оренди`}],
   bond:     [{v:'521',l:`521 — Зобов’язання за облігаціями`}],
+  corp_bond: [{v:'143',l:`143 — Інвестиції непов’язаним сторонам (довгострокові)`},{v:'352',l:`352 — Інші поточні фінансові інвестиції`}],
+  bill_rec: [{v:'182',l:`182 — Довгострокові векселі одержані`},{v:'341',l:`341 — Короткострокові векселі, одержані в національній валюті`},{v:'342',l:`342 — Короткострокові векселі, одержані в іноземній валюті`}],
+  bill_pay: [{v:'511',l:`511 — Довгострокові векселі, видані в національній валюті`},{v:'512',l:`512 — Довгострокові векселі, видані в іноземній валюті`},{v:'621',l:`621 — Короткострокові векселі, видані в національній валюті`},{v:'622',l:`622 — Короткострокові векселі, видані в іноземній валюті`}],
+  def_sale: [{v:'183',l:`183 — Інша дебіторська заборгованість (довгострокова)`},{v:'361',l:`361 — Розрахунки з вітчизняними покупцями`},{v:'362',l:`362 — Розрахунки з іноземними покупцями`}],
+  def_purchase: [{v:'55',l:`55 — Інші довгострокові зобов’язання`},{v:'631',l:`631 — Розрахунки з вітчизняними постачальниками`},{v:'632',l:`632 — Розрахунки з іноземними постачальниками`}],
+  lease_lessor: [{v:'181',l:`181 — Заборгованість за майном, що передано у фінансову оренду`}],
+  conv_bond: [{v:'521',l:`521 — Зобов’язання за облігаціями`}],
+  recv_matrix: [{v:'361',l:`361 — Розрахунки з вітчизняними покупцями`},{v:'362',l:`362 — Розрахунки з іноземними покупцями`},{v:'377',l:`377 — Розрахунки з іншими дебіторами`}],
+  equity_inv: [{v:'143',l:`143 — Інвестиції непов’язаним сторонам (довгострокові)`},{v:'352',l:`352 — Інші поточні фінансові інвестиції`}],
+  fin_guar: [{v:'69',l:`69 — Доходи майбутніх періодів`}],
+  provision: [{v:'474',l:`474 — Забезпечення інших витрат і платежів`},{v:'473',l:`473 — Забезпечення гарантійних зобов’язань`},{v:'478',l:`478 — Забезпечення відновлення земельних ділянок`}],
+  deriv_fwd: [{v:'352',l:`352 — Інші поточні фінансові інвестиції`}],
+  deriv_irs: [{v:'352',l:`352 — Інші поточні фінансові інвестиції`}],
   credit_579: [{v:'501',l:`501 — Довгострокові кредити банків у національній валюті`},{v:'601',l:`601 — Короткострокові кредити банків у національній валюті`}],
 };
 
@@ -2156,6 +2259,7 @@ function onTypeChange() {
   if(isOvdp) ovdpSync();
   if(isFx)   fxCurrencyChange();
   syncCcyToggleBtn();
+  V3.onType(type);
 }
 
 function fxCurrencyChange(){
@@ -2603,7 +2707,8 @@ function leaseSync() {
   const rPeriod = Math.pow(1 + rAnnual, freqMonths / 12) - 1;
   const pvLiability = leaseInitialLiability(payment, rPeriod, nPeriods, timing);
   const prepay = timing === 'advance' ? payment : 0;
-  const rouAsset = Math.round((pvLiability + prepay + initCosts - incentives + dismantling) * 100) / 100;
+  const dismPV = dismantling > 0 ? Math.round(dismantling / Math.pow(1 + rAnnual, daysBetween(sDate, eDate) / 365) * 100) / 100 : 0;
+  const rouAsset = Math.round((pvLiability + prepay + initCosts - incentives + dismPV) * 100) / 100;
   const totalPay = Math.round(payment * nPeriods * 100) / 100;
   const totalInt = Math.round((totalPay - pvLiability - prepay) * 100) / 100;
   const f = v => v.toLocaleString('uk-UA', {minimumFractionDigits:2, maximumFractionDigits:2});
@@ -2683,7 +2788,9 @@ function calculateLease() {
   // ── Первісна оцінка (МСФЗ 16.26, 16.24) ───────────────────────────────
   const pvLiability = leaseInitialLiability(payment, rPeriod, nPeriods, timing);
   const prepay = timing === 'advance' ? payment : 0;
-  const rouAsset = r2(pvLiability + prepay + initCosts - incentives + dismantling);
+  // Забезпечення на демонтаж — теперішня вартість очікуваних витрат на кінець строку (МСБО 37 п.45)
+  const dismPV = dismantling > 0 ? r2(dismantling / Math.pow(1 + rAnnual, daysBetween(sDate, eDate) / 365)) : 0;
+  const rouAsset = r2(pvLiability + prepay + initCosts - incentives + dismPV);
 
   // ── Модифікація ────────────────────────────────────────────────────────
   const modEnabled = document.getElementById('leaseModEnabled') && document.getElementById('leaseModEnabled').checked;
@@ -2708,6 +2815,7 @@ function calculateLease() {
     finalEndDate = modEndDate;
     modNewRate  = parseFloat(document.getElementById('leaseModRate').value) / 100;
     modType     = document.getElementById('leaseModType').value;
+    if (modType === 'index') modNewRate = rAnnual;   // МСФЗ 16.43: при зміні індексу ставка дисконтування не змінюється
     modScopeDecr= (parseFloat(document.getElementById('leaseModScopeDecr').value) || 0) / 100;
     if (!(modNewRate > 0)) { alert('Вкажіть нову ставку дисконтування на дату модифікації'); return; }
     if (modEndDate <= modDate) { alert('Нова дата закінчення має бути пізніше дати модифікації'); return; }
@@ -2812,11 +2920,12 @@ function calculateLease() {
     ph += mkP(fmtD(sDate),'311','Поточні рахунки',rouAcc,rouShort,f(incentives),'Отримані стимули від орендодавця зменшують первісну вартість ППКО (МСФЗ 16.24(b))');
   }
   if (dismantling > 0) {
-    ph += mkP(fmtD(sDate),rouAcc,rouShort,'474','Забезпечення інших витрат і платежів',f(dismantling),'Забезпечення на демонтаж і відновлення включено до ППКО (МСФЗ 16.24(d), МСБО 37)');
+    ph += mkP(fmtD(sDate),rouAcc,rouShort,'474','Забезпечення інших витрат і платежів',f(dismPV),'Забезпечення на демонтаж і відновлення за теперішньою вартістю ' + f(dismPV) + ' (очікувані витрати ' + f(dismantling) + ') включено до ППКО (МСФЗ 16.24(d), МСБО 37 п.45)');
   }
   ph += `</div>`;
 
   let onCur = 0;           // сальдо поточної частини (611)
+  let provBal = dismPV, provPrev = sDate;   // забезпечення на демонтаж
   if (reclassOn) {
     const lim = addM(sDate, 12);
     const init = r2(allEv.filter(e => e.payment > 0 && e.date <= lim).reduce((t, e) => t + principalOf(e), 0));
@@ -2860,6 +2969,12 @@ function calculateLease() {
       onCur = r2(onCur - fromCur);
     }
     if (e.dep > 0.005) ph += mkP(fmtD(e.date),depExpAcc,depShort,depAcc,depAccShort,f(e.dep),'Амортизація ППКО прямолінійним методом (МСФЗ 16.31–16.32)');
+    if (dismantling > 0) {
+      const lastEv = i === allEv.length - 1;
+      const unw = lastEv ? r2(dismantling - provBal) : r2(provBal * (Math.pow(1 + rAnnual, daysBetween(provPrev, e.date) / 365) - 1));
+      if (unw > 0.005) ph += mkP(fmtD(e.date),'952','Інші фінансові витрати','474','Забезпечення інших витрат і платежів',f(unw),'Вивільнення дисконту забезпечення на демонтаж (МСБО 37 п.60)');
+      provBal = r2(provBal + unw); provPrev = e.date;
+    }
     const isReport = i === allEv.length - 1 || qIdx(allEv[i + 1].date) !== qIdx(e.date) || (hasMod && allEv[i + 1].phase !== e.phase);
     if (reclassOn && isReport && !(hasMod && e.phase === 1 && allEv[i + 1] && allEv[i + 1].phase === 2)) {
       const delta = r2(target12(i) - onCur);
@@ -2906,10 +3021,10 @@ function calculateLease() {
   const depFirst = (ph1.events.find(x => x.dep > 0) || { dep: 0 }).dep;
   document.getElementById('explainGrid').innerHTML = `
     <div class="explain-block"><div class="eb-title">Зобов’язання з оренди</div><div class="eb-text">Теперішня вартість орендних платежів, не сплачених на дату початку оренди, дисконтованих за ставкою, закладеною в оренді, або за ставкою додаткових запозичень орендаря (МСФЗ 16.26).${timing === 'advance' ? ' При оплаті на початку періоду перший платіж сплачується на дату початку і до зобов’язання не входить.' : ''}</div><div class="eb-formula">${timing === 'advance' ? 'PV = PMT × [1 − (1+r)<sup>−(n−1)</sup>] / r' : 'PV = PMT × [1 − (1+r)<sup>−n</sup>] / r'} = ${f(pvLiability)}<br>r = (1 + ${pct(rAnnual)})<sup>${freqMonths}/12</sup> − 1 = ${(rPeriod*100).toFixed(4).replace('.',',')} % за ${freqLabel}, n = ${nPeriods}</div></div>
-    <div class="explain-block"><div class="eb-title">Актив з права користування (ППКО)</div><div class="eb-text">Первісна вартість = зобов’язання з оренди + платежі на дату початку або раніше − отримані стимули + первісні прямі витрати + забезпечення на демонтаж (МСФЗ 16.24).</div><div class="eb-formula">${f(pvLiability)} + ${f(prepay)} − ${f(incentives)} + ${f(initCosts)} + ${f(dismantling)} = ${f(rouAsset)}</div></div>
+    <div class="explain-block"><div class="eb-title">Актив з права користування (ППКО)</div><div class="eb-text">Первісна вартість = зобов’язання з оренди + платежі на дату початку або раніше − отримані стимули + первісні прямі витрати + забезпечення на демонтаж (МСФЗ 16.24).</div><div class="eb-formula">${f(pvLiability)} + ${f(prepay)} − ${f(incentives)} + ${f(initCosts)} + ${f(dismPV)} = ${f(rouAsset)}${dismantling > 0 ? '<br>Забезпечення: ' + f(dismantling) + ' / (1 + ' + pct(rAnnual) + ')<sup>років</sup> = ' + f(dismPV) + '; вивільнення дисконту — Дт 952 / Кт 474' : ''}</div></div>
     <div class="explain-block"><div class="eb-title">Відсотки та платежі</div><div class="eb-text">Відсотки за період = зобов’язання на початок × ставка за період (МСФЗ 16.36(a)). Платіж зменшує зобов’язання на основну суму (платіж − відсотки). Останній платіж закриває зобов’язання до 0,00.${reclassOn ? ' На кожну звітну дату основна сума платежів наступних 12 місяців показується на рах. 611.' : ''}</div></div>
     <div class="explain-block"><div class="eb-title">Амортизація ППКО</div><div class="eb-text">Прямолінійним методом протягом строку оренди (МСФЗ 16.31–16.32), якщо право власності не переходить до орендаря.${hasMod ? ' Після модифікації — нова балансова вартість на строк, що залишився.' : ''}</div><div class="eb-formula">${f(rouAsset)} ÷ ${ph1.n} пер. = ${f(depFirst)} за ${freqLabel}${hasMod ? '<br>Після модифікації: ' + f(modNewROU) + ' ÷ ' + ph2.n + ' пер.' : ''}</div></div>
-    ${hasMod ? `<div class="explain-block"><div class="eb-title">⚡ Модифікація (МСФЗ 16.44–16.46)</div><div class="eb-text">На дату модифікації зобов’язання переоцінюється як теперішня вартість платежів, що залишились, за <strong>новою</strong> ставкою (${pct(modNewRate)}); різниця коригує ППКО.${modType === 'scope_decrease' ? ' При зменшенні обсягу спершу пропорційно зменшуються ППКО і зобов’язання, а різниця визнається у прибутку або збитку (МСФЗ 16.46(a)).' : ''} Дата модифікації має збігатися з датою платежу.</div></div>` : ''}`;
+    ${hasMod ? `<div class="explain-block"><div class="eb-title">⚡ Модифікація (МСФЗ 16.44–16.46)</div><div class="eb-text">На дату модифікації зобов’язання переоцінюється як теперішня вартість платежів, що залишились, за <strong>новою</strong> ставкою (${pct(modNewRate)}); різниця коригує ППКО.${modType === 'scope_decrease' ? ' При зменшенні обсягу спершу пропорційно зменшуються ППКО і зобов’язання, а різниця визнається у прибутку або збитку (МСФЗ 16.46(a)).' : ''}${modType === 'index' ? ' Зміна платежів через індекс або ставку: зобов’язання переоцінюється з <strong>незміненою</strong> ставкою дисконтування (МСФЗ 16.42(b), 16.43).' : ''} Дата модифікації має збігатися з датою платежу.</div></div>` : ''}`;
   document.getElementById('explainGridIfrs').innerHTML = `
     <div class="explain-block"><div class="eb-title">Виключення (МСФЗ 16.5–16.8)</div><div class="eb-text">Для короткострокової оренди (до 12 місяців) та оренди активів з низькою вартістю орендар може визнавати платежі витратами рівномірно протягом строку.</div></div>
     <div class="explain-block"><div class="eb-title">Переоцінка (МСФЗ 16.39–16.46)</div><div class="eb-text">При зміні строку, платежів або індексу зобов’язання переоцінюється, а різниця коригує балансову вартість ППКО.</div></div>`;
@@ -3362,6 +3477,7 @@ function buildExplain579Ifrs(mktPct, rDpct, grant, fairValue, nominal, eirPct, c
 // ─────────────────────────────────────────────────────────────────────────
 function calculate() {
   const type    = document.getElementById('instrType').value;
+  if (V3.TYPES[type]) { V3.calculate(type); return; }
   if (type === 'lease') { calculateLease(); return; }
   if (type === 'credit_579') { calculateCredit579(); return; }
   const isOvdp  = type === 'ovdp' || type === 'ovdp_fx';
@@ -5122,6 +5238,1323 @@ function applyOvdpData(d) {
   updatePeriod();
 }
 
+
+// ═══ V3-BEGIN ═══
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FinDiscounting Pro 3.0 — ядро амортизованої собівартості та нові інструменти
+// ═══════════════════════════════════════════════════════════════════════════
+const V3 = {};
+V3.r2 = v => Math.round(v * 100) / 100;
+V3.pct = (v, d = 2) => (v * 100).toFixed(d).replace('.', ',') + ' %';
+V3.$ = id => document.getElementById(id);
+V3.parseNum = s => { const v = parseFloat(String(s).replace(/[\s ]/g, '').replace(',', '.')); return isFinite(v) ? v : NaN; };
+V3.num = (id, def = 0) => { const el = V3.$(id); if (!el || el.value === '') return def; const v = V3.parseNum(el.value); return isFinite(v) ? v : def; };
+V3.val = (id, def = '') => { const el = V3.$(id); return el && el.value !== '' ? el.value : def; };
+V3.on = id => { const el = V3.$(id); return !!(el && el.checked); };
+V3.date = id => { const v = V3.val(id); return v ? parseLocalDate(v) : null; };
+V3.parseDate = s => {
+  s = String(s).trim(); let m;
+  if ((m = s.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/))) return new Date(+m[3], +m[2] - 1, +m[1]);
+  if ((m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))) return new Date(+m[1], +m[2] - 1, +m[3]);
+  return null;
+};
+// Таблиця з буфера Excel: рядки «дата; число; число…» (роздільник — табуляція, крапка з комою або |)
+V3.parseTable = text => {
+  const rows = [];
+  String(text || '').split(/\r?\n/).forEach(line => {
+    const parts = line.split(/\t|;|\|/).map(x => x.trim()).filter(x => x !== '');
+    if (parts.length < 2) return;
+    const d = V3.parseDate(parts[0]);
+    if (!d) return;
+    rows.push({ date: d, vals: parts.slice(1).map(V3.parseNum) });
+  });
+  return rows.sort((a, b) => a.date - b.date);
+};
+// Таблиця «назва; число; число»
+V3.parseNamed = text => {
+  const rows = [];
+  String(text || '').split(/\r?\n/).forEach(line => {
+    const parts = line.split(/\t|;|\|/).map(x => x.trim()).filter(x => x !== '');
+    if (parts.length < 2) return;
+    const vals = parts.slice(1).map(V3.parseNum);
+    if (!vals.every(isFinite)) return;
+    rows.push({ name: parts[0], vals });
+  });
+  return rows;
+};
+// Значення, що діє на дату (ступінчаста функція)
+V3.stepValue = (rows, date, def) => {
+  let v = def;
+  for (const r of rows) { if (r.date <= date) v = r.vals[0]; else break; }
+  return v;
+};
+V3.eir = (price, flows, from, fb) => {
+  const e = computeYTMExact(price, flows.filter(f => Math.abs(f.cf) > 0).map(f => ({ days: daysBetween(from, f.date), amount: f.cf })));
+  return isFinite(e) && Math.abs(e) < 1000 ? e / 100 : fb;
+};
+V3.pv = (flows, from, r) => {
+  const rd = Math.pow(1 + r, 1 / 365) - 1;
+  return flows.reduce((s, f) => s + f.cf / Math.pow(1 + rd, daysBetween(from, f.date)), 0);
+};
+
+// ── Графік періодів ──────────────────────────────────────────────────────
+V3.periodsFromDates = (start, dates) => dates.map((d, i) => {
+  const st = i ? dates[i - 1] : start;
+  return { start: st, date: d, days: daysBetween(st, d), stdDays: daysBetween(st, d), isLast: i === dates.length - 1 };
+});
+V3.periodsFor = (o, start, end, repay, manualRows) => {
+  if (o.dates) {                                  // дати купонів задані (облігації)
+    const ds = o.dates.filter(d => d > start && d < end);
+    ds.push(new Date(end));
+    return V3.periodsFromDates(start, ds);
+  }
+  if (o.bondStep) {                               // купони — від дати погашення назад
+    const ds = [new Date(end)];
+    for (let k = 1; k < 2000; k++) { const d = addM(end, -k * o.bondStep); if (d <= start) break; ds.unshift(d); }
+    return V3.periodsFromDates(start, ds);
+  }
+  if (repay === 'manual' && manualRows && manualRows.length) {
+    const ds = manualRows.map(r => r.date).filter(d => d > start && d < end);
+    ds.push(new Date(end));
+    return V3.periodsFromDates(start, ds);
+  }
+  if (!o.freq) return V3.periodsFromDates(start, [new Date(end)]);
+  return periodSchedule(start, end, o.freq);
+};
+// Договірні потоки: основна сума і відсотки на залишок
+V3.fill = (periods, principal0, rateFn, o, repay, manualMap) => {
+  const r2 = V3.r2;
+  let bal = principal0, ann = null, annRate = null;
+  const n = periods.length;
+  return periods.map((p, k) => {
+    const rate = rateFn(p.start);
+    let interest = 0;
+    if (o.basis === 'period') interest = r2(bal * rate * (o.freq || 12) / 12 * (p.stdDays ? p.days / p.stdDays : 1));
+    else if (o.basis === 'bond') interest = r2(bal * rate / o.perYear);
+    else interest = r2(bal * rate * p.days / 365);
+    let principal = 0;
+    if (p.isLast) principal = bal;
+    else if (repay === 'equal') principal = Math.min(bal, r2(principal0 / n));
+    else if (repay === 'annuity') {
+      if (ann === null || annRate !== rate) {
+        const i = rate * (o.freq || 3) / 12, left = n - k;
+        ann = i > 0 ? bal * i / (1 - Math.pow(1 + i, -left)) : bal / left;
+        annRate = rate;
+      }
+      principal = Math.max(0, Math.min(bal, r2(ann - interest)));
+    } else if (repay === 'manual') principal = Math.min(bal, r2((manualMap || {})[dateKey(p.date)] || 0));
+    bal = r2(bal - principal);
+    return { ...p, rate, interest, principal, cf: r2(interest + principal) };
+  });
+};
+
+// ── Ядро: справедлива вартість → ЕСВ → амортизація (змінна ставка, модифікація, ОКЗ) ──
+V3.engine = o => {
+  const r2 = V3.r2;
+  const isAsset = o.side === 'asset';
+  const rateFn = o.float
+    ? (d => V3.stepValue(o.float.rows, d, o.float.rows[0].vals[0]) + o.float.margin)
+    : (() => o.rate);
+  let flows;
+  if (o.explicit) {
+    flows = o.explicit.map((f, i) => {
+      const st = i ? o.explicit[i - 1].date : o.sDate;
+      return { start: st, date: f.date, days: daysBetween(st, f.date), stdDays: 0, isLast: i === o.explicit.length - 1, rate: 0, interest: 0, principal: f.cf, cf: r2(f.cf), nonCash: r2(f.nonCash || 0) };
+    });
+  } else {
+    const periods = V3.periodsFor(o, o.sDate, o.eDate, o.repay, o.manualRows);
+    const r0 = rateFn(o.sDate);
+    flows = V3.fill(periods, o.nominal, () => r0, o, o.repay, o.manualMap);
+  }
+  // Справедлива вартість: ціна (якщо задана) або потоки за ринковою ставкою
+  const fair = o.price != null ? r2(o.price) : r2(V3.pv(flows, o.sDate, o.mkt));
+  const carrying0 = r2(isAsset ? fair + (o.costs || 0) : fair - (o.costs || 0));
+  let eir = V3.eir(carrying0, flows, o.sDate, o.mkt || 0);
+  const eir0 = eir;
+
+  const rows = [], events = [];
+  let bal = carrying0, prin = o.nominal, rateNow = o.explicit ? 0 : rateFn(o.sDate);
+  let cur = flows, modDone = false, endEff = o.eDate;
+  for (let i = 0; i < cur.length; i++) {
+    let p = cur[i];
+    if (o.float && !modDone) {                    // МСФЗ 9 п. B5.4.5: перегляд ЕСВ при зміні ринкової ставки
+      const rn = rateFn(p.start);
+      if (Math.abs(rn - rateNow) > 1e-12) {
+        rateNow = rn;
+        const skel = cur.slice(i).map(x => ({ start: x.start, date: x.date, days: x.days, stdDays: x.stdDays, isLast: x.isLast }));
+        const rest = V3.fill(skel, prin, () => rn, o, o.repay, o.manualMap);
+        cur = cur.slice(0, i).concat(rest);
+        p = cur[i];
+        const eNew = V3.eir(bal, cur.slice(i), p.start, eir);
+        events.push({ kind: 'reset', idx: i, date: p.start, rate: rn, eirOld: eir, eirNew: eNew });
+        eir = eNew;
+      }
+    }
+    const rD = Math.pow(1 + eir, 1 / 365) - 1;
+    const isLast = i === cur.length - 1;
+    const intCalc = r2(bal * (Math.pow(1 + rD, p.days) - 1));
+    const eirInt = isLast ? r2(p.cf - bal) : intCalc;
+    const close = r2(bal + eirInt - p.cf);
+    const row = { ...p, isLast, rawDate: p.date, open: bal, eirInt, close, eir, rateNow, rD };
+    if (o.explicit) { row.principal = r2(p.cf - eirInt); row.interest = 0; }
+    rows.push(row);
+    bal = close;
+    prin = r2(prin - (o.explicit ? 0 : p.principal));
+    if (isLast && Math.abs(eirInt - intCalc) > Math.max(1, Math.abs(row.open) * 1e-7)) row.adjust = r2(eirInt - intCalc);
+
+    // Модифікація умов — на першу дату графіка, не раніше дати модифікації
+    if (o.mod && !modDone && !isLast && p.date >= o.mod.date) {
+      modDone = true;
+      const M = p.date, C = bal, P = prin;
+      const mPer = V3.periodsFor({ freq: o.freq }, M, o.mod.end, o.mod.repay, null);
+      const mFl = V3.fill(mPer, P, () => o.mod.rate, o, o.mod.repay, {});
+      const pvOrig = r2(V3.pv(mFl, M, eir));
+      const fee = o.mod.fee || 0;
+      // Тест 10 % (МСФЗ 9 п. B3.3.6): теперішня вартість нових потоків з комісіями за первісною ЕСВ
+      const test = Math.abs((isAsset ? pvOrig - fee : pvOrig + fee) - C) / C;
+      const substantial = test >= 0.1;
+      const fv = r2(V3.pv(mFl, M, o.mod.mkt));
+      const remeasured = substantial ? fv : pvOrig;
+      const delta = r2(remeasured - C);              // зміна балансової вартості до комісії
+      const newCarr = substantial ? fv : r2(pvOrig - fee);
+      const gain = isAsset ? r2(delta + (substantial ? fee : 0)) : r2(-delta - (substantial ? fee : 0));
+      const eNew = V3.eir(newCarr, mFl, M, substantial ? o.mod.mkt : eir);
+      events.push({ kind: 'mod', idx: i, date: M, C, pvOrig, fv, test, substantial, delta, fee, newCarr, gain, eirOld: eir, eirNew: eNew });
+      row.mod = events[events.length - 1];
+      cur = cur.slice(0, i + 1).concat(mFl);
+      eir = eNew; bal = newCarr; rateNow = o.mod.rate; endEff = o.mod.end;
+    }
+  }
+
+  // Очікувані кредитні збитки (активи)
+  if (o.ecl && isAsset) {
+    const E = o.ecl;
+    const stageAt = d => (!E.from || d >= E.from) ? E.stage : 1;
+    const target = (gross, d, last) => last ? 0 : r2(gross * (stageAt(d) === 1 ? E.pd12 : E.pdLife) * E.lgd);
+    const st0 = stageAt(o.sDate);
+    let aI = target(carrying0, o.sDate, false), aN = st0 >= 2 ? aI : 0;
+    o.eclInit = { ifrs: aI, np: aN, stage: st0 };
+    rows.forEach(r => {
+      const grossAfter = r.mod ? r.mod.newCarr : r.close;
+      const sPrev = stageAt(r.start), sNow = stageAt(r.date);
+      const ioa = sPrev === 3 ? r2(aI * (Math.pow(1 + r.rD, r.days) - 1)) : 0;  // МСФЗ 9 п.5.4.1(b)
+      const tI = target(grossAfter, r.date, r.isLast);
+      const tN = sNow >= 2 ? tI : 0;
+      r.ecl = { stage: sNow, ioa, dI: r2(tI - aI - ioa), aI: tI, dN: r2(tN - aN), aN: tN };
+      aI = tI; aN = tN;
+    });
+  }
+  return { o, fair, carrying0, eir0, eirEnd: eir, rows, events, endEff,
+           totalInt: r2(rows.reduce((s, r) => s + r.eirInt, 0)) };
+};
+
+// ── Поточна частина: довгостроковий рахунок → поточний ──────────────────
+V3.ASSET_CUR = { '183': '377', '182': '341', '181': '377' };
+V3.curAccFor = o => {
+  if (o.side === 'asset') {
+    if (o.acc === '182' && o.fx) return '342';
+    return V3.ASSET_CUR[o.acc] || null;
+  }
+  if (['501','502','505','506','55','511','512'].includes(o.acc)) {
+    if (['511','512'].includes(o.acc)) return o.fx || o.acc === '512' ? '622' : '621';
+    return o.fx ? '612' : '611';
+  }
+  return null;
+};
+V3.ACC_NAMES = {
+  '311': 'поточний рахунок', '312': 'валютний рахунок', '611': 'поточна заборгованість за довгостроковими зобов’язаннями',
+  '612': 'поточна заборгованість за довгостроковими зобов’язаннями в іноземній валюті', '377': 'розрахунки з іншими дебіторами',
+  '341': 'короткострокові векселі одержані', '342': 'короткострокові векселі одержані в іноземній валюті',
+  '621': 'короткострокові векселі видані', '622': 'короткострокові векселі видані в іноземній валюті',
+};
+
+// ── Проведення для інструментів ядра ─────────────────────────────────────
+// std: 'np' — НП(С)БО, 'ifrs' — МСФЗ
+V3.enginePostings = (T, res, std) => {
+  const r2 = V3.r2, o = res.o, isAsset = o.side === 'asset';
+  const A = role => V3.acc(T, role);
+  const acc = o.acc, cur = V3.curAccFor(o), cash = o.fx ? '312' : '311';
+  const instr = new Set([acc, cur].filter(Boolean));
+  const rate = d => o.fx ? V3.stepValue(o.fx.rows, d, o.fx.r0) : 1;
+  const r0 = rate(o.sDate);
+  // Сальдо рахунків інструмента (дебетове +): у гривнях і у валюті — окремо для кожного рахунку
+  const uahBal = {}, fcyBal = {};
+  let allowUah = 0, fxTotal = 0;
+  const book = e => {
+    [[e.dt, 1], [e.kt, -1]].forEach(([a, sg]) => {
+      if (!instr.has(a)) return;
+      uahBal[a] = r2((uahBal[a] || 0) + sg * e.uah);
+      if (!e.uahOnly) fcyBal[a] = r2((fcyBal[a] || 0) + sg * e.fcy);
+    });
+  };
+  const mk = (date, dt, kt, fcy, rt, desc, uahOnly) => ({ date, dt, kt, fcy: r2(fcy), rate: rt, uah: r2(fcy * rt), desc, uahOnly });
+  const flip = e => (e.fcy < 0 ? { ...e, dt: e.kt, kt: e.dt, fcy: -e.fcy, uah: -e.uah } : e);
+  const show = list => list.map(flip).filter(e => Math.abs(e.uah) > 0.004 || Math.abs(e.fcy) > 0.004).map(e => {
+    book(e);
+    return (o.fx && !e.uahOnly)
+      ? PRfx(fmtD(e.date), e.dt, e.kt, e.fcy, e.rate, e.uah, o.fx.sym, e.desc)
+      : PR(fmtD(e.date), e.dt, e.kt, e.uah, e.desc);
+  });
+
+  // 1. Первісне визнання
+  const init = T.init(res, std, (dt, kt, fcy, desc, uahOnly) => mk(o.sDate, dt, kt, fcy, uahOnly ? 1 : r0, desc, uahOnly), A);
+  const eclOn = o.ecl && isAsset;
+  const allowRate = std === 'ifrs' ? 'ifrs' : 'np';
+  if (eclOn && o.eclInit[allowRate] > 0.005) {
+    const u = r2(o.eclInit[allowRate] * r0);
+    init.push(mk(o.sDate, A('eclExp'), A('eclRes'), u, 1, std === 'ifrs'
+      ? 'Очікувані кредитні збитки за 12 місяців на дату визнання (МСФЗ 9 п.5.5.5)'
+      : 'Резерв сумнівних боргів (НП(С)БО 10 п.8)', true));
+    allowUah = u;
+  }
+  const plan = cur ? currentPortionPlan(o.sDate, res.rows) : null;
+  if (plan && plan.initial > 0.005) init.push(isAsset
+    ? mk(o.sDate, cur, acc, plan.initial, r0, 'Переведення до поточної частини: сума до отримання протягом 12 місяців')
+    : mk(o.sDate, acc, cur, plan.initial, r0, 'Переведення до поточної частини: сума до погашення протягом 12 місяців'));
+  let html = GRP('📌 Первісне визнання — ' + fmtD(o.sDate), show(init));
+
+  // 2. Події графіка
+  const resets = {};
+  res.events.filter(e => e.kind === 'reset').forEach(e => { resets[e.idx] = e; });
+  html += byYear(res.rows, (yr, yR) => GRP('📆 ' + yr + (isAsset ? ' — процентний дохід за ЕСВ і надходження' : ' — фінансові витрати за ЕСВ і платежі'),
+    yR.flatMap(r => {
+      const j = res.rows.indexOf(r), rN = rate(r.date), lbl = qLbl(r.date) + ' · ' + r.days + ' дн.';
+      const E = [];
+      if (resets[j]) E.push(mk(r.start, '—', '—', 0, 1, ''));
+      const step = plan ? plan.plan[j] : null;
+      // відсотки за ЕСВ
+      if (isAsset) E.push(mk(r.date, acc, A('inc'), r.eirInt, rN, lbl + ' — процентний дохід за ЕСВ' + (r.adjust ? ' (з коригуванням округлення)' : '')));
+      else E.push(mk(r.date, A('exp'), acc, r.eirInt, rN, lbl + ' — фінансові витрати за ЕСВ' + (r.adjust ? ' (з коригуванням округлення)' : '')));
+      // договірні відсотки
+      if (r.interest > 0.005) {
+        if (isAsset) E.push(mk(r.date, cash, acc, r.interest, rN, lbl + ' — отримано договірні відсотки'));
+        else {
+          E.push(mk(r.date, acc, '684', r.interest, rN, lbl + ' — нараховано договірні відсотки'));
+          E.push(mk(r.date, '684', cash, r.interest, rN, lbl + ' — сплачено договірні відсотки'));
+        }
+      }
+      // основна сума / платіж
+      const nonCash = r.nonCash || 0;
+      let curLeft = step ? step.fromCur : 0;
+      if (nonCash > 0.005) {
+        const ncCur = Math.min(curLeft, nonCash), ncAcc = r2(nonCash - ncCur);
+        curLeft = r2(curLeft - ncCur);
+        const nl = lbl + ' — ' + (T.nonCashLabel || 'негрошове погашення');
+        if (ncCur > 0.005) E.push(isAsset ? mk(r.date, A('assetBack'), cur, ncCur, rN, nl) : mk(r.date, cur, A('assetBack'), ncCur, rN, nl));
+        if (ncAcc > 0.005) E.push(isAsset ? mk(r.date, A('assetBack'), acc, ncAcc, rN, nl) : mk(r.date, acc, A('assetBack'), ncAcc, rN, nl));
+      }
+      const cashPart = r2((o.explicit ? r.cf : r.principal) - nonCash);
+      const fromCur = Math.min(curLeft, Math.max(0, cashPart));
+      const rest = r2(cashPart - fromCur);
+      const what = o.explicit ? 'платіж' : 'основна сума';
+      if (isAsset) {
+        if (fromCur > 0.005) E.push(mk(r.date, cash, cur, fromCur, rN, lbl + ' — отримано ' + what + ' (поточна частина)'));
+        if (rest > 0.005) E.push(mk(r.date, cash, acc, rest, rN, lbl + ' — отримано ' + what));
+      } else {
+        if (fromCur > 0.005) E.push(mk(r.date, cur, cash, fromCur, rN, lbl + ' — сплачено ' + what + ' (поточна частина)'));
+        if (rest > 0.005) E.push(mk(r.date, acc, cash, rest, rN, lbl + ' — сплачено ' + what));
+      }
+      if (step && Math.abs(step.delta) > 0.005) E.push(isAsset
+        ? mk(r.date, cur, acc, step.delta, rN, lbl + ' — поточна частина: сума до отримання протягом 12 місяців')
+        : mk(r.date, acc, cur, step.delta, rN, lbl + ' — поточна частина: сума до погашення протягом 12 місяців'));
+      // модифікація
+      if (r.mod) {
+        const m = r.mod, t = (m.test * 100).toFixed(1).replace('.', ',') + ' %';
+        const head = 'Модифікація умов: ' + (m.substantial ? 'суттєва (тест ' + t + ' ≥ 10 %) — припинення визнання і нове визнання за справедливою вартістю' : 'несуттєва (тест ' + t + ' < 10 %) — перерахунок за первісною ЕСВ');
+        if (Math.abs(m.delta) > 0.005) {
+          if (isAsset) E.push(m.delta > 0 ? mk(r.date, acc, A('modGain'), m.delta, rN, head + ': прибуток (МСФЗ 9 п.5.4.3)') : mk(r.date, A('modLoss'), acc, -m.delta, rN, head + ': збиток (МСФЗ 9 п.5.4.3)'));
+          else E.push(m.delta < 0 ? mk(r.date, acc, A('modGain'), -m.delta, rN, head + ': прибуток (МСФЗ 9 п.3.3.3)') : mk(r.date, A('modLoss'), acc, m.delta, rN, head + ': збиток (МСФЗ 9 п.3.3.3)'));
+        } else E.push(mk(r.date, '—', '—', 0, 1, ''));
+        if (m.fee > 0.005) {
+          if (isAsset) E.push(m.substantial ? mk(r.date, cash, A('modGain'), m.fee, rN, 'Комісія за модифікацію — дохід') : mk(r.date, cash, acc, m.fee, rN, 'Комісія за модифікацію зменшує балансову вартість і враховується в новій ЕСВ'));
+          else E.push(m.substantial ? mk(r.date, A('modLoss'), cash, m.fee, rN, 'Комісія за модифікацію — витрати (МСФЗ 9 п. B3.3.6)') : mk(r.date, acc, cash, m.fee, rN, 'Комісія за модифікацію зменшує балансову вартість і амортизується (МСФЗ 9 п. B3.3.6)'));
+        }
+      }
+      // курсова різниця: валютне сальдо кожного рахунку × курс дати − гривневе сальдо (НП(С)БО 21, МСБО 21 п.23)
+      const out = [];
+      if (o.fx) {
+        const tmpU = { ...uahBal }, tmpF = { ...fcyBal };
+        E.map(flip).forEach(e => [[e.dt, 1], [e.kt, -1]].forEach(([a, sg]) => {
+          if (!instr.has(a)) return;
+          tmpU[a] = r2((tmpU[a] || 0) + sg * e.uah);
+          tmpF[a] = r2((tmpF[a] || 0) + sg * e.fcy);
+        }));
+        [acc, cur].filter(Boolean).forEach(a => {
+          const fx = r2((tmpF[a] || 0) * rN - (tmpU[a] || 0));
+          if (Math.abs(fx) > 0.004) {
+            fxTotal = r2(fxTotal + fx);
+            const txt = lbl + ' — курсова різниця' + (a === cur ? ' (поточна частина)' : '') + ' (' + rN.toFixed(4).replace('.', ',') + ')';
+            out.push(fx > 0 ? mk(r.date, a, A('fxGain'), fx, 1, txt, true) : mk(r.date, A('fxLoss'), a, -fx, 1, txt, true));
+          }
+        });
+      }
+      out.push(...E.filter(e => e.dt !== '—'));
+      // очікувані кредитні збитки / резерв сумнівних боргів
+      if (eclOn && r.ecl) {
+        const e = r.ecl;
+        if (std === 'ifrs' && e.ioa > 0.005) {
+          const u = r2(e.ioa * rN);
+          out.push(mk(r.date, A('inc'), A('eclRes'), u, 1, lbl + ' — стадія 3: процентний дохід визнається на амортизовану собівартість за вирахуванням резерву (МСФЗ 9 п.5.4.1(b))', true));
+          allowUah = r2(allowUah + u);
+        }
+        const tgt = r2((std === 'ifrs' ? e.aI : e.aN) * rN);
+        const d = r2(tgt - allowUah);
+        if (Math.abs(d) > 0.004) out.push(d > 0
+          ? mk(r.date, A('eclExp'), A('eclRes'), d, 1, lbl + (std === 'ifrs' ? ' — збільшення резерву очікуваних кредитних збитків, стадія ' + e.stage : ' — нарахування резерву сумнівних боргів'), true)
+          : mk(r.date, A('eclRes'), A('eclInc'), -d, 1, lbl + (std === 'ifrs' ? ' — зменшення резерву очікуваних кредитних збитків' : ' — зменшення резерву сумнівних боргів'), true));
+        allowUah = tgt;
+      }
+      const pre = resets[j] ? [`<div class="posting-row"><span class="pdesc" style="color:var(--accent4)">↻ ${fmtD(r.start)}: змінна ставка ${V3.pct(resets[j].rate)} — ЕСВ переглянуто з ${V3.pct(resets[j].eirOld, 4)} до ${V3.pct(resets[j].eirNew, 4)} (МСФЗ 9 п. B5.4.5)</span></div>`] : [];
+      return pre.concat(show(out));
+    })
+  ));
+  if (T.final) html += T.final(res, std, (dt, kt, fcy, desc) => mk(res.rows[res.rows.length - 1].date, dt, kt, fcy, rate(res.rows[res.rows.length - 1].date), desc), show);
+  res['fx_' + std] = fxTotal;
+  return html;
+};
+V3.acc = (T, role) => V3.val('v3_acc_' + role, (T.accs && T.accs[role]) ? T.accs[role][0] : role);
+
+// ── Інтерфейс: поля, блоки, рахунки ──────────────────────────────────────
+V3.hint = h => h ? ` <span style="color:var(--muted);font-size:12px">${h}</span>` : '';
+V3.field = f => {
+  if (f.type === 'select') return `<label for="${f.id}">${f.label}${V3.hint(f.hint)}</label><select id="${f.id}"${f.onchange ? ` onchange="${f.onchange}"` : ''}>${f.opts.map(([v, l]) => `<option value="${v}"${String(v) === String(f.def) ? ' selected' : ''}>${l}</option>`).join('')}</select>`;
+  if (f.type === 'textarea') return `<label for="${f.id}">${f.label}${V3.hint(f.hint)}</label><textarea id="${f.id}" class="v3-ta" rows="${f.rows || 4}" placeholder="${f.ph || ''}">${f.def || ''}</textarea>`;
+  if (f.type === 'html') return f.html;
+  return `<label for="${f.id}">${f.label}${V3.hint(f.hint)}</label><input type="${f.type || 'number'}" id="${f.id}" value="${f.def ?? ''}"${(f.type || 'number') === 'number' ? ' step="any"' : ''}${f.ph ? ` placeholder="${f.ph}"` : ''}>`;
+};
+V3.FREQ = [[1, 'Щомісяця'], [3, 'Щокварталу'], [6, 'Раз на півроку'], [12, 'Щороку']];
+V3.REPAY = [['bullet', 'Наприкінці строку'], ['equal', 'Рівними частинами'], ['annuity', 'Ануїтет (рівний загальний платіж)'], ['manual', 'За власним графіком (таблиця)']];
+V3.BLOCKS = {
+  schedule: { title: 'Графік платежів', always: true, fields: T => [
+    { id: 'v3_freq', label: 'Періодичність платежів', type: 'select', opts: V3.FREQ, def: T.defFreq || 3 },
+    { id: 'v3_repay', label: 'Повернення основної суми', type: 'select', opts: T.repayOpts || V3.REPAY, def: T.defRepay || 'bullet' },
+    ...(T.noBasis ? [] : [{ id: 'v3_basis', label: 'Нарахування договірних відсотків', type: 'select', opts: [['act365', 'Факт/365 на залишок основної суми'], ['period', 'Річна ставка / кількість платежів на рік']], def: 'act365' }]),
+    { id: 'v3_manual', label: 'Власний графік: дата; сума основного боргу', type: 'textarea', hint: 'можна вставити з Excel; останній платіж — залишок', ph: '31.03.2026; 250000\n30.06.2026; 250000', rows: 4 },
+  ] },
+  fx: { title: 'Валюта інструмента (НП(С)БО 21, МСБО 21)', fields: () => [
+    { id: 'v3_ccy', label: 'Валюта', type: 'select', opts: [['USD', 'USD — долар США'], ['EUR', 'EUR — євро']], def: 'USD' },
+    { id: 'v3_fx0', label: 'Курс НБУ на дату визнання, грн', def: 41.5 },
+    { id: 'v3_fxTable', label: 'Курси НБУ на дати графіка: дата; курс', type: 'textarea', hint: 'порожні дати — останній відомий курс', ph: '31.03.2025; 41,48', rows: 4 },
+    { type: 'html', html: '<button type="button" class="fx-fetch-btn" onclick="V3.fetchFx()">📥 Заповнити курсами НБУ</button> <span class="fx-fetch-status" id="v3_fxStatus"></span>' },
+  ] },
+  float: { title: 'Змінна процентна ставка (МСФЗ 9 п. B5.4.5)', fields: () => [
+    { id: 'v3_fltBase', label: 'Базова ставка: дата початку дії; ставка, %', type: 'textarea', hint: 'наприклад, облікова ставка НБУ', def: '01.01.2025; 13,5\n24.04.2025; 15,5', rows: 4 },
+    { id: 'v3_fltMargin', label: 'Маржа, % річних', def: 3 },
+  ] },
+  mod: { title: 'Модифікація (реструктуризація) умов (МСФЗ 9 п.3.3.2, 5.4.3)', fields: T => [
+    { id: 'v3_modDate', label: 'Дата модифікації', type: 'date', hint: 'застосовується з першої дати графіка, не раніше' },
+    { id: 'v3_modRate', label: 'Нова договірна ставка, % річних', def: 10 },
+    { id: 'v3_modEnd', label: 'Нова дата погашення', type: 'date' },
+    { id: 'v3_modRepay', label: 'Повернення основної суми після модифікації', type: 'select', opts: V3.REPAY.slice(0, 3), def: 'equal' },
+    { id: 'v3_modFee', label: 'Комісія за модифікацію', def: 0 },
+    { id: 'v3_modMkt', label: 'Ринкова ставка на дату модифікації, %', hint: 'для суттєвої модифікації', def: 18 },
+  ] },
+  ecl: { title: 'Очікувані кредитні збитки / резерв сумнівних боргів', fields: () => [
+    { id: 'v3_eclStage', label: 'Стадія', type: 'select', opts: [[1, '1 — кредитний ризик не зріс (ОКЗ за 12 місяців)'], [2, '2 — значне зростання ризику (ОКЗ за весь строк)'], [3, '3 — кредитно-знецінений актив']], def: 1 },
+    { id: 'v3_eclFrom', label: 'Стадія діє з дати', type: 'date', hint: 'порожньо — з дати визнання; до цієї дати — стадія 1' },
+    { id: 'v3_eclPd12', label: 'Імовірність дефолту за 12 місяців, %', def: 2 },
+    { id: 'v3_eclPdLife', label: 'Імовірність дефолту за весь строк, %', def: 8 },
+    { id: 'v3_eclLgd', label: 'Втрати в разі дефолту (LGD), %', def: 45 },
+  ] },
+};
+V3.block = (key, T) => {
+  if (key === 'accounts') {
+    const rows = Object.entries(T.accs || {}).map(([role, [def, label]]) =>
+      `<label for="v3_acc_${role}">${label}</label><input type="text" id="v3_acc_${role}" value="${def}" class="v3-acc">`).join('');
+    return `<details class="v3-block"><summary>Рахунки проведень <span style="color:var(--muted);font-size:12px">можна змінити відповідно до робочого плану рахунків</span></summary><div class="v3-block-body">${rows}</div></details>`;
+  }
+  const B = V3.BLOCKS[key];
+  const body = B.fields(T).map(V3.field).join('');
+  if (B.always) return `<div class="v3-block v3-open"><div class="v3-block-title">${B.title}</div><div class="v3-block-body">${body}</div></div>`;
+  return `<div class="v3-block"><label class="v3-block-head"><input type="checkbox" id="v3_on_${key}" onchange="V3.toggleBlocks()"> ${B.title}</label><div class="v3-block-body" id="v3_body_${key}">${body}</div></div>`;
+};
+V3.toggleBlocks = () => {
+  Object.keys(V3.BLOCKS).forEach(k => { const b = V3.$('v3_body_' + k); if (b) b.style.display = V3.on('v3_on_' + k) ? 'block' : 'none'; });
+  const rep = V3.$('v3_repay'), man = V3.$('v3_manual');
+  if (rep && man) { const show = rep.value === 'manual'; man.style.display = show ? '' : 'none'; man.previousElementSibling.style.display = show ? '' : 'none'; }
+};
+V3.render = type => {
+  const host = V3.$('v3Panel');
+  if (!host) return;
+  const T = V3.TYPES[type];
+  if (!T) { host.style.display = 'none'; host.innerHTML = ''; return; }
+  let h = T.intro ? `<div class="v3-intro">${T.intro}</div>` : '';
+  h += (T.fields || []).map(V3.field).join('');
+  (T.blocks || []).forEach(b => { h += V3.block(b, T); });
+  host.innerHTML = h;
+  host.style.display = 'block';
+  const rep = V3.$('v3_repay'); if (rep) rep.addEventListener('change', V3.toggleBlocks);
+  V3.toggleBlocks();
+};
+// Налаштування інтерфейсу при виборі типу
+V3.onType = type => {
+  const T = V3.TYPES[type];
+  V3.render(type);
+  const show = (id, on) => { const el = V3.$(id); if (el) el.style.display = on ? '' : 'none'; };
+  const endOn = !T || T.needEnd !== false;
+  show('endDateLabel', endOn); show('endDate', endOn);
+  const pr = document.querySelector('.period-row'); if (pr) pr.style.display = endOn ? '' : 'none';
+  if (!T) return;
+  show('standardFields', !!T.useStandard);
+  show('ovdpPanel', false); show('leasePanel', false); show('credit579Panel', false);
+  show('emissionRow', false);
+  show('relPartyRow', !!T.relParty);
+  const sd = V3.$('startDateLabel'), ed = V3.$('endDateLabel');
+  if (sd) sd.innerHTML = T.startLabel || 'Дата первісного визнання';
+  if (ed) ed.textContent = T.endLabel || 'Дата погашення';
+  if (T.useStandard) {
+    const nrRow = V3.$('nomRateRow'); if (nrRow) nrRow.style.display = 'block';
+  }
+};
+// Курси НБУ на дати графіка
+V3.fetchFx = async () => {
+  const st = V3.$('v3_fxStatus');
+  const type = V3.val('instrType');
+  const T = V3.TYPES[type];
+  if (!T || !T.engine) return;
+  const o = T.prep(V3.date('startDate'), V3.date('endDate'));
+  if (!o) return;
+  V3.readBlocks(T, o, true);
+  const dates = [o.sDate].concat(V3.engine({ ...o, fx: null, ecl: null }).rows.map(r => r.date));
+  const ccy = V3.val('v3_ccy', 'USD');
+  const lines = [];
+  for (let i = 0; i < dates.length; i++) {
+    if (st) st.textContent = (i + 1) + '/' + dates.length + '…';
+    try {
+      const resp = await fetch('https://nbu-proxy.serhyi-minin.workers.dev/worker?valcode=' + ccy + '&date=' + dateKey(dates[i]).replace(/-/g, ''));
+      const data = await resp.json();
+      const r = data[ccy];
+      if (r > 0) { if (i === 0) V3.$('v3_fx0').value = r; else lines.push(fmtD(dates[i]) + '; ' + String(r).replace('.', ',')); }
+    } catch (e) { /* пропускаємо дату */ }
+  }
+  V3.$('v3_fxTable').value = lines.join('\n');
+  if (st) st.textContent = lines.length ? '✅ ' + lines.length + ' курсів НБУ' : '❌ курси не завантажено';
+};
+// Зчитування блоків
+V3.readBlocks = (T, o, quiet) => {
+  const fail = m => { if (!quiet) alert(m); return false; };
+  const bl = T.blocks || [];
+  if (bl.includes('schedule')) {
+    o.freq = parseInt(V3.val('v3_freq', '3'));
+    o.repay = V3.val('v3_repay', 'bullet');
+    o.basis = V3.val('v3_basis', o.basis || 'act365');
+    if (o.repay === 'manual') {
+      o.manualRows = V3.parseTable(V3.val('v3_manual'));
+      o.manualMap = {};
+      o.manualRows.forEach(r => { const k = dateKey(r.date); o.manualMap[k] = (o.manualMap[k] || 0) + (r.vals[0] || 0); });
+      if (!o.manualRows.length) return fail('Введіть власний графік: рядки «дата; сума основного боргу»');
+    }
+  }
+  if (bl.includes('fx') && V3.on('v3_on_fx')) {
+    const ccy = V3.val('v3_ccy', 'USD');
+    o.fx = { ccy, sym: ccy === 'EUR' ? '€' : '$', r0: V3.num('v3_fx0', 0), rows: V3.parseTable(V3.val('v3_fxTable')) };
+    if (!(o.fx.r0 > 0)) return fail('Вкажіть курс НБУ на дату визнання');
+  }
+  if (bl.includes('float') && V3.on('v3_on_float')) {
+    const rows = V3.parseTable(V3.val('v3_fltBase')).map(r => ({ date: r.date, vals: [r.vals[0] / 100] }));
+    if (!rows.length) return fail('Введіть базову ставку: рядки «дата; ставка, %»');
+    o.float = { rows, margin: V3.num('v3_fltMargin', 0) / 100 };
+    o.rate = V3.stepValue(rows, o.sDate, rows[0].vals[0]) + o.float.margin;
+  }
+  if (bl.includes('mod') && V3.on('v3_on_mod')) {
+    o.mod = { date: V3.date('v3_modDate'), rate: V3.num('v3_modRate', NaN) / 100, end: V3.date('v3_modEnd') || o.eDate,
+              repay: V3.val('v3_modRepay', 'equal'), fee: V3.num('v3_modFee', 0), mkt: V3.num('v3_modMkt', NaN) / 100 };
+    if (!o.mod.date || o.mod.date <= o.sDate || o.mod.date >= o.eDate) return fail('Дата модифікації має бути між датою визнання і датою погашення');
+    if (!isFinite(o.mod.rate) || !isFinite(o.mod.mkt)) return fail('Вкажіть нову договірну ставку і ринкову ставку на дату модифікації');
+    if (o.mod.end <= o.mod.date) return fail('Нова дата погашення має бути пізніше дати модифікації');
+  }
+  if (bl.includes('ecl') && V3.on('v3_on_ecl')) {
+    o.ecl = { stage: parseInt(V3.val('v3_eclStage', '1')), from: V3.date('v3_eclFrom'),
+              pd12: V3.num('v3_eclPd12', 0) / 100, pdLife: V3.num('v3_eclPdLife', 0) / 100, lgd: V3.num('v3_eclLgd', 45) / 100 };
+  }
+  return true;
+};
+
+// ── Відображення результатів ─────────────────────────────────────────────
+V3.card = (cls, label, value) => `<div class="metric ${cls}"><div class="metric-label">${label}</div><div class="metric-value">${value}</div></div>`;
+V3.block3 = (title, text, formula) => `<div class="explain-block"><div class="eb-title">${title}</div><div class="eb-text">${text}</div>${formula ? `<div class="eb-formula">${formula}</div>` : ''}</div>`;
+V3.show = R => {
+  const cfg = { showTabs: true, head: R.headNp, headIfrs: R.headIfrs };
+  if (R.titles) cfg.titles = R.titles;
+  if (R.explain) cfg.explain = R.explain;
+  if (R.tabs) cfg.tabs = R.tabs;
+  setResultsLayout(cfg);
+  V3.$('badgeType').textContent = R.badge;
+  V3.$('badgePeriod').textContent = R.period || '—';
+  V3.$('badgeRate').textContent = R.rate || '—';
+  V3.$('metrics').innerHTML = R.metrics.map(m => V3.card(...m)).join('');
+  V3.$('amortBody').innerHTML = R.bodyNp;
+  V3.$('amortBodyIfrs').innerHTML = R.bodyIfrs;
+  V3.$('postings').innerHTML = R.postNp;
+  V3.$('postingsIfrs').innerHTML = R.postIfrs;
+  V3.$('explainGrid').innerHTML = R.explainNp.join('');
+  V3.$('explainGridIfrs').innerHTML = R.explainIfrs.join('');
+  ['explainBody', 'explainToggle', 'explainBodyIfrs', 'explainToggleIfrs'].forEach(id => { const x = V3.$(id); if (x) x.classList.add('open'); });
+  const el = V3.$('results'); el.classList.add('show'); el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+V3.periodTxt = (s, e) => { const d = daysBetween(s, e); return d < 365 ? d + ' дн.' : Math.floor(d / 365) + ' р. (' + d + ' дн.)'; };
+V3.td = (v, cls) => `<td${cls ? ` class="${cls}"` : ''}>${v}</td>`;
+V3.dash = '<td style="color:var(--muted)">—</td>';
+
+// Таблиця амортизації для інструментів ядра
+V3.engineTable = (res, std) => {
+  const o = res.o, unit = o.fx ? ', ' + o.fx.ccy : '';
+  const eclOn = o.ecl && o.side === 'asset';
+  const rate = d => o.fx ? V3.stepValue(o.fx.rows, d, o.fx.r0) : 1;
+  const head = '<tr><th>Дата</th><th>Подія</th><th>Балансова вартість на початок' + unit + '</th><th>Відсотки за ЕСВ' + unit + '</th><th>Грошовий потік' + unit + '</th>'
+    + (eclOn ? '<th>' + (std === 'ifrs' ? 'Резерв ОКЗ' : 'Резерв сумнівних боргів') + unit + '</th>' : '')
+    + '<th>Балансова вартість на кінець' + unit + '</th>' + (o.fx ? '<th>Курс НБУ</th><th>Балансова вартість, грн</th>' : '') + '</tr>';
+  const cols = 6 + (eclOn ? 1 : 0) + (o.fx ? 2 : 0);
+  let b = `<tr style="background:rgba(37,99,235,0.04)"><td style="color:var(--accent2)">${fmtD(o.sDate)}</td><td style="color:var(--accent2)">📌 Первісне визнання</td>${V3.dash}${V3.dash}${V3.dash}`
+    + (eclOn ? V3.td(fmt(std === 'ifrs' ? o.eclInit.ifrs : o.eclInit.np)) : '')
+    + `<td style="color:var(--accent2)">${fmt(res.carrying0)}</td>` + (o.fx ? V3.td(rate(o.sDate).toFixed(4).replace('.', ',')) + V3.td(fmt(V3.r2(res.carrying0 * rate(o.sDate)))) : '') + '</tr>';
+  res.rows.forEach(r => {
+    const reset = res.events.find(e => e.kind === 'reset' && e.idx === res.rows.indexOf(r));
+    if (reset) b += `<tr class="mod-highlight-row"><td colspan="${cols}" style="text-align:center;color:var(--accent4)">↻ ${fmtD(reset.date)}: ставка ${V3.pct(reset.rate)} — ЕСВ ${V3.pct(reset.eirOld, 4)} → ${V3.pct(reset.eirNew, 4)}</td></tr>`;
+    b += `<tr><td style="color:var(--accent2)">${fmtD(r.date)}</td><td style="color:var(--muted)">${qLbl(r.date)} · ${r.days} дн.${r.isLast ? ' · погашення' : ''}</td>`
+      + V3.td(fmt(r.open)) + V3.td(fmt(r.eirInt), 'tg') + (r.cf ? V3.td(fmt(r.cf), 'tb') : V3.dash)
+      + (eclOn ? V3.td(fmt(std === 'ifrs' ? r.ecl.aI : r.ecl.aN)) : '')
+      + V3.td(fmt(r.close)) + (o.fx ? V3.td(rate(r.date).toFixed(4).replace('.', ',')) + V3.td(fmt(V3.r2(r.close * rate(r.date)))) : '') + '</tr>';
+    if (r.mod) {
+      const m = r.mod;
+      b += `<tr class="mod-highlight-row"><td colspan="${cols}" style="text-align:center;font-weight:700;color:var(--accent4)">⚡ Модифікація ${fmtD(m.date)}: тест 10 % = ${(m.test * 100).toFixed(2).replace('.', ',')} % — ${m.substantial ? 'суттєва (нове визнання)' : 'несуттєва'} · ${fmt(m.C)} → ${fmt(m.newCarr)} · результат ${m.gain >= 0 ? 'прибуток' : 'збиток'} ${fmt(Math.abs(m.gain))}</td></tr>`;
+    }
+  });
+  return { head, body: b };
+};
+
+// Повний цикл для типів ядра
+V3.runEngineType = (T, sDate, eDate) => {
+  const o = T.prep(sDate, eDate);
+  if (!o) return null;
+  o.sDate = sDate; o.eDate = o.eDate || eDate;
+  if (!V3.readBlocks(T, o)) return null;
+  if (!(o.nominal > 0) && !o.explicit) { alert('Вкажіть суму інструмента'); return null; }
+  return V3.engine(o);
+};
+V3.renderEngine = (T, res) => {
+  const o = res.o, r2 = V3.r2, unit = o.fx ? o.fx.ccy : 'грн';
+  const tNp = V3.engineTable(res, 'np'), tIf = V3.engineTable(res, 'ifrs');
+  const postNp = (T.postings || V3.enginePostings)(T, res, 'np'), postIf = (T.postings || V3.enginePostings)(T, res, 'ifrs');
+  const disc = r2((o.nominalForDisc ?? o.nominal) - res.fair);
+  const mod = res.events.find(e => e.kind === 'mod');
+  const resets = res.events.filter(e => e.kind === 'reset');
+  const m = [
+    ['mg', (o.price != null ? (T.priceLabel || 'Ціна придбання') : 'Справедлива вартість (PV за ринковою ставкою)') + ', ' + unit, fmt(res.fair)],
+    (o.costs > 0 ? ['mg', 'Балансова вартість при визнанні' + (o.side === 'asset' ? ' (+ витрати на операцію)' : ' (− витрати на операцію)'), fmt(res.carrying0)] : null),
+    (T.noDisc ? null : [disc >= 0 ? 'mr' : 'mo', (disc >= 0 ? 'Дисконт' : 'Премія') + ', ' + unit, fmt(Math.abs(disc))]),
+    ['mo', 'ЕСВ на дату визнання', V3.pct(res.eir0, 4)],
+    ['mb', (o.side === 'asset' ? 'Процентний дохід' : 'Фінансові витрати') + ' за весь строк, ' + unit, fmt(res.totalInt)],
+    (resets.length ? ['mo', 'ЕСВ після останнього перегляду', V3.pct(res.eirEnd, 4)] : null),
+    (mod ? [mod.gain >= 0 ? 'mg' : 'mr', 'Модифікація: ' + (mod.gain >= 0 ? 'прибуток' : 'збиток'), fmt(Math.abs(mod.gain))] : null),
+    (o.ecl && o.side === 'asset' ? ['mr', 'ОКЗ на дату визнання (МСФЗ)', fmt(o.eclInit.ifrs)] : null),
+    (o.fx ? ['mo', 'Курсові різниці за строк, грн', fmt(res.fx_ifrs)] : null),
+  ].filter(Boolean);
+  const ex = T.explain ? T.explain(res) : { np: [], ifrs: [] };
+  const common = [];
+  if (o.float) common.push(V3.block3('↻ Змінна ставка', 'Договірна ставка = базова ставка + маржа ' + V3.pct(o.float.margin) + '. При кожній зміні базової ставки майбутні потоки перераховуються за новою ставкою, а ЕСВ переглядається так, щоб теперішня вартість нових потоків дорівнювала поточній балансовій вартості (МСФЗ 9 п. B5.4.5).'));
+  if (mod) common.push(V3.block3('⚡ Модифікація умов', 'Нові потоки дисконтуються за первісною ЕСВ. Якщо різниця з балансовою вартістю (з урахуванням комісії) становить 10 % або більше, модифікація суттєва: первісний інструмент припиняє визнаватися, новий визнається за справедливою вартістю (МСФЗ 9 п.3.3.2, B3.3.6). Інакше балансова вартість перераховується за первісною ЕСВ, різниця — прибуток або збиток (п.5.4.3), комісія амортизується. НП(С)БО окремого тесту не містить — застосовано підхід МСФЗ 9.',
+    'Тест = |PV нових потоків за первісною ЕСВ ± комісія − балансова вартість| / балансова вартість = ' + (mod.test * 100).toFixed(2).replace('.', ',') + ' %'));
+  if (o.fx) common.push(V3.block3('💱 Валюта', 'Потоки й амортизація — у валюті інструмента; на кожну дату графіка балансова вартість перераховується за курсом НБУ, різниця — курсова різниця (НП(С)БО 21, МСБО 21 п.23, 28). Курсові різниці за позиками й інвестиціями — неопераційні: 744 / 974.'));
+  V3.show({
+    badge: T.label, period: V3.periodTxt(o.sDate, res.endEff), rate: 'ЕСВ ' + V3.pct(res.eir0, 4) + (o.fx ? ' · ' + o.fx.ccy : ''),
+    metrics: m, headNp: tNp.head, headIfrs: tIf.head, bodyNp: tNp.body, bodyIfrs: tIf.body, postNp, postIfrs: postIf,
+    titles: ['Амортизаційна таблиця · НП(С)БО (метод ефективної ставки)', 'Бухгалтерські проведення · НП(С)БО', 'Амортизаційна таблиця · МСФЗ 9 (метод ефективної ставки)', 'Бухгалтерські проведення · МСФЗ 9'],
+    explainNp: ex.np.concat(common), explainIfrs: ex.ifrs.concat(common),
+  });
+};
+
+V3.calculate = type => {
+  const T = V3.TYPES[type];
+  const sDate = V3.date('startDate'), eDate = V3.date('endDate');
+  if (!sDate) { alert('Вкажіть дату визнання'); return; }
+  if (T.needEnd !== false && (!eDate || eDate <= sDate)) { alert('Дата погашення має бути пізніше дати визнання'); return; }
+  if (T.engine) { const res = V3.runEngineType(T, sDate, eDate); if (res) (T.render || V3.renderEngine)(T, res); }
+  else T.calc(T, sDate, eDate);
+};
+
+// ── Типи на ядрі амортизованої собівартості ─────────────────────────────
+V3.ACC_FX = { fxGain: ['744', 'Дохід від неопераційної курсової різниці'], fxLoss: ['974', 'Втрати від неопераційних курсових різниць'] };
+V3.ACC_ECL = { eclExp: ['944', 'Витрати на резерв (сумнівні та безнадійні борги)'], eclRes: ['38', 'Резерв сумнівних боргів / очікуваних кредитних збитків'], eclInc: ['719', 'Дохід від зменшення резерву'] };
+V3.cashOf = o => o.fx ? '312' : '311';
+V3.needMkt = (o, label) => { if (!isFinite(o.mkt)) { alert('Вкажіть ' + (label || 'ринкову ставку')); return null; } return o; };
+V3.loanPrep = side => () => V3.needMkt({
+  side, nominal: V3.num('nominal'), rate: V3.num('nomRate') / 100, mkt: V3.num('marketRate', NaN) / 100,
+  costs: V3.num('commission'), acc: V3.val('account'), isRel: V3.on('isRelParty'),
+});
+V3.norms = {
+  loanAsset: 'НП(С)БО 10 «Дебіторська заборгованість» · НП(С)БО 13 «Фінансові інструменти» · МСФЗ 9 п.4.1.2, 5.1.1, 5.4.1',
+  loanLiab: 'НП(С)БО 11 «Зобов’язання» п.9 · НП(С)БО 13 · МСФЗ 9 п.4.2.1, 5.1.1',
+};
+V3.explainLoan = (res, asset) => {
+  const o = res.o;
+  const sched = { bullet: 'основна сума — наприкінці строку', equal: 'основна сума — рівними частинами', annuity: 'ануїтетні платежі', manual: 'власний графік' }[o.repay] || '';
+  const fr = { 1: 'щомісяця', 3: 'щокварталу', 6: 'раз на півроку', 12: 'щороку' }[o.freq] || '';
+  const txt = (asset ? 'Видана позика' : 'Отримана позика або зобов’язання') + ' первісно визнається за справедливою вартістю — договірні потоки, дисконтовані за ринковою ставкою ' + V3.pct(o.mkt) + '; витрати на операцію ' + (asset ? 'збільшують' : 'зменшують') + ' балансову вартість. Далі — амортизована собівартість за ЕСВ.';
+  const b1 = V3.block3('📐 Метод', txt, 'Графік: платежі ' + fr + ', ' + sched + '; договірні відсотки ' + (o.basis === 'period' ? '= річна ставка / кількість платежів на рік' : '— факт/365 на залишок основної суми'));
+  const rel = o.isRel ? ' Для пов’язаної особи різниця між номіналом і справедливою вартістю відображається у власному капіталі (рах. 425).' : '';
+  return {
+    np: [b1, V3.block3('📋 Нормативна база', '<strong>' + (asset ? V3.norms.loanAsset : V3.norms.loanLiab) + '</strong><br><br>Основна сума до ' + (asset ? 'отримання' : 'погашення') + ' протягом 12 місяців переводиться на поточний рахунок на кожну дату графіка.' + rel)],
+    ifrs: [b1, V3.block3('📋 МСФЗ 9', 'п.5.1.1 — первісне визнання за справедливою вартістю з витратами на операцію; п.5.4.1 — процентний дохід (витрати) за ЕСВ; п. B5.1.2A — різниця першого дня.' + rel)],
+  };
+};
+
+V3.TYPES = {};
+V3.TYPES.loan_out = {
+  label: 'Видана позика', engine: true, useStandard: true, relParty: true,
+  blocks: ['schedule', 'fx', 'float', 'mod', 'ecl', 'accounts'],
+  accs: { inc: ['733', 'Процентний дохід за ЕСВ'], diffLoss: ['977', 'Збиток при первісному визнанні'], diffGain: ['733', 'Дохід при первісному визнанні'],
+          relEq: ['425', 'Пов’язана особа — інший додатковий капітал'], modGain: ['733', 'Прибуток від модифікації'], modLoss: ['977', 'Збиток від модифікації'], ...V3.ACC_FX, ...V3.ACC_ECL },
+  prep: V3.loanPrep('asset'),
+  init: (res, std, E, A) => {
+    const o = res.o, d = V3.r2(o.nominal - res.fair), cash = V3.cashOf(o);
+    const L = [E(o.acc, cash, o.nominal, 'Видача позики за номіналом')];
+    if (d > 0.005) L.push(E(o.isRel ? A('relEq') : A('diffLoss'), o.acc, d, o.isRel ? 'Різниця між номіналом і справедливою вартістю — операція з пов’язаною особою' : 'Збиток при первісному визнанні: ставка нижче ринкової'));
+    if (d < -0.005) L.push(E(o.acc, o.isRel ? A('relEq') : A('diffGain'), -d, o.isRel ? 'Різниця між справедливою вартістю і номіналом — операція з пов’язаною особою' : 'Дохід при первісному визнанні: ставка вище ринкової'));
+    if (o.costs > 0.005) { L.push(E(o.acc, '685', o.costs, 'Витрати на операцію (комісія) включено до балансової вартості')); L.push(E('685', cash, o.costs, 'Оплата комісії')); }
+    return L;
+  },
+  explain: res => V3.explainLoan(res, true),
+};
+V3.TYPES.loan_in = {
+  label: 'Отримана позика (кредит)', engine: true, useStandard: true, relParty: true,
+  blocks: ['schedule', 'fx', 'float', 'mod', 'accounts'],
+  accs: { exp: ['951', 'Відсотки за кредит (за ЕСВ)'], diffGain: ['733', 'Дохід при первісному визнанні'], diffLoss: ['952', 'Витрати при первісному визнанні'],
+          relEq: ['425', 'Пов’язана особа — інший додатковий капітал'], modGain: ['733', 'Прибуток від модифікації'], modLoss: ['952', 'Збиток від модифікації'], ...V3.ACC_FX },
+  prep: V3.loanPrep('liab'),
+  init: (res, std, E, A) => {
+    const o = res.o, d = V3.r2(o.nominal - res.fair), cash = V3.cashOf(o);
+    const L = [E(cash, o.acc, o.nominal, 'Отримано кошти за номіналом')];
+    if (d > 0.005) L.push(E(o.acc, o.isRel ? A('relEq') : A('diffGain'), d, o.isRel ? 'Вигода від позики пов’язаної особи — інший додатковий капітал' : 'Дохід при первісному визнанні: ставка нижче ринкової'));
+    if (d < -0.005) L.push(E(o.isRel ? A('relEq') : A('diffLoss'), o.acc, -d, o.isRel ? 'Операція з пов’язаною особою' : 'Витрати при первісному визнанні: ставка вище ринкової'));
+    if (o.costs > 0.005) { L.push(E(o.acc, '685', o.costs, 'Витрати на операцію (комісія) зменшують балансову вартість')); L.push(E('685', cash, o.costs, 'Оплата комісії')); }
+    return L;
+  },
+  explain: res => V3.explainLoan(res, false),
+};
+V3.TYPES.liab = { ...V3.TYPES.loan_in, label: 'Довгострокове зобов’язання',
+  accs: { ...V3.TYPES.loan_in.accs, exp: ['952', 'Інші фінансові витрати (за ЕСВ)'] } };
+
+// Векселі
+V3.billFields = (asset) => [
+  { id: 'v3_nom', label: 'Номінал векселя', def: 500000 },
+  { id: 'v3_rate', label: 'Відсоткова ставка векселя, % річних', hint: '0 — дисконтний вексель; відсотки сплачуються разом з номіналом', def: 0 },
+  { id: 'v3_mkt', label: 'Ринкова ставка, % річних', hint: 'для теперішньої вартості', def: 18 },
+];
+V3.billPrep = side => () => V3.needMkt({ side, nominal: V3.num('v3_nom'), rate: V3.num('v3_rate') / 100, mkt: V3.num('v3_mkt', NaN) / 100, freq: 0, repay: 'bullet', basis: 'act365', costs: 0, acc: V3.val('account') });
+V3.TYPES.bill_rec = {
+  label: 'Вексель одержаний', engine: true, fields: V3.billFields(true), blocks: ['fx', 'ecl', 'accounts'],
+  startLabel: 'Дата отримання векселя', endLabel: 'Дата погашення векселя',
+  accs: { counter: ['361', 'Рахунок дебіторської заборгованості, погашеної векселем'], inc: ['733', 'Процентний дохід за ЕСВ (амортизація дисконту)'], diffLoss: ['977', 'Дисконт при первісному визнанні'], diffGain: ['733', 'Дохід при первісному визнанні'], ...V3.ACC_FX, ...V3.ACC_ECL },
+  prep: V3.billPrep('asset'),
+  init: (res, std, E, A) => {
+    const o = res.o, d = V3.r2(o.nominal - res.fair);
+    const L = [E(o.acc, A('counter'), o.nominal, 'Отримано вексель від покупця в погашення дебіторської заборгованості')];
+    if (d > 0.005) L.push(E(A('diffLoss'), o.acc, d, 'Різниця між номіналом і теперішньою вартістю векселя'));
+    if (d < -0.005) L.push(E(o.acc, A('diffGain'), -d, 'Теперішня вартість векселя перевищує номінал'));
+    return L;
+  },
+  explain: res => ({
+    np: [V3.block3('📐 Вексель одержаний', 'Довгостроковий вексель (понад 12 місяців) — рах. 182, короткостроковий — 341 (342 — в іноземній валюті). Первісно — за теперішньою вартістю суми до отримання; дисконт амортизується за ЕСВ до дати погашення.', 'PV = (номінал + відсотки) / (1 + r)<sup>днів/365</sup>'),
+         V3.block3('📋 Нормативна база', '<strong>НП(С)БО 10 · НП(С)БО 13</strong>. Для векселя зі строком до 12 місяців дисконтування можна не застосовувати, якщо вплив несуттєвий (облікова політика).')],
+    ifrs: [V3.block3('📋 МСФЗ 9', 'Вексель — фінансовий актив за амортизованою собівартістю (п.4.1.2): первісно за справедливою вартістю (п.5.1.1), далі — процентний дохід за ЕСВ і очікувані кредитні збитки (розд. 5.5).')],
+  }),
+};
+V3.TYPES.bill_pay = {
+  label: 'Вексель виданий', engine: true, fields: V3.billFields(false), blocks: ['fx', 'accounts'],
+  startLabel: 'Дата видачі векселя', endLabel: 'Дата погашення векселя',
+  accs: { counter: ['631', 'Рахунок кредиторської заборгованості, погашеної векселем'], exp: ['952', 'Інші фінансові витрати (амортизація дисконту)'], diffGain: ['733', 'Дохід при первісному визнанні'], diffLoss: ['952', 'Витрати при первісному визнанні'], ...V3.ACC_FX },
+  prep: V3.billPrep('liab'),
+  init: (res, std, E, A) => {
+    const o = res.o, d = V3.r2(o.nominal - res.fair);
+    const L = [E(A('counter'), o.acc, o.nominal, 'Видано вексель постачальнику в погашення кредиторської заборгованості')];
+    if (d > 0.005) L.push(E(o.acc, A('diffGain'), d, 'Різниця між номіналом і теперішньою вартістю векселя'));
+    if (d < -0.005) L.push(E(A('diffLoss'), o.acc, -d, 'Теперішня вартість векселя перевищує номінал'));
+    return L;
+  },
+  explain: res => ({
+    np: [V3.block3('📐 Вексель виданий', 'Довгостроковий вексель — рах. 511 (512 — в іноземній валюті), короткостроковий — 621 (622). Первісно — за теперішньою вартістю суми до сплати; дисконт амортизується як фінансові витрати за ЕСВ. Сума до погашення протягом 12 місяців переводиться на 621.'),
+         V3.block3('📋 Нормативна база', '<strong>НП(С)БО 11 п.9 · НП(С)БО 13</strong>')],
+    ifrs: [V3.block3('📋 МСФЗ 9', 'Фінансове зобов’язання за амортизованою собівартістю (п.4.2.1): первісно за справедливою вартістю, далі — фінансові витрати за ЕСВ.')],
+  }),
+};
+
+// Продаж і купівля з відстроченням платежу
+V3.defFields = [
+  { id: 'v3_price', label: 'Договірна ціна (без ПДВ)', def: 1200000 },
+  { id: 'v3_down', label: 'Оплата на дату договору', def: 0 },
+  { id: 'v3_mkt', label: 'Ринкова ставка, % річних', hint: 'ставка окремої операції фінансування', def: 18 },
+];
+V3.defRepay = [['equal', 'Рівними частинами'], ['bullet', 'Одним платежем наприкінці'], ['manual', 'За власним графіком (таблиця)']];
+V3.defPrep = side => () => {
+  const price = V3.num('v3_price'), down = V3.num('v3_down');
+  if (!(down < price)) { alert('Оплата на дату договору має бути меншою за ціну'); return null; }
+  return V3.needMkt({ side, nominal: V3.r2(price - down), price: undefined, rate: 0, mkt: V3.num('v3_mkt', NaN) / 100, costs: 0, acc: V3.val('account'), down, contract: price, cogs: V3.num('v3_cogs') });
+};
+V3.TYPES.def_sale = {
+  label: 'Продаж з відстроченням платежу', engine: true, noBasis: true, defFreq: 1, defRepay: 'equal', repayOpts: V3.defRepay,
+  fields: [...V3.defFields, { id: 'v3_cogs', label: 'Собівартість проданих товарів', hint: '0 — без проведення', def: 0 }],
+  blocks: ['schedule', 'fx', 'ecl', 'accounts'],
+  startLabel: 'Дата продажу (передачі контролю)', endLabel: 'Дата останнього платежу',
+  accs: { revenue: ['702', 'Дохід від реалізації товарів'], inc: ['732', 'Відсотки одержані (процентний дохід за ЕСВ)'], cogsExp: ['902', 'Собівартість реалізованих товарів'], inventory: ['282', 'Товари в торгівлі'], ...V3.ACC_FX, ...V3.ACC_ECL },
+  prep: V3.defPrep('asset'),
+  init: (res, std, E, A) => {
+    const o = res.o, cash = V3.cashOf(o), L = [];
+    if (o.down > 0.005) L.push(E(cash, A('revenue'), o.down, 'Оплата на дату продажу'));
+    L.push(E(o.acc, A('revenue'), res.fair, 'Виручка в сумі теперішньої вартості відстрочених платежів (МСФЗ 15 п.60–65)'));
+    if (o.cogs > 0.005) L.push(E(A('cogsExp'), A('inventory'), o.cogs, 'Собівартість проданих товарів', true));
+    return L;
+  },
+  explain: res => {
+    const o = res.o, rev = V3.r2(o.down + res.fair);
+    const t = 'Якщо платіж відстрочено понад 12 місяців, договір містить значний компонент фінансування: виручка визнається за ціною негайної оплати (теперішня вартість), а різниця до договірної ціни — процентним доходом протягом строку відстрочення.';
+    return {
+      np: [V3.block3('📐 Продаж з відстроченням', t, 'Виручка = оплата на дату продажу + PV відстрочених платежів = ' + fmt(o.down) + ' + ' + fmt(res.fair) + ' = ' + fmt(rev)),
+           V3.block3('📋 Нормативна база', '<strong>НП(С)БО 15 «Дохід» · НП(С)БО 10</strong>. Суми — без ПДВ; податкові наслідки (ПДВ, податок на прибуток) — за ПКУ окремо.')],
+      ifrs: [V3.block3('📋 МСФЗ 15 п.60–65', 'Ціна операції коригується на вплив вартості грошей у часі. Практичне звільнення (п.63): якщо відстрочення не перевищує 12 місяців, коригування можна не робити. Процентний дохід — окремо від виручки за договорами з клієнтами.')],
+    };
+  },
+};
+V3.TYPES.def_purchase = {
+  label: 'Купівля з відстроченням платежу', engine: true, noBasis: true, defFreq: 1, defRepay: 'equal', repayOpts: V3.defRepay,
+  fields: V3.defFields, blocks: ['schedule', 'fx', 'accounts'],
+  startLabel: 'Дата придбання', endLabel: 'Дата останнього платежу',
+  accs: { asset: ['152', 'Рахунок придбаного активу'], exp: ['952', 'Інші фінансові витрати (за ЕСВ)'], ...V3.ACC_FX },
+  prep: V3.defPrep('liab'),
+  init: (res, std, E, A) => {
+    const o = res.o, cash = V3.cashOf(o), L = [];
+    L.push(E(A('asset'), o.acc, res.fair, 'Актив визнано за ціною негайної оплати — теперішня вартість відстрочених платежів'));
+    if (o.down > 0.005) L.push(E(A('asset'), cash, o.down, 'Оплата на дату придбання'));
+    return L;
+  },
+  explain: res => {
+    const o = res.o;
+    return {
+      np: [V3.block3('📐 Купівля з відстроченням', 'Актив визнається за ціною, яку було б сплачено при негайній оплаті (теперішня вартість відстрочених платежів); різниця до договірної ціни — фінансові витрати протягом строку відстрочення.', 'Вартість активу = ' + fmt(o.down) + ' + ' + fmt(res.fair) + ' = ' + fmt(V3.r2(o.down + res.fair))),
+           V3.block3('📋 Нормативна база', '<strong>НП(С)БО 7 п.8, НП(С)БО 9, НП(С)БО 11 п.9</strong> — довгострокова кредиторська заборгованість за теперішньою вартістю.')],
+      ifrs: [V3.block3('📋 МСФЗ', 'МСБО 16 п.23, МСБО 2 п.18: якщо оплату відстрочено понад звичайні умови кредиту, різниця між ціною негайної оплати і загальною сумою платежів визнається процентними витратами протягом строку відстрочення.')],
+    };
+  },
+};
+
+// Облігації придбані (корпоративні, муніципальні)
+V3.TYPES.corp_bond = {
+  label: 'Облігації придбані (корпоративні, муніципальні)', engine: true, priceLabel: 'Ціна придбання',
+  fields: [
+    { id: 'v3_face', label: 'Номінал 1 облігації', def: 1000 },
+    { id: 'v3_qty', label: 'Кількість, шт.', def: 1000 },
+    { id: 'v3_price', label: 'Ціна 1 облігації', hint: 'з накопиченим купонним доходом', def: 985 },
+    { id: 'v3_comm', label: 'Комісія при придбанні', def: 0 },
+    { id: 'v3_cpn', label: 'Купонна ставка, % річних', def: 16 },
+    { id: 'v3_perYear', label: 'Кількість купонів на рік', type: 'select', opts: [[1, '1'], [2, '2'], [4, '4'], [12, '12']], def: 4 },
+    { id: 'v3_cpnDates', label: 'Дати купонів (необов’язково): дата; 0', type: 'textarea', hint: 'порожньо — від дати погашення назад', rows: 3 },
+  ],
+  blocks: ['fx', 'ecl', 'accounts'],
+  startLabel: 'Дата придбання', endLabel: 'Дата погашення облігацій',
+  accs: { inc: ['732', 'Відсотки одержані (процентний дохід за ЕСВ)'], ...V3.ACC_FX, eclExp: ['972', 'Втрати від зменшення корисності активів'], eclRes: ['38', 'Резерв очікуваних кредитних збитків'], eclInc: ['742', 'Дохід від відновлення корисності активів'] },
+  prep: () => {
+    const face = V3.num('v3_face'), qty = V3.num('v3_qty'), per = parseInt(V3.val('v3_perYear', '4'));
+    const ds = V3.parseTable(V3.val('v3_cpnDates')).map(r => r.date);
+    return { side: 'asset', nominal: V3.r2(face * qty), rate: V3.num('v3_cpn') / 100, mkt: V3.num('v3_cpn') / 100, basis: 'bond', perYear: per,
+             bondStep: ds.length ? null : 12 / per, dates: ds.length ? ds : null, repay: 'bullet', freq: 12 / per,
+             price: V3.r2(V3.num('v3_price') * qty), pricePer: V3.num('v3_price'), qty, costs: V3.num('v3_comm'), acc: V3.val('account') };
+  },
+  init: (res, std, E, A) => {
+    const o = res.o, cash = V3.cashOf(o);
+    const L = [E(o.acc, cash, o.price, 'Придбано облігації: ' + o.qty + ' шт. × ' + fmt(o.pricePer))];
+    if (o.costs > 0.005) { L.push(E(o.acc, '685', o.costs, 'Комісія включається до первісної вартості (НП(С)БО 12 п.4; МСФЗ 9 п.5.1.1)')); L.push(E('685', cash, o.costs, 'Оплата комісії')); }
+    return L;
+  },
+  explain: res => ({
+    np: [V3.block3('📐 Облігації, утримувані до погашення', 'Первісна вартість — ціна придбання з комісією (НП(С)БО 12 п.4). Дисконт або премія амортизуються за ЕСВ, розрахованою з фактичної ціни (п.10). Купон за повний період = номінал × ставка / кількість купонів на рік; дати купонів — від дати погашення назад.'),
+         V3.block3('📋 Рахунки', 'Довгострокові — 143, поточні — 352. Процентний дохід — 732. Зменшення корисності — 972 / відновлення — 742.')],
+    ifrs: [V3.block3('📋 МСФЗ 9', 'Амортизована собівартість (п.4.1.2) за бізнес-моделлю «утримання для отримання договірних потоків». Очікувані кредитні збитки: стадія 1 — 12 місяців, стадії 2–3 — весь строк (п.5.5.3, 5.5.5). Для інструментів з низьким кредитним ризиком ризик вважається не зрослим (п.5.5.10).')],
+  }),
+};
+
+// Фінансова оренда в орендодавця
+V3.TYPES.lease_lessor = {
+  label: 'Фінансова оренда (орендодавець)', engine: true, noDisc: true, priceLabel: 'Чиста інвестиція в оренду',
+  nonCashLabel: 'повернення активу за негарантованою ліквідаційною вартістю',
+  fields: [
+    { id: 'v3_pay', label: 'Орендний платіж за період', def: 100000 },
+    { id: 'v3_lfreq', label: 'Періодичність', type: 'select', opts: [[1, 'Щомісяця'], [3, 'Щокварталу'], [12, 'Щороку']], def: 3 },
+    { id: 'v3_timing', label: 'Момент оплати', type: 'select', opts: [['arrears', 'Наприкінці періоду'], ['advance', 'На початку періоду']], def: 'arrears' },
+    { id: 'v3_fv', label: 'Справедлива вартість активу', def: 1000000 },
+    { id: 'v3_bv', label: 'Залишкова (балансова) вартість активу', def: 900000 },
+    { id: 'v3_resid', label: 'Негарантована ліквідаційна вартість', def: 0 },
+    { id: 'v3_idc', label: 'Первісні прямі витрати орендодавця', def: 0 },
+  ],
+  blocks: ['ecl', 'accounts'],
+  startLabel: 'Дата початку оренди', endLabel: 'Дата закінчення оренди',
+  accs: { inc: ['732', 'Фінансовий дохід за ставкою, закладеною в оренді'], asset: ['104', 'Рахунок переданого активу'], gain: ['746', 'Прибуток від передачі активу'], loss: ['977', 'Збиток від передачі активу'], assetBack: ['104', 'Рахунок активу, повернутого після оренди'], ...V3.ACC_ECL },
+  prep: (s, e) => {
+    const pay = V3.num('v3_pay'), f = parseInt(V3.val('v3_lfreq', '3')), adv = V3.val('v3_timing') === 'advance';
+    const n = Math.max(1, Math.round(leaseMonths(s, e) / f));
+    const resid = V3.num('v3_resid'), fv = V3.num('v3_fv'), idc = V3.num('v3_idc');
+    const ex = [];
+    for (let k = adv ? 0 : 1; k <= (adv ? n - 1 : n); k++) {
+      let d = k === n ? new Date(e) : addM(s, k * f);
+      if (!adv && k < n) d.setDate(d.getDate() - 1);
+      ex.push({ date: d, cf: pay });
+    }
+    if (resid > 0) {
+      const last = ex[ex.length - 1];
+      if (dateKey(last.date) === dateKey(e)) { last.cf = V3.r2(last.cf + resid); last.nonCash = resid; }
+      else ex.push({ date: new Date(e), cf: resid, nonCash: resid });
+    }
+    if (!(fv > 0)) { alert('Вкажіть справедливу вартість активу'); return null; }
+    return { side: 'asset', explicit: ex, nominal: V3.r2(ex.reduce((t, x) => t + x.cf, 0)), price: V3.r2(fv + idc), fv, bv: V3.num('v3_bv'), idc, mkt: 0.1, acc: V3.val('account'), costs: 0 };
+  },
+  init: (res, std, E, A) => {
+    const o = res.o, g = V3.r2(o.fv - o.bv), L = [];
+    L.push(E(o.acc, A('asset'), o.bv, 'Передано актив у фінансову оренду за залишковою вартістю (накопичений знос попередньо списано: Дт 131 / Кт ' + A('asset') + ')'));
+    if (g > 0.005) L.push(E(o.acc, A('gain'), g, 'Різниця між справедливою і залишковою вартістю переданого активу'));
+    if (g < -0.005) L.push(E(A('loss'), o.acc, -g, 'Залишкова вартість перевищує справедливу вартість активу'));
+    if (o.idc > 0.005) { L.push(E(o.acc, '685', o.idc, 'Первісні прямі витрати включено до чистої інвестиції в оренду (МСФЗ 16 п.69)')); L.push(E('685', '311', o.idc, 'Оплата')); }
+    return L;
+  },
+  explain: res => ({
+    np: [V3.block3('📐 Чиста інвестиція в оренду', 'Ставка, закладена в оренді, — це ставка, за якої теперішня вартість орендних платежів і негарантованої ліквідаційної вартості дорівнює справедливій вартості активу плюс первісні прямі витрати орендодавця (МСФЗ 16, Додаток А).', 'Ставка, закладена в оренді = ' + V3.pct(res.eir0, 4) + ' річних'),
+         V3.block3('📋 Рахунки', 'Дебіторська заборгованість за фінансовою орендою — 181, поточна частина — 377. Фінансовий дохід — 732. Для орендодавця-виробника або дилера виручка й собівартість визнаються окремо (МСФЗ 16 п.71).')],
+    ifrs: [V3.block3('📋 МСФЗ 16 п.67–80', 'На дату початку оренди орендодавець припиняє визнання активу і визнає дебіторську заборгованість у сумі чистої інвестиції в оренду (п.67–68). Фінансовий дохід — за постійною періодичною ставкою на чисту інвестицію (п.75–76).')],
+  }),
+};
+
+// Конвертовані облігації (складений інструмент, МСБО 32 п.28–32)
+V3.TYPES.conv_bond = {
+  label: 'Конвертовані облігації розміщені', engine: true, noDisc: true,
+  fields: [
+    { id: 'v3_nom', label: 'Номінальна вартість випуску', def: 10000000 },
+    { id: 'v3_proc', label: 'Надходження від розміщення', def: 10000000 },
+    { id: 'v3_cpn', label: 'Купонна ставка, % річних', def: 8 },
+    { id: 'v3_cfreq', label: 'Виплата купону', type: 'select', opts: [[3, 'Щокварталу'], [6, 'Раз на півроку'], [12, 'Щороку']], def: 6 },
+    { id: 'v3_mkt', label: 'Ринкова ставка за аналогічними облігаціями без конвертації, %', def: 16 },
+    { id: 'v3_costs', label: 'Витрати на розміщення', def: 0 },
+  ],
+  blocks: ['accounts'],
+  startLabel: 'Дата розміщення', endLabel: 'Дата погашення (конвертації)',
+  accs: { eq: ['425', 'Компонент власного капіталу'], exp: ['952', 'Інші фінансові витрати'] },
+  prep: (s, e) => {
+    const N = V3.num('v3_nom'), P = V3.num('v3_proc'), costs = V3.num('v3_costs');
+    const o = V3.needMkt({ side: 'liab', nominal: N, rate: V3.num('v3_cpn') / 100, mkt: V3.num('v3_mkt', NaN) / 100, basis: 'period', freq: parseInt(V3.val('v3_cfreq', '6')), repay: 'bullet', acc: '521', proceeds: P });
+    if (!o) return null;
+    const per = V3.periodsFor(o, s, e, 'bullet', null);
+    const L = V3.r2(V3.pv(V3.fill(per, N, () => o.rate, o, 'bullet', {}), s, o.mkt));
+    o.liabFv = L; o.equity = V3.r2(P - L);
+    o.costs = V3.r2(P > 0 ? costs * L / P : 0); o.costsEq = V3.r2(costs - o.costs); o.totalCosts = costs;
+    return o;
+  },
+  postings: (T, res, std) => {
+    const o = res.o, r2 = V3.r2, N = o.nominal, Lv = o.liabFv;
+    const gross = r2(Lv - N);
+    const toPrem = gross > 0 ? Math.min(o.costs, gross) : 0, toDisc = r2(o.costs - toPrem), netPrem = gross > 0 ? r2(gross - toPrem) : 0;
+    const amAcc = netPrem > 0.005 ? '522' : '523', d0 = fmtD(o.sDate);
+    let html = GRP('📌 Розміщення конвертованих облігацій — ' + d0, [
+      gross >= 0 ? PR(d0, '311', '521', N, 'Зобов’язання за облігаціями — номінальна вартість') : PR(d0, '311', '521', Lv, 'Компонент зобов’язання: теперішня вартість купонів і номіналу за ринковою ставкою'),
+      gross < -0.005 ? PR(d0, '523', '521', -gross, 'Дисконт: номінал − компонент зобов’язання') : '',
+      gross > 0.005 ? PR(d0, '311', '522', gross, 'Премія: компонент зобов’язання − номінал') : '',
+      Math.abs(o.equity) > 0.005 ? PR(d0, o.equity > 0 ? '311' : V3.acc(T, 'eq'), o.equity > 0 ? V3.acc(T, 'eq') : '311', Math.abs(o.equity), 'Компонент власного капіталу: надходження − компонент зобов’язання (МСБО 32 п.31–32)') : '',
+      toPrem > 0.005 ? PR(d0, '522', '685', toPrem, 'Витрати на розміщення, віднесені на зобов’язання (МСБО 32 п.38)') : '',
+      toDisc > 0.005 ? PR(d0, '523', '685', toDisc, 'Витрати на розміщення, віднесені на зобов’язання (МСБО 32 п.38)') : '',
+      o.costsEq > 0.005 ? PR(d0, V3.acc(T, 'eq'), '685', o.costsEq, 'Витрати на розміщення, віднесені на власний капітал (МСБО 32 п.38)') : '',
+      o.totalCosts > 0.005 ? PR(d0, '685', '311', o.totalCosts, 'Оплата витрат на розміщення') : '',
+    ].filter(Boolean));
+    html += byYear(res.rows, (yr, yR) => GRP('📆 ' + yr + ' — купон і амортизація за ЕСВ', yR.flatMap(r => {
+      const am = r2(r.eirInt - r.interest), lbl = qLbl(r.date) + ' · ' + r.days + ' дн.';
+      return [
+        r.interest > 0.005 ? PR(fmtD(r.date), V3.acc(T, 'exp'), '684', r.interest, lbl + ' — нараховано купон') : '',
+        am > 0.005 ? PR(fmtD(r.date), V3.acc(T, 'exp'), amAcc, am, lbl + ' — амортизація ' + (amAcc === '523' ? 'дисконту' : 'премії') + ' за ЕСВ') : '',
+        am < -0.005 ? PR(fmtD(r.date), amAcc, V3.acc(T, 'exp'), -am, lbl + ' — амортизація ' + (amAcc === '522' ? 'премії' : 'дисконту') + ' за ЕСВ') : '',
+        r.interest > 0.005 ? PR(fmtD(r.date), '684', '311', r.interest, lbl + ' — виплачено купон') : '',
+        r.principal > 0.005 ? PR(fmtD(r.date), '521', '311', r.principal, lbl + ' — погашення облігацій за номіналом') : '',
+      ].filter(Boolean);
+    })));
+    html += `<div class="posting-group"><div class="posting-phase">Якщо власники конвертують облігації</div><div class="posting-row"><span class="pdesc">Замість погашення: Дт 521 / Кт 401 (номінал акцій або часток), Дт 521 / Кт 421 (різниця), компонент капіталу Дт ${V3.acc(T, 'eq')} / Кт 421 — МСБО 32 п. AG32. Компонент капіталу не переоцінюється.</span></div></div>`;
+    return html;
+  },
+  explain: res => {
+    const o = res.o;
+    const t = V3.block3('📐 Розподіл складового інструмента', 'Спершу оцінюється компонент зобов’язання — теперішня вартість купонів і номіналу за ставкою аналогічних облігацій без права конвертації. Залишок надходжень — компонент власного капіталу (МСБО 32 п.31–32). Витрати на розміщення розподіляються пропорційно (п.38).',
+      'Зобов’язання = ' + fmt(o.liabFv) + ' · капітал = ' + fmt(o.proceeds) + ' − ' + fmt(o.liabFv) + ' = ' + fmt(o.equity));
+    return { np: [t, V3.block3('📋 НП(С)БО', 'НП(С)БО 13 не містить окремого порядку для складових інструментів; за обліковою політикою застосовано підхід МСБО 32. Рахунки: 521 — номінал, 523 — дисконт, 522 — премія, 425 — компонент капіталу.')],
+             ifrs: [t, V3.block3('📋 МСБО 32 п.28–32, AG31–AG35', 'Компонент капіталу після визнання не переоцінюється; при погашенні без конвертації залишається у власному капіталі (може бути перенесений у межах капіталу).')] };
+  },
+};
+
+// ── Окремі розрахунки ────────────────────────────────────────────────────
+V3.qEnds = (s, e) => {                          // звітні дати (кінці кварталів) між s і e
+  const out = []; let d = nextQEnd(s);
+  while (d && d < e) { out.push(new Date(d)); d = nextQEnd(d); }
+  return out;
+};
+V3.uniqDates = list => {
+  const m = new Map(); list.forEach(x => { if (x) m.set(dateKey(x.date || x), x); });
+  return [...m.values()].sort((a, b) => (a.date || a) - (b.date || b));
+};
+V3.rowsHtml = rows => rows.map(r => '<tr>' + r.map((c, i) => i < 2 ? `<td${i === 0 ? ' style="color:var(--accent2)"' : ''}>${c}</td>` : (c === null ? V3.dash : `<td>${c}</td>`)).join('') + '</tr>').join('');
+V3.headHtml = cols => '<tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr>';
+V3.post = (list) => list.filter(x => x && Math.abs(x[3]) > 0.004).map(([d, dt, kt, sum, desc]) => sum < 0 ? PR(d, kt, dt, -sum, desc) : PR(d, dt, kt, sum, desc));
+
+// 1. Резерв під торговельну дебіторську заборгованість (матриця)
+V3.TYPES.recv_matrix = {
+  label: 'Резерв під торговельну дебіторську заборгованість', needEnd: false,
+  startLabel: 'Звітна дата',
+  intro: 'Розрахунок резерву за строками непогашення: НП(С)БО 10 — метод коефіцієнта сумнівності; МСФЗ 9 — спрощений підхід і матриця резервів з урахуванням прогнозної інформації.',
+  fields: [
+    { id: 'v3_buckets', label: 'Групи заборгованості: назва; сума; рівень втрат, %', type: 'textarea', rows: 6,
+      def: 'Не прострочена; 1200000; 1\nПрострочена 1–30 днів; 350000; 3\nПрострочена 31–90 днів; 180000; 10\nПрострочена 91–180 днів; 90000; 30\nПрострочена понад 180 днів; 60000; 70' },
+    { id: 'v3_fwd', label: 'Коригування на прогнозну інформацію (МСФЗ), %', hint: 'наприклад, +10 — погіршення економічних умов', def: 10 },
+    { id: 'v3_exist', label: 'Сальдо резерву на початок (рах. 38)', def: 50000 },
+  ],
+  blocks: ['accounts'],
+  accs: { eclExp: ['944', 'Сумнівні та безнадійні борги'], eclRes: ['38', 'Резерв сумнівних боргів'], eclInc: ['719', 'Інші доходи від операційної діяльності'] },
+  calc: (T, s) => {
+    const r2 = V3.r2, rows = V3.parseNamed(V3.val('v3_buckets'));
+    if (!rows.length) { alert('Введіть групи заборгованості: «назва; сума; рівень втрат, %»'); return; }
+    const fwd = V3.num('v3_fwd') / 100, exist = V3.num('v3_exist');
+    let tot = 0, np = 0, ifr = 0;
+    const tr = rows.map(r => {
+      const [bal, rate] = r.vals; const a = r2(bal * rate / 100), b = r2(bal * rate / 100 * (1 + fwd));
+      tot += bal; np += a; ifr += b;
+      return [r.name, '', fmt(bal), (rate).toFixed(2).replace('.', ',') + ' %', fmt(a), fmt(b)];
+    });
+    np = r2(np); ifr = r2(ifr); tot = r2(tot);
+    tr.push(['<strong>Разом</strong>', '', '<strong>' + fmt(tot) + '</strong>', '', '<strong>' + fmt(np) + '</strong>', '<strong>' + fmt(ifr) + '</strong>']);
+    const head = V3.headHtml(['Група', '', 'Сума заборгованості, грн', 'Рівень втрат', 'Резерв НП(С)БО, грн', 'Резерв МСФЗ, грн']);
+    const d0 = fmtD(s), A = r => V3.acc(T, r);
+    const adj = (target, label) => {
+      const d = r2(target - exist);
+      return GRP('📌 Коригування резерву на ' + d0, V3.post([
+        d > 0 ? [d0, A('eclExp'), A('eclRes'), d, label + ': донарахування до ' + fmt(target) + ' (було ' + fmt(exist) + ')'] : [d0, A('eclRes'), A('eclInc'), -d, label + ': зменшення до ' + fmt(target) + ' (було ' + fmt(exist) + ')'],
+      ]) || '<div class="posting-row"><span class="pdesc">Коригування не потрібне</span></div>');
+    };
+    V3.show({
+      badge: T.label, period: 'на ' + d0, rate: 'Прогнозне коригування ' + V3.pct(fwd),
+      metrics: [['mb', 'Торговельна дебіторська заборгованість, грн', fmt(tot)], ['mr', 'Резерв за НП(С)БО 10, грн', fmt(np)], ['mr', 'Резерв ОКЗ за МСФЗ 9, грн', fmt(ifr)], ['mo', 'Сальдо резерву на початок, грн', fmt(exist)]],
+      headNp: head, headIfrs: head, bodyNp: V3.rowsHtml(tr), bodyIfrs: V3.rowsHtml(tr),
+      postNp: adj(np, 'Резерв сумнівних боргів (НП(С)БО 10 п.8)'), postIfrs: adj(ifr, 'Очікувані кредитні збитки за весь строк (МСФЗ 9 п.5.5.15)'),
+      titles: ['Розрахунок резерву за строками непогашення · НП(С)БО 10', 'Бухгалтерські проведення · НП(С)БО', 'Матриця резервів · МСФЗ 9', 'Бухгалтерські проведення · МСФЗ 9'],
+      explainNp: [V3.block3('📐 Метод коефіцієнта сумнівності', 'Дебіторську заборгованість групують за строками непогашення; для кожної групи встановлюють коефіцієнт сумнівності на основі даних про фактичне списання за попередні періоди. Резерв = Σ сума групи × коефіцієнт (НП(С)БО 10 п.8–9). Резерв сумнівних боргів — рах. 38, витрати — 944.')],
+      explainIfrs: [V3.block3('📐 Спрощений підхід МСФЗ 9', 'Для торговельної дебіторської заборгованості без значного компонента фінансування резерв завжди дорівнює очікуваним кредитним збиткам за весь строк (п.5.5.15). Матриця резервів на основі історичних втрат за строками прострочення, скоригованих на прогнозну інформацію (п. B5.5.35).', 'Резерв = Σ сума × рівень втрат × (1 + ' + V3.pct(fwd) + ')')],
+    });
+  },
+};
+
+// 2. Фінансова гарантія видана
+V3.TYPES.fin_guar = {
+  label: 'Фінансова гарантія видана', startLabel: 'Дата надання гарантії', endLabel: 'Дата закінчення гарантії',
+  intro: 'Гарантія за зобов’язаннями іншої особи (наприклад, за кредитом пов’язаної компанії).',
+  fields: [
+    { id: 'v3_gAmt', label: 'Сума гарантованого боргу', def: 5000000 },
+    { id: 'v3_gMode', label: 'Винагорода за гарантію', type: 'select', opts: [['upfront', 'Одноразова на дату надання'], ['periodic', 'Щоквартальна, % річних від суми'], ['none', 'Без винагороди (за пов’язану особу)']], def: 'none' },
+    { id: 'v3_gFee', label: 'Винагорода: сума (одноразова) або ставка, % річних', def: 1 },
+    { id: 'v3_gMkt', label: 'Ринкова ставка винагороди за аналогічну гарантію, % річних', hint: 'для оцінки безоплатної гарантії', def: 1.5 },
+    { id: 'v3_gDisc', label: 'Ставка дисконтування, % річних', def: 16 },
+    { id: 'v3_gStage', label: 'Стадія кредитного ризику боржника', type: 'select', opts: [[1, '1 — ризик не зріс'], [2, '2 — значне зростання ризику'], [3, '3 — дефолт ймовірний']], def: 1 },
+    { id: 'v3_gFrom', label: 'Стадія діє з дати', type: 'date', hint: 'порожньо — з дати надання' },
+    { id: 'v3_gPd12', label: 'Імовірність дефолту боржника за 12 місяців, %', def: 2 },
+    { id: 'v3_gPdLife', label: 'Імовірність дефолту за весь строк, %', def: 7 },
+    { id: 'v3_gLgd', label: 'Втрати в разі дефолту (LGD), %', def: 40 },
+  ],
+  blocks: ['accounts'],
+  accs: { liab: ['69', 'Доходи майбутніх періодів (зобов’язання за гарантією)'], inc: ['733', 'Дохід від гарантії'], freeDr: ['142', 'Внесок у пов’язану особу за безоплатну гарантію'],
+          provExp: ['977', 'Витрати на забезпечення за гарантією'], prov: ['474', 'Забезпечення за гарантією'], provInc: ['719', 'Дохід від зменшення забезпечення'], recv: ['377', 'Розрахунки за винагородою'] },
+  calc: (T, s, e) => {
+    const r2 = V3.r2, A = r => V3.acc(T, r);
+    const amt = V3.num('v3_gAmt'), mode = V3.val('v3_gMode', 'none'), fee = V3.num('v3_gFee'), mktFee = V3.num('v3_gMkt') / 100, disc = V3.num('v3_gDisc') / 100;
+    const stage = parseInt(V3.val('v3_gStage', '1')), from = V3.date('v3_gFrom'), pd12 = V3.num('v3_gPd12') / 100, pdL = V3.num('v3_gPdLife') / 100, lgd = V3.num('v3_gLgd') / 100;
+    const stageAt = d => (!from || d >= from) ? stage : 1;
+    const per = periodSchedule(s, e, 3), total = daysBetween(s, e);
+    const qFees = per.map(p => ({ date: p.date, cf: r2(amt * mktFee * p.days / 365) }));
+    let init = 0;
+    if (mode === 'upfront') init = fee;
+    else if (mode === 'none') init = r2(V3.pv(qFees, s, disc));
+    const ecl = d => r2(amt * (stageAt(d) === 1 ? pd12 : pdL) * lgd);
+    let prevUn = init, prevProvI = 0, prevProvN = 0;
+    const tr = [], pI = [], pN = [], d0 = fmtD(s);
+    if (mode === 'upfront') { pI.push([d0, '311', A('liab'), init, 'Отримано винагороду за гарантію — первісна оцінка за справедливою вартістю (МСФЗ 9 п.4.2.1(c))']); pN.push([d0, '311', A('liab'), init, 'Отримано винагороду за гарантію — доходи майбутніх періодів']); }
+    if (mode === 'none') pI.push([d0, A('freeDr'), A('liab'), init, 'Справедлива вартість безоплатної гарантії: теперішня вартість ринкової винагороди — внесок у пов’язану особу']);
+    const notes = [];
+    if (mode === 'none') notes.push('<div class="posting-row"><span class="pdesc">Гарантія надана: позабалансовий облік на рах. 05 «Гарантії та забезпечення надані» у сумі ' + fmt(amt) + ' грн.</span></div>');
+    per.forEach((p, i) => {
+      const dd = fmtD(p.date), last = p.isLast;
+      const un = last ? 0 : r2(init * daysBetween(p.date, e) / total);
+      const am = r2(prevUn - un);
+      const ek = last ? 0 : ecl(p.date);
+      const provI = r2(Math.max(0, ek - un));                      // МСФЗ: зобов’язання = більше з ОКЗ і неамортизованої суми
+      const provN = last ? 0 : (stageAt(p.date) === 3 ? r2(amt * lgd) : 0);  // НП(С)БО 11: забезпечення лише за ймовірного вибуття ресурсів
+      tr.push([dd, qLbl(p.date) + ' · ' + p.days + ' дн.', fmt(un), fmt(ek), fmt(r2(Math.max(un, ek))), fmt(provN)]);
+      if (am > 0.004) { pI.push([dd, A('liab'), A('inc'), am, 'Визнано дохід від гарантії рівномірно протягом строку']); if (mode === 'upfront') pN.push([dd, A('liab'), A('inc'), am, 'Визнано дохід від гарантії рівномірно протягом строку']); }
+      if (mode === 'periodic') {
+        const f = r2(amt * fee / 100 * p.days / 365);
+        [pI, pN].forEach(L => { L.push([dd, A('recv'), A('inc'), f, 'Нараховано винагороду за гарантію за квартал']); L.push([dd, '311', A('recv'), f, 'Отримано винагороду']); });
+      }
+      pI.push([dd, A('provExp'), A('prov'), r2(provI - prevProvI), 'ОКЗ за гарантією (стадія ' + stageAt(p.date) + ') перевищують неамортизовану суму — додаткове забезпечення (МСФЗ 9 п.4.2.1(c)(i))']);
+      pN.push([dd, A('provExp'), A('prov'), r2(provN - prevProvN), 'Забезпечення: виконання гарантії ймовірне (НП(С)БО 11 п.13)']);
+      prevUn = un; prevProvI = provI; prevProvN = provN;
+    });
+    const fix = L => L.map(x => (x[1] === A('provExp') && x[3] < 0) ? [x[0], A('prov'), A('provInc'), -x[3], 'Зменшення забезпечення за гарантією'] : x);
+    const head = V3.headHtml(['Дата', 'Період', 'Неамортизована сума, грн', 'ОКЗ, грн', 'Зобов’язання МСФЗ, грн', 'Забезпечення НП(С)БО, грн']);
+    V3.show({
+      badge: T.label, period: V3.periodTxt(s, e), rate: 'Сума ' + fmt(amt) + ' грн',
+      metrics: [['mb', 'Сума гарантії, грн', fmt(amt)], ['mg', 'Первісна оцінка (МСФЗ), грн', fmt(init)], ['mr', 'ОКЗ на першу звітну дату, грн', fmt(ecl(per[0].date))]],
+      headNp: head, headIfrs: head, bodyNp: V3.rowsHtml(tr), bodyIfrs: V3.rowsHtml(tr),
+      postNp: notes.join('') + GRP('Фінансова гарантія · НП(С)БО', V3.post(fix(pN))), postIfrs: GRP('Фінансова гарантія · МСФЗ 9', V3.post(fix(pI))),
+      titles: ['Розрахунок за гарантією · НП(С)БО', 'Бухгалтерські проведення · НП(С)БО', 'Розрахунок за гарантією · МСФЗ 9', 'Бухгалтерські проведення · МСФЗ 9'],
+      explainNp: [V3.block3('📐 НП(С)БО', 'Надана гарантія без ймовірного вибуття ресурсів — умовне зобов’язання: розкривається в примітках і обліковується на позабалансовому рах. 05. Забезпечення (рах. 474) визнається, коли виконання гарантії стає ймовірним (НП(С)БО 11 п.13), — у програмі для стадії 3 у сумі гарантії × LGD. Одноразова винагорода — доходи майбутніх періодів з рівномірним визнанням доходу.')],
+      explainIfrs: [V3.block3('📐 МСФЗ 9 п.4.2.1(c)', 'Первісно — за справедливою вартістю (отримана винагорода або теперішня вартість ринкової винагороди для безоплатної гарантії). Далі — більша з двох сум: резерв очікуваних кредитних збитків (розд. 5.5) або первісна сума за вирахуванням визнаного доходу (МСФЗ 15).', 'ОКЗ = сума гарантії × PD × LGD (стадія 1 — PD за 12 місяців, стадії 2–3 — за весь строк)')],
+    });
+  },
+};
+
+// 3. Довгострокове забезпечення (МСБО 37)
+V3.TYPES.provision = {
+  label: 'Довгострокове забезпечення (МСБО 37)', needEnd: false, startLabel: 'Дата визнання забезпечення',
+  intro: 'Наприклад, відновлення земельних ділянок, демонтаж, судовий позов з виплатами в майбутньому.',
+  fields: [
+    { id: 'v3_pFlows', label: 'Очікувані виплати: дата; сума', type: 'textarea', rows: 4, def: '31.12.2027; 1500000\n31.12.2028; 500000' },
+    { id: 'v3_pRate', label: 'Ставка дисконтування (до оподаткування), % річних', def: 14 },
+    { id: 'v3_pTarget', label: 'Забезпечення визнається у', type: 'select', opts: [['expense', 'витратах'], ['asset', 'вартості активу (демонтаж, відновлення)']], def: 'expense' },
+    { id: 'v3_pReDate', label: 'Перегляд оцінки: дата', type: 'date', hint: 'необов’язково' },
+    { id: 'v3_pReFlows', label: 'Нові очікувані виплати: дата; сума', type: 'textarea', rows: 3, ph: '31.12.2027; 1800000' },
+    { id: 'v3_pReRate', label: 'Нова ставка дисконтування, %', hint: 'порожньо — без змін', def: '' },
+  ],
+  blocks: ['accounts'],
+  accs: { exp: ['949', 'Інші витрати операційної діяльності'], asset: ['103', 'Рахунок активу (демонтаж, відновлення)'], unw: ['952', 'Інші фінансові витрати (вивільнення дисконту)'], inc: ['719', 'Дохід від зменшення забезпечення'] },
+  calc: (T, s) => {
+    const r2 = V3.r2, A = r => V3.acc(T, r), acc = V3.val('account', '474');
+    let flows = V3.parseTable(V3.val('v3_pFlows')).map(r => ({ date: r.date, cf: r.vals[0] })).filter(f => f.date > s);
+    if (!flows.length) { alert('Введіть очікувані виплати після дати визнання: «дата; сума»'); return; }
+    let rate = V3.num('v3_pRate') / 100;
+    const target = V3.val('v3_pTarget') === 'asset' ? A('asset') : A('exp');
+    const reDate = V3.date('v3_pReDate'), reFlows = V3.parseTable(V3.val('v3_pReFlows')).map(r => ({ date: r.date, cf: r.vals[0] }));
+    const reRate = V3.val('v3_pReRate') === '' ? null : V3.num('v3_pReRate') / 100;
+    const hasRe = reDate && reDate > s && reFlows.length;
+    const endAll = hasRe ? new Date(Math.max(flows.slice(-1)[0].date, reFlows.slice(-1)[0].date)) : flows.slice(-1)[0].date;
+    const events = V3.uniqDates([...V3.qEnds(s, endAll), ...flows.map(f => f.date), ...(hasRe ? [reDate, ...reFlows.map(f => f.date)] : []), endAll]).filter(d => d > s);
+    const d0 = fmtD(s);
+    // МСФЗ: теперішня вартість і вивільнення дисконту
+    let bal = r2(V3.pv(flows, s, rate)), prev = s, cur = flows, reDone = false;
+    const pI = [[d0, target, acc, bal, 'Визнано забезпечення за теперішньою вартістю очікуваних виплат (МСБО 37 п.45–47)']];
+    const tI = [], tN = [];
+    // НП(С)БО: облікова оцінка без дисконтування (НП(С)БО 11 п.16)
+    let balN = r2(flows.reduce((t, f) => t + f.cf, 0));
+    const pN = [[d0, target, acc, balN, 'Визнано забезпечення в сумі облікової оцінки витрат (НП(С)БО 11 п.13, 16)']];
+    for (const d of events) {
+      const dd = fmtD(d), key = dateKey(d);
+      const pay = r2(cur.filter(f => dateKey(f.date) === key).reduce((t, f) => t + f.cf, 0));
+      const pendingRe = hasRe && !reDone && reDate >= d;
+      const isFinal = pay > 0 && !cur.some(f => f.date > d) && !pendingRe;
+      let unw = r2(bal * (Math.pow(1 + rate, daysBetween(prev, d) / 365) - 1));
+      if (isFinal) unw = r2(pay - bal);
+      if (Math.abs(unw) > 0.004) pI.push([dd, A('unw'), acc, unw, 'Вивільнення дисконту — фінансові витрати (МСБО 37 п.60)']);
+      bal = r2(bal + unw);
+      if (pay > 0) { pI.push([dd, acc, '311', pay, 'Використання забезпечення']); pN.push([dd, acc, '311', pay, 'Використання забезпечення']); bal = r2(bal - pay); balN = r2(balN - pay); }
+      if (hasRe && !reDone && key === dateKey(reDate)) {
+        reDone = true; cur = reFlows.filter(f => f.date > d); if (reRate !== null) rate = reRate;
+        const newBal = r2(V3.pv(cur, d, rate)), dI = r2(newBal - bal);
+        const newN = r2(cur.reduce((t, f) => t + f.cf, 0)), dN = r2(newN - balN);
+        const toAsset = target === A('asset');
+        const lbl = toAsset ? 'Перегляд оцінки: зміна коригує вартість активу (КТМФЗ 1 п.5)' : 'Перегляд оцінки забезпечення (МСБО 37 п.59)';
+        pI.push(dI >= 0 ? [dd, target, acc, dI, lbl] : [dd, acc, toAsset ? target : A('inc'), -dI, lbl]);
+        pN.push(dN >= 0 ? [dd, target, acc, dN, 'Перегляд облікової оцінки забезпечення'] : [dd, acc, toAsset ? target : A('inc'), -dN, 'Перегляд облікової оцінки забезпечення']);
+        bal = newBal; balN = newN;
+      }
+      tI.push([dd, qLbl(d), fmt(bal), Math.abs(unw) > 0.004 ? fmt(unw) : null, pay ? fmt(pay) : null]);
+      tN.push([dd, qLbl(d), fmt(balN), null, pay ? fmt(pay) : null]);
+      prev = d;
+      if (isFinal) break;
+    }
+    const head = V3.headHtml(['Дата', 'Період', 'Забезпечення на кінець, грн', 'Вивільнення дисконту, грн', 'Виплата, грн']);
+    V3.show({
+      badge: T.label, period: V3.periodTxt(s, endAll), rate: 'Ставка ' + V3.pct(V3.num('v3_pRate') / 100),
+      metrics: [['mb', 'Очікувані виплати разом, грн', fmt(r2(flows.reduce((t, f) => t + f.cf, 0)))], ['mg', 'Теперішня вартість (МСФЗ), грн', fmt(r2(V3.pv(flows, s, V3.num('v3_pRate') / 100)))]],
+      headNp: head, headIfrs: head, bodyNp: V3.rowsHtml(tN), bodyIfrs: V3.rowsHtml(tI),
+      postNp: GRP('Забезпечення · НП(С)БО', V3.post(pN)), postIfrs: GRP('Забезпечення · МСБО 37', V3.post(pI)),
+      titles: ['Забезпечення · НП(С)БО 11', 'Бухгалтерські проведення · НП(С)БО', 'Забезпечення з дисконтуванням · МСБО 37', 'Бухгалтерські проведення · МСФЗ'],
+      explainNp: [V3.block3('📐 НП(С)БО 11', 'Сума забезпечення — облікова оцінка ресурсів, необхідних для погашення зобов’язання на дату балансу (п.16 у чинній редакції не вимагає дисконтування). Забезпечення використовується лише на покриття витрат, для яких його створено.')],
+      explainIfrs: [V3.block3('📐 МСБО 37', 'Якщо вплив вартості грошей у часі суттєвий, забезпечення оцінюється за теперішньою вартістю (п.45–47); вивільнення дисконту — фінансові витрати (п.60). Зміна оцінки забезпечення на демонтаж коригує вартість активу (КТМФЗ 1).', 'PV = Σ виплата / (1 + r)<sup>днів/365</sup>')],
+    });
+  },
+};
+
+// 4–5. Похідні інструменти
+V3.derivMoves = (A, d, prev, next, desc) => {
+  const r2 = V3.r2, L = [];
+  const dA = r2(Math.max(next, 0) - Math.max(prev, 0)), dL = r2(Math.max(-next, 0) - Math.max(-prev, 0));
+  if (dA > 0.004) L.push([d, A('asset'), A('gain'), dA, desc + ': збільшення справедливої вартості (актив)']);
+  if (dA < -0.004) L.push([d, A('loss'), A('asset'), -dA, desc + ': зменшення справедливої вартості (актив)']);
+  if (dL > 0.004) L.push([d, A('loss'), A('liab'), dL, desc + ': збільшення зобов’язання за справедливою вартістю']);
+  if (dL < -0.004) L.push([d, A('liab'), A('gain'), -dL, desc + ': зменшення зобов’язання за справедливою вартістю']);
+  return L;
+};
+V3.DERIV_ACCS = { asset: ['352', 'Похідний фінансовий актив'], liab: ['685', 'Похідне фінансове зобов’язання'], gain: ['733', 'Інші доходи від фінансових операцій'], loss: ['952', 'Інші фінансові витрати'] };
+V3.derivExplain = txt => ({
+  np: [V3.block3('📐 НП(С)БО 13', 'Похідні фінансові інструменти оцінюються за справедливою вартістю, зміни визнаються у фінансових доходах або витратах. ' + txt)],
+  ifrs: [V3.block3('📐 МСФЗ 9', 'Похідний інструмент без обліку хеджування — за справедливою вартістю через прибуток або збиток (п.4.1.4, 5.7.1). ' + txt)],
+});
+V3.TYPES.deriv_fwd = {
+  label: 'Валютний форвард', startLabel: 'Дата укладення', endLabel: 'Дата розрахунку',
+  fields: [
+    { id: 'v3_fN', label: 'Сума у валюті', def: 1000000 },
+    { id: 'v3_fCcy', label: 'Валюта', type: 'select', opts: [['USD', 'USD'], ['EUR', 'EUR']], def: 'USD' },
+    { id: 'v3_fDir', label: 'Позиція', type: 'select', opts: [['buy', 'Купівля валюти'], ['sell', 'Продаж валюти']], def: 'buy' },
+    { id: 'v3_fK', label: 'Форвардний курс за договором', def: 42.5 },
+    { id: 'v3_fVals', label: 'Оцінка: дата; ринковий форвардний курс на дату розрахунку; ставка дисконтування, %', type: 'textarea', rows: 4, def: '31.03.2025; 42,9; 14\n30.06.2025; 42,2; 14' },
+    { id: 'v3_fSpot', label: 'Курс на дату розрахунку', def: 43.1 },
+  ],
+  blocks: ['accounts'], accs: V3.DERIV_ACCS,
+  calc: (T, s, e) => {
+    const r2 = V3.r2, A = r => V3.acc(T, r), N = V3.num('v3_fN'), K = V3.num('v3_fK'), sg = V3.val('v3_fDir') === 'sell' ? -1 : 1;
+    const pts = V3.parseTable(V3.val('v3_fVals')).filter(r => r.date > s && r.date < e).map(r => ({ date: r.date, F: r.vals[0], r: (r.vals[1] || 0) / 100 }));
+    pts.push({ date: e, F: V3.num('v3_fSpot'), r: 0, last: true });
+    let prev = 0; const tr = [], P = [];
+    pts.forEach(p => {
+      const df = p.last ? 1 : 1 / Math.pow(1 + p.r, daysBetween(p.date, e) / 365);
+      const fv = r2(sg * N * (p.F - K) * df), dd = fmtD(p.date);
+      P.push(...V3.derivMoves(A, dd, prev, fv, p.last ? 'Розрахунок' : 'Оцінка'));
+      tr.push([dd, p.last ? 'Розрахунок' : 'Звітна дата', p.F.toFixed(4).replace('.', ','), p.last ? null : V3.pct(p.r), fmt(fv), fmt(r2(fv - prev))]);
+      prev = fv;
+    });
+    if (prev > 0.004) P.push([fmtD(e), '311', A('asset'), prev, 'Отримано різницю за форвардом (розрахунок на нетто-основі)']);
+    if (prev < -0.004) P.push([fmtD(e), A('liab'), '311', -prev, 'Сплачено різницю за форвардом (розрахунок на нетто-основі)']);
+    const head = V3.headHtml(['Дата', 'Подія', 'Ринковий курс', 'Ставка дисконтування', 'Справедлива вартість, грн', 'Зміна, грн']);
+    const ex = V3.derivExplain('Справедлива вартість = ±сума × (ринковий форвардний курс − курс за договором), дисконтована до дати оцінки. На дату розрахунку — за фактичним курсом.');
+    V3.show({
+      badge: T.label + ' · ' + V3.val('v3_fCcy'), period: V3.periodTxt(s, e), rate: 'Курс ' + K,
+      metrics: [['mb', 'Сума у валюті', fmt(N)], ['mo', 'Курс за договором', String(K).replace('.', ',')], [prev >= 0 ? 'mg' : 'mr', 'Результат на дату розрахунку, грн', fmt(prev)]],
+      headNp: head, headIfrs: head, bodyNp: V3.rowsHtml(tr), bodyIfrs: V3.rowsHtml(tr),
+      postNp: GRP('Форвард · НП(С)БО', V3.post(P)), postIfrs: GRP('Форвард · МСФЗ 9', V3.post(P)),
+      titles: ['Оцінка форварду · НП(С)БО', 'Бухгалтерські проведення · НП(С)БО', 'Оцінка форварду · МСФЗ 9', 'Бухгалтерські проведення · МСФЗ 9'],
+      explainNp: ex.np, explainIfrs: ex.ifrs,
+    });
+  },
+};
+V3.TYPES.deriv_irs = {
+  label: 'Процентний своп', startLabel: 'Дата укладення', endLabel: 'Дата закінчення',
+  fields: [
+    { id: 'v3_sN', label: 'Номінальна сума', def: 10000000 },
+    { id: 'v3_sFix', label: 'Фіксована ставка, % річних', def: 15 },
+    { id: 'v3_sDir', label: 'Позиція', type: 'select', opts: [['payFix', 'Сплачую фіксовану, отримую плаваючу'], ['recFix', 'Отримую фіксовану, сплачую плаваючу']], def: 'payFix' },
+    { id: 'v3_sFreq', label: 'Розрахунки', type: 'select', opts: [[3, 'Щокварталу'], [6, 'Раз на півроку'], [12, 'Щороку']], def: 3 },
+    { id: 'v3_sRates', label: 'Ставки: дата; плаваюча ставка на період, %; ринкова своп-ставка, %', type: 'textarea', rows: 5, def: '01.01.2025; 14,5; 15\n01.04.2025; 15,5; 16\n01.07.2025; 15,5; 15,5\n01.10.2025; 15; 15\n01.01.2026; 14; 14' },
+  ],
+  blocks: ['accounts'], accs: V3.DERIV_ACCS,
+  calc: (T, s, e) => {
+    const r2 = V3.r2, A = r => V3.acc(T, r), N = V3.num('v3_sN'), fix = V3.num('v3_sFix') / 100, sg = V3.val('v3_sDir') === 'recFix' ? -1 : 1;
+    const rates = V3.parseTable(V3.val('v3_sRates'));
+    if (!rates.length) { alert('Введіть ставки: «дата; плаваюча, %; своп-ставка, %»'); return; }
+    const fl = d => V3.stepValue(rates.map(r => ({ date: r.date, vals: [r.vals[0] / 100] })), d, rates[0].vals[0] / 100);
+    const sw = d => V3.stepValue(rates.map(r => ({ date: r.date, vals: [(r.vals[1] ?? r.vals[0]) / 100] })), d, (rates[0].vals[1] ?? rates[0].vals[0]) / 100);
+    const per = periodSchedule(s, e, parseInt(V3.val('v3_sFreq', '3')));
+    let prev = 0; const tr = [], P = [];
+    per.forEach((p, j) => {
+      const dd = fmtD(p.date), f = fl(p.start), set = r2(sg * N * (f - fix) * p.days / 365);
+      P.push(set >= 0 ? [dd, '311', A('gain'), set, 'Нетто-розрахунок за період: плаваюча ' + V3.pct(f) + ' проти фіксованої ' + V3.pct(fix)] : [dd, A('loss'), '311', -set, 'Нетто-розрахунок за період: плаваюча ' + V3.pct(f) + ' проти фіксованої ' + V3.pct(fix)]);
+      const S = sw(p.date);
+      let fv = 0;
+      for (let k = j + 1; k < per.length; k++) fv += sg * N * (S - fix) * per[k].days / 365 / Math.pow(1 + S, daysBetween(p.date, per[k].date) / 365);
+      fv = p.isLast ? 0 : r2(fv);
+      P.push(...V3.derivMoves(A, dd, prev, fv, 'Переоцінка свопу'));
+      tr.push([dd, qLbl(p.date) + ' · ' + p.days + ' дн.', V3.pct(f), fmt(set), V3.pct(S), fmt(fv)]);
+      prev = fv;
+    });
+    const head = V3.headHtml(['Дата', 'Період', 'Плаваюча ставка', 'Нетто-розрахунок, грн', 'Своп-ставка', 'Справедлива вартість, грн']);
+    const ex = V3.derivExplain('Справедлива вартість на дату = ±номінал × (ринкова своп-ставка − фіксована) × Σ тривалість майбутніх періодів × коефіцієнт дисконтування. Нетто-розрахунок за кожен період — фінансовий дохід або витрати.');
+    V3.show({
+      badge: T.label, period: V3.periodTxt(s, e), rate: 'Фіксована ' + V3.pct(fix),
+      metrics: [['mb', 'Номінальна сума, грн', fmt(N)], ['mo', 'Фіксована ставка', V3.pct(fix)], ['mg', 'Розрахунки за весь строк, грн', fmt(r2(P.filter(x => x[4].startsWith('Нетто')).reduce((t, x) => t + (x[1] === '311' ? x[3] : -x[3]), 0)))]],
+      headNp: head, headIfrs: head, bodyNp: V3.rowsHtml(tr), bodyIfrs: V3.rowsHtml(tr),
+      postNp: GRP('Процентний своп · НП(С)БО', V3.post(P)), postIfrs: GRP('Процентний своп · МСФЗ 9', V3.post(P)),
+      titles: ['Розрахунки й оцінка свопу · НП(С)БО', 'Бухгалтерські проведення · НП(С)БО', 'Розрахунки й оцінка свопу · МСФЗ 9', 'Бухгалтерські проведення · МСФЗ 9'],
+      explainNp: ex.np, explainIfrs: ex.ifrs,
+    });
+  },
+};
+
+// 6. Акції та частки (пайові інструменти)
+V3.TYPES.equity_inv = {
+  label: 'Акції та частки (пайові інструменти)', needEnd: false, startLabel: 'Дата придбання',
+  fields: [
+    { id: 'v3_eQty', label: 'Кількість акцій (часток)', def: 10000 },
+    { id: 'v3_ePrice', label: 'Ціна придбання 1 акції', def: 120 },
+    { id: 'v3_eTc', label: 'Витрати на придбання', def: 6000 },
+    { id: 'v3_eClass', label: 'Класифікація за МСФЗ 9', type: 'select', opts: [['fvtpl', 'За справедливою вартістю через прибуток або збиток'], ['fvoci', 'За справедливою вартістю через інший сукупний дохід']], def: 'fvtpl' },
+    { id: 'v3_eFvs', label: 'Справедлива вартість: дата; ціна 1 акції', type: 'textarea', rows: 4, def: '31.12.2025; 131,5\n31.12.2026; 118' },
+    { id: 'v3_eDivs', label: 'Дивіденди: дата; сума', type: 'textarea', rows: 3, def: '15.06.2026; 25000' },
+    { id: 'v3_eSellDate', label: 'Продаж: дата', type: 'date', hint: 'необов’язково' },
+    { id: 'v3_eSellPrice', label: 'Ціна продажу 1 акції', def: 125 },
+    { id: 'v3_eSellCost', label: 'Витрати на продаж', def: 3000 },
+  ],
+  blocks: ['accounts'],
+  accs: { gain: ['746', 'Інші доходи (дооцінка)'], loss: ['975', 'Уцінка необоротних активів і фінансових інвестицій'], oci: ['413', 'Дооцінка (уцінка) фінансових інструментів'], ret: ['441', 'Прибуток нерозподілений'],
+          divRec: ['373', 'Розрахунки за нарахованими доходами'], div: ['731', 'Дивіденди одержані'], saleRec: ['377', 'Розрахунки з іншими дебіторами'], saleInc: ['741', 'Дохід від реалізації фінансових інвестицій'], saleCost: ['971', 'Собівартість реалізованих фінансових інвестицій'], tcExp: ['952', 'Інші фінансові витрати'] },
+  calc: (T, s) => {
+    const r2 = V3.r2, A = r => V3.acc(T, r), acc = V3.val('account', '143');
+    const q = V3.num('v3_eQty'), price = V3.num('v3_ePrice'), tc = V3.num('v3_eTc'), cls = V3.val('v3_eClass', 'fvtpl');
+    const fvs = V3.parseTable(V3.val('v3_eFvs')).filter(r => r.date > s);
+    const divs = V3.parseTable(V3.val('v3_eDivs')).filter(r => r.date > s);
+    const sd = V3.date('v3_eSellDate'), sp = V3.num('v3_eSellPrice'), sc = V3.num('v3_eSellCost');
+    const sold = sd && sd > s;
+    const cost = r2(q * price), d0 = fmtD(s);
+    const evs = [...fvs.map(r => ({ date: r.date, kind: 'fv', p: r.vals[0] })), ...divs.map(r => ({ date: r.date, kind: 'div', a: r.vals[0] })), ...(sold ? [{ date: sd, kind: 'sell' }] : [])]
+      .filter(x => !sold || x.date <= sd).sort((a, b) => a.date - b.date || (a.kind === 'sell') - (b.kind === 'sell'));
+    const build = std => {
+      const P = [], tr = [];
+      const capTc = std === 'np' || cls === 'fvoci';
+      let bal = r2(cost + (capTc ? tc : 0)), oci = 0;
+      P.push([d0, acc, '311', cost, 'Придбано ' + q + ' акцій (часток) × ' + fmt(price)]);
+      if (tc > 0) P.push(capTc ? [d0, acc, '311', tc, std === 'np' ? 'Витрати на придбання включено до собівартості (НП(С)БО 12 п.4)' : 'Витрати на операцію включено до первісної вартості (МСФЗ 9 п.5.1.1)'] : [d0, A('tcExp'), '311', tc, 'Витрати на операцію — у прибутку або збитку (МСФЗ 9 п.5.1.1)']);
+      tr.push([d0, 'Придбання', fmt(bal), null, null]);
+      const reval = (d, newBal, lbl) => {
+        const dlt = r2(newBal - bal), dd = fmtD(d);
+        if (std === 'ifrs' && cls === 'fvoci') { if (Math.abs(dlt) > 0.004) P.push(dlt > 0 ? [dd, acc, A('oci'), dlt, lbl + ': дооцінка в іншому сукупному доході (МСФЗ 9 п.5.7.5)'] : [dd, A('oci'), acc, -dlt, lbl + ': уцінка в іншому сукупному доході']); oci = r2(oci + dlt); }
+        else if (Math.abs(dlt) > 0.004) P.push(dlt > 0 ? [dd, acc, A('gain'), dlt, lbl + ': дооцінка до справедливої вартості' + (std === 'np' ? ' (НП(С)БО 12 п.8)' : '')] : [dd, A('loss'), acc, -dlt, lbl + ': уцінка до справедливої вартості' + (std === 'np' ? ' (НП(С)БО 12 п.8)' : '')]);
+        bal = newBal;
+        return dlt;
+      };
+      evs.forEach(x => {
+        const dd = fmtD(x.date);
+        if (x.kind === 'fv') { const dl = reval(x.date, r2(q * x.p), 'Справедлива вартість ' + fmt(x.p) + ' за акцію'); tr.push([dd, 'Оцінка на дату', fmt(bal), fmt(dl), null]); }
+        if (x.kind === 'div') { P.push([dd, A('divRec'), A('div'), x.a, 'Нараховано дивіденди']); P.push([dd, '311', A('divRec'), x.a, 'Отримано дивіденди']); tr.push([dd, 'Дивіденди', fmt(bal), null, fmt(x.a)]); }
+        if (x.kind === 'sell') {
+          const proceeds = r2(q * sp);
+          if (std === 'np') {
+            P.push([dd, A('saleRec'), A('saleInc'), proceeds, 'Продаж фінансової інвестиції — дохід']);
+            P.push([dd, A('saleCost'), acc, bal, 'Списано собівартість (балансову вартість) проданої інвестиції']);
+            if (sc > 0) P.push([dd, A('saleCost'), '311', sc, 'Витрати на продаж']);
+            P.push([dd, '311', A('saleRec'), proceeds, 'Отримано оплату']);
+          } else {
+            reval(x.date, proceeds, 'Оцінка на дату продажу');
+            P.push([dd, '311', acc, proceeds, 'Припинення визнання: отримано оплату (МСФЗ 9 п.3.2.12)']);
+            if (sc > 0) P.push([dd, A('tcExp'), '311', sc, 'Витрати на продаж']);
+            if (cls === 'fvoci' && Math.abs(oci) > 0.004) P.push(oci > 0 ? [dd, A('oci'), A('ret'), oci, 'Накопичену дооцінку перенесено до нерозподіленого прибутку без рекласифікації у прибуток (МСФЗ 9 п. B5.7.1)'] : [dd, A('ret'), A('oci'), -oci, 'Накопичену уцінку перенесено до нерозподіленого прибутку (МСФЗ 9 п. B5.7.1)']);
+            bal = 0;
+          }
+          tr.push([dd, 'Продаж', fmt(0), null, fmt(proceeds)]);
+        }
+      });
+      return { P, tr };
+    };
+    const n = build('np'), f = build('ifrs');
+    const head = V3.headHtml(['Дата', 'Подія', 'Балансова вартість, грн', 'Переоцінка, грн', 'Надходження, грн']);
+    V3.show({
+      badge: T.label, period: sold ? V3.periodTxt(s, sd) : 'з ' + d0, rate: cls === 'fvoci' ? 'МСФЗ: через інший сукупний дохід' : 'МСФЗ: через прибуток або збиток',
+      metrics: [['mb', 'Вартість придбання, грн', fmt(cost)], ['mo', 'Витрати на операцію, грн', fmt(tc)]],
+      headNp: head, headIfrs: head, bodyNp: V3.rowsHtml(n.tr), bodyIfrs: V3.rowsHtml(f.tr),
+      postNp: GRP('Пайові інструменти · НП(С)БО', V3.post(n.P)), postIfrs: GRP('Пайові інструменти · МСФЗ 9', V3.post(f.P)),
+      titles: ['Оцінка інвестиції · НП(С)БО 12', 'Бухгалтерські проведення · НП(С)БО', 'Оцінка інвестиції · МСФЗ 9', 'Бухгалтерські проведення · МСФЗ 9'],
+      explainNp: [V3.block3('📐 НП(С)БО 12', 'Первісна оцінка — за собівартістю з витратами на придбання (п.4). На дату балансу — за справедливою вартістю; дооцінка — інші доходи (746), уцінка — інші витрати (975) (п.8). Продаж: дохід 741, собівартість 971. Інвестиції, що обліковуються за методом участі в капіталі, у цьому розрахунку не розглядаються.')],
+      explainIfrs: [V3.block3('📐 МСФЗ 9', cls === 'fvoci'
+        ? 'Безвідкличний вибір: зміни справедливої вартості — в іншому сукупному доході (п.5.7.5); при продажу накопичена сума не рекласифікується в прибуток, а переноситься в межах капіталу (п. B5.7.1). Дивіденди — у прибутку (п.5.7.6). Витрати на операцію включаються до первісної вартості.'
+        : 'За справедливою вартістю через прибуток або збиток (п.4.1.4): витрати на операцію — у витратах, зміни справедливої вартості — у прибутку або збитку. Дивіденди — у прибутку (п.5.7.1A).')],
+    });
+  },
+};
+
+// ═══ V3-END ═══
 </script>
 </body>
 </html>
