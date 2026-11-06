@@ -372,7 +372,7 @@ async function generate() {
     issuedAt: new Date(start).toISOString(),
     expiresAt: new Date(end + 'T23:59:59').toISOString(),
     methods,
-    version: '2.01'
+    version: '2.0.2'
   };
 
   const signature = await hmacHex(secret, JSON.stringify(payload));
