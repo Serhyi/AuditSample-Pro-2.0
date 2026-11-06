@@ -64690,6 +64690,13 @@ function allocateRiskSample(matched, flagsOf, cap, seed) {
     }
     if (!moved) break;
   }
+  for (let i = CRITERION_ORDER.length - 1; i >= 0 && diff < 0; i--) {
+    const c = CRITERION_ORDER[i];
+    if (quotas[c] > 0) {
+      quotas[c]--;
+      diff++;
+    }
+  }
   const rng2 = new Mulberry32(Math.floor(seed) || 0);
   const picked = [];
   for (const c of CRITERION_ORDER) {
@@ -65259,6 +65266,14 @@ function getDateOrder(locale = getSystemLocale()) {
 function isMonthFirstLocale(locale) {
   return getDateOrder(locale) === "mdy";
 }
+function getDecimalSeparator(locale = getSystemLocale()) {
+  try {
+    const part = new Intl.NumberFormat(locale).formatToParts(1.1).find((p) => p.type === "decimal");
+    return part ? part.value : ".";
+  } catch {
+    return ".";
+  }
+}
 
 // src/utils/cellNormalization.ts
 var makeIso = (y, m, d) => {
@@ -65287,7 +65302,13 @@ function parseDateText(str, monthFirst = isMonthFirstLocale()) {
   }
   return null;
 }
-function parseNumericText(str) {
+var isDecimalSeparator = (parts, sep, decimalSeparator) => {
+  if (parts.length > 2) return false;
+  if (parts[parts.length - 1].length !== 3) return true;
+  if (parts[0].startsWith("0")) return true;
+  return sep === decimalSeparator;
+};
+function parseNumericText(str, decimalSeparator = getDecimalSeparator()) {
   let s = str.trim();
   if (s === "") return null;
   let negative = false;
@@ -65306,12 +65327,10 @@ function parseNumericText(str) {
   let normalized;
   if (lastComma >= 0 && lastDot >= 0) {
     normalized = lastComma > lastDot ? digits.replace(/\./g, "").replace(",", ".") : digits.replace(/,/g, "");
-  } else if (lastComma >= 0) {
-    const parts = digits.split(",");
-    normalized = parts.length > 2 || parts[parts.length - 1].length === 3 ? digits.replace(/,/g, "") : digits.replace(",", ".");
-  } else if (lastDot >= 0) {
-    const parts = digits.split(".");
-    normalized = parts.length > 2 ? digits.replace(/\./g, "") : digits;
+  } else if (lastComma >= 0 || lastDot >= 0) {
+    const sep = lastComma >= 0 ? "," : ".";
+    const parts = digits.split(sep);
+    normalized = isDecimalSeparator(parts, sep, decimalSeparator) ? digits.replace(sep, ".") : parts.join("");
   } else {
     normalized = digits;
   }
