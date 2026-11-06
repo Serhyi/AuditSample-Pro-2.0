@@ -100,3 +100,26 @@ describe('timezone safety', () => {
     expect(toIsoDate(45839)).toBe('2025-07-01');
   });
 });
+
+describe('separator conventions', () => {
+  const DOT_DECIMAL = '.';
+  const COMMA_DECIMAL = ',';
+
+  it('judges comma and dot by the same rule', () => {
+    // Same shape, so the two separators must not mean different magnitudes.
+    expect(parseNumericText('1.234', COMMA_DECIMAL)).toBe(1234);
+    expect(parseNumericText('1,234', COMMA_DECIMAL)).toBe(1.234);
+    expect(parseNumericText('1,234', DOT_DECIMAL)).toBe(1234);
+    expect(parseNumericText('1.234', DOT_DECIMAL)).toBe(1.234);
+  });
+
+  it('needs no convention where the shape is unambiguous', () => {
+    for (const sep of [DOT_DECIMAL, COMMA_DECIMAL]) {
+      expect(parseNumericText('1.234.567', sep)).toBe(1234567);   // two separators group
+      expect(parseNumericText('12.50', sep)).toBe(12.5);          // two decimals
+      expect(parseNumericText('1,5', sep)).toBe(1.5);             // one decimal
+      expect(parseNumericText('0.123', sep)).toBe(0.123);         // a leading zero never groups
+      expect(parseNumericText('1.234.567,89', sep)).toBe(1234567.89);
+    }
+  });
+});

@@ -1,4 +1,4 @@
-import { isMonthFirstLocale } from './locale';
+import { isMonthFirstLocale, getDecimalSeparator } from './locale';
 
 // Single source of truth for turning raw spreadsheet/CSV cells into clean
 // typed values. Used by both importers (web worker and desktop worker) so the
@@ -58,11 +58,25 @@ export function parseDateText(str: string, monthFirst = isMonthFirstLocale()): s
 }
 
 /**
+ * Is the single separator in `parts` a decimal point rather than digit
+ * grouping? Both conventions are in use and the shapes overlap ('1.234' is a
+ * thousand in Kyiv and one-and-a-bit in New York), so the ambiguous case is
+ * settled by the operating system's own decimal separator, the same way an
+ * ambiguous date is settled by its date order.
+ */
+const isDecimalSeparator = (parts: string[], sep: string, decimalSeparator: string): boolean => {
+  if (parts.length > 2) return false;                     // 1.234.567 groups
+  if (parts[parts.length - 1].length !== 3) return true;   // 1,5 / 12.50 is decimal
+  if (parts[0].startsWith('0')) return true;               // 0.123 is never grouping
+  return sep === decimalSeparator;
+};
+
+/**
  * Parses numeric text (space/comma/dot grouping, parentheses negatives).
  * Returns null for anything that must stay text, including identifiers that
  * Number() would corrupt.
  */
-export function parseNumericText(str: string): number | null {
+export function parseNumericText(str: string, decimalSeparator = getDecimalSeparator()): number | null {
   let s = str.trim();
   if (s === '') return null;
 
@@ -91,15 +105,14 @@ export function parseNumericText(str: string): number | null {
     normalized = lastComma > lastDot
       ? digits.replace(/\./g, '').replace(',', '.')
       : digits.replace(/,/g, '');
-  } else if (lastComma >= 0) {
-    const parts = digits.split(',');
-    // "1,234" / "1,234,567" is grouping; "1,5" is a decimal comma.
-    normalized = (parts.length > 2 || parts[parts.length - 1].length === 3)
-      ? digits.replace(/,/g, '')
-      : digits.replace(',', '.');
-  } else if (lastDot >= 0) {
-    const parts = digits.split('.');
-    normalized = parts.length > 2 ? digits.replace(/\./g, '') : digits;
+  } else if (lastComma >= 0 || lastDot >= 0) {
+    // One kind of separator: comma and dot are judged by the same rule, so the
+    // same shape cannot mean a thousand with one and a fraction with the other.
+    const sep = lastComma >= 0 ? ',' : '.';
+    const parts = digits.split(sep);
+    normalized = isDecimalSeparator(parts, sep, decimalSeparator)
+      ? digits.replace(sep, '.')
+      : parts.join('');
   } else {
     normalized = digits;
   }

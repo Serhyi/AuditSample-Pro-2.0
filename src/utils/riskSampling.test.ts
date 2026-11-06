@@ -122,3 +122,29 @@ describe('settings preview', () => {
     expect(previewRiskMatches(withSmall, opts, 0).eligible).toBe(32);
   });
 });
+
+describe('a cap smaller than the number of criteria', () => {
+  // One entry per criterion: a holiday, a Saturday and a month-end day.
+  const oneEach: TransactionItem[] = [
+    { id: 'h', date: '2025-01-01', amount: 100, originalRow: [] },
+    { id: 'w', date: '2025-07-05', amount: 100, originalRow: [] },
+    { id: 'c', date: '2025-07-31', amount: 100, originalRow: [] }
+  ] as any;
+
+  const cfg = {
+    ...base, riskWeekend: true, riskHoliday: true, riskClosingDays: 1,
+    holidays: ['01-01'], riskRandomAuto: false, riskRandomCount: 0
+  } as unknown as SamplingConfig;
+
+  it('never returns more items than the cap', () => {
+    expect(runSampling(oneEach, { ...cfg, riskMaxByCriteria: 3 }).samplingItems).toHaveLength(3);
+    expect(runSampling(oneEach, { ...cfg, riskMaxByCriteria: 2 }).samplingItems).toHaveLength(2);
+    expect(runSampling(oneEach, { ...cfg, riskMaxByCriteria: 1 }).samplingItems).toHaveLength(1);
+  });
+
+  it('keeps the rarest criterion when it cannot keep them all', () => {
+    const one = runSampling(oneEach, { ...cfg, riskMaxByCriteria: 1 });
+    expect(one.samplingItems[0].id).toBe('h');       // holiday outranks weekend and closing
+    expect(one.riskCriteriaSelected).toEqual({ holiday: 1, weekend: 0, closing: 0 });
+  });
+});

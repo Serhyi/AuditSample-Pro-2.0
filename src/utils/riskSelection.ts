@@ -92,6 +92,14 @@ export function allocateRiskSample<T>(
     if (!moved) break; // every criterion is at its floor or ceiling
   }
 
+  // A cap smaller than the number of matched criteria cannot give each one an
+  // item, and the floor above would otherwise push the sample past the cap.
+  // Drop the broadest criteria first so the rarest still reach the sample.
+  for (let i = CRITERION_ORDER.length - 1; i >= 0 && diff < 0; i--) {
+    const c = CRITERION_ORDER[i];
+    if (quotas[c] > 0) { quotas[c]--; diff++; }
+  }
+
   const rng = new Mulberry32(Math.floor(seed) || 0);
   const picked: T[] = [];
   for (const c of CRITERION_ORDER) {
