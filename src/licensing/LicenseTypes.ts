@@ -8,7 +8,7 @@ export interface LicensePayload {
   issuedAt: string;        // ISO date
   expiresAt: string;       // ISO date
   methods: LicenseMethod[];  // ['All'] for full, ['StopOrGo'] for free
-  version: '1';
+  version: string;
 }
 
 export interface LicenseFile {
