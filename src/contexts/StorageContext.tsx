@@ -13,7 +13,6 @@ interface StorageContextType {
 
 const defaultSettings: GlobalSettings = {
   language: 'ua',
-  currency: 'UAH',
   holidays: DEFAULT_HOLIDAYS
 };
 

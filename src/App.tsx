@@ -6,7 +6,7 @@ import ConfigStep from './components/ConfigStep';
 import ResultsStep from './components/ResultsStep';
 import { LicenseActivationModal } from './components/LicenseActivationModal';
 import { UpgradeModal } from './components/UpgradeModal';
-import { TransactionItem, SamplingConfig, SamplingResult, Currency, ColumnIndices, Language } from './types';
+import { TransactionItem, SamplingConfig, SamplingResult, ColumnIndices, Language } from './types';
 import { runSampling } from './utils/samplingEngine';
 import { t } from './utils/translations';
 import { useAppStorage } from './contexts/StorageContext';
@@ -84,7 +84,6 @@ const App: React.FC = () => {
   const { settings, updateSettings, isReady } = useAppStorage();
 
   const lang = settings.language;
-  const currency = settings.currency;
 
   const { licenseState, activateLicense } = useLicense();
   const [showLicenseModal, setShowLicenseModal] = useState(false);
@@ -488,10 +487,6 @@ const App: React.FC = () => {
     updateSettings({ ...settings, language: lang === 'en' ? 'ua' : 'en' });
   };
 
-  const setCurrency = (c: Currency) => {
-    updateSettings({ ...settings, currency: c });
-  };
-
   const renderRichText = (text: string) => {
     return text.split('\n').map((line, i) => {
       if (line.startsWith('### ')) {
@@ -618,8 +613,6 @@ const App: React.FC = () => {
                   }}
                   onImportProject={importProject}
                   lang={lang} 
-                  currency={currency}
-                  setCurrency={setCurrency}
                 />
                 <div className="flex justify-end">
                     <button 
@@ -680,7 +673,6 @@ const App: React.FC = () => {
                   onResultsUpdate={setResults}
                   config={config} 
                   lang={lang} 
-                  currency={currency}
                   sourceHeaders={sourceHeaders}
                   colIndices={columnIndices}
                   settings={settings}

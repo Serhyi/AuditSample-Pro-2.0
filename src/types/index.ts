@@ -3,14 +3,12 @@ export type SamplingMethod = 'StopOrGo' | 'MUS' | 'Attribute' | 'Random' | 'Fixe
 export type CVSSubMethod = 'MeanPerUnit' | 'Difference' | 'Ratio';
 export type AnomalyMethod = 'ModifiedZ' | 'None';
 export type Language = 'en' | 'ua';
-export type Currency = 'UAH' | 'USD' | 'EUR';
 
 export interface GlobalSettings {
   // Date and number formatting are not settings: they follow the operating
   // system's locale (see utils/locale.ts), so what is shown on screen, what is
   // read on import and what is written on export can never disagree.
   language: Language;
-  currency: Currency;
   /**
    * Holidays used by the RiskAssessment method. Entries are 'MM-DD' (recurring)
    * or 'YYYY-MM-DD' (a single date). See utils/holidays.ts.
