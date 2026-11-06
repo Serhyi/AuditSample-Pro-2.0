@@ -30,7 +30,7 @@ const SyncedScrollContainer = ({ children, setRefs, syncScrollRef }: any) => {
     );
 };
 
-import { SampledItem, SamplingResult, SamplingConfig, Language, Currency, ColumnIndices, GlobalSettings } from '../types';
+import { SampledItem, SamplingResult, SamplingConfig, Language, ColumnIndices, GlobalSettings } from '../types';
 import { LicensePayload } from '../licensing/LicenseTypes';
 import { calculateExtrapolation, formatMoney, formatDate, smartFormat, methodsSupportingAnomalies } from '../utils/samplingEngine';
 import { Upload, CheckCircle2, AlertCircle, ShieldCheck, BookOpen, Sigma, PlayCircle, StopCircle, Calculator, Database, Info, Layers, Target } from 'lucide-react';
@@ -44,7 +44,6 @@ interface ResultsStepProps {
   onResultsUpdate: (newResults: SamplingResult) => void;
   config: SamplingConfig;
   lang: Language;
-  currency: Currency;
   sourceHeaders: string[];
   colIndices: ColumnIndices;
   settings: GlobalSettings;
@@ -116,7 +115,7 @@ const TablePagination = memo<{ items: SampledItem[], title?: string, isKey?: boo
    );
 });
 
-const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onResultsUpdate, config, lang, currency, sourceHeaders, colIndices, settings, license }) => {
+const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onResultsUpdate, config, lang, sourceHeaders, colIndices, settings, license }) => {
   const [activeTab, setActiveTab] = useState<'sample' | 'key'>('sample');
 
   const extrapolation = useMemo(() => calculateExtrapolation(currentResults, config), [currentResults, config]);
@@ -504,7 +503,7 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
   return (
     <div className="space-y-8 animate-fade-in pb-12">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <StatCard label={t('totalPop', lang)} value={`${currentResults.populationSize} ${t('items', lang)}`} subValue={`${formatMoney(currentResults.populationValue)} ${currency}`} icon={<Database className="w-4 h-4" />} />
+        <StatCard label={t('totalPop', lang)} value={`${currentResults.populationSize} ${t('items', lang)}`} subValue={formatMoney(currentResults.populationValue)} icon={<Database className="w-4 h-4" />} />
         
         <div className="bg-white p-6 rounded-[1.5rem] border border-slate-200 shadow-sm flex flex-col relative overflow-hidden group hover:shadow-md transition-all">
           <div className="text-brand-600 text-[10px] font-black uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
@@ -518,11 +517,11 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
           <div className="mt-auto pt-4 border-t border-slate-50 space-y-1.5">
             <div className="flex justify-between items-center text-[10px] font-bold">
                 <span className="text-slate-400 uppercase tracking-widest">Сума вибірки:</span>
-                <span className="text-neutral-900 font-mono">{formatMoney(currentResults.sampleValue)} <span className="text-[9px] text-slate-400 ml-0.5">{currency}</span></span>
+                <span className="text-neutral-900 font-mono">{formatMoney(currentResults.sampleValue)}</span>
             </div>
             <div className="flex justify-between items-center text-[10px] font-bold border-l-2 border-brand-500 pl-3">
                 <span className="text-slate-400 uppercase tracking-widest">Ключові ел.:</span>
-                <span className="text-neutral-900 font-mono">{formatMoney(keyItemsValue)} <span className="text-[9px] text-slate-400 ml-0.5">{currency}</span></span>
+                <span className="text-neutral-900 font-mono">{formatMoney(keyItemsValue)}</span>
             </div>
           </div>
         </div>
@@ -539,7 +538,6 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                 label={t('projError', lang)} 
                 value={isAttribute ? `${extrapolation.projected.toFixed(2)}%` : formatMoney(extrapolation.projected)} 
                 subValue={t('projErrorDesc', lang)}
-                currency={!isAttribute ? currency : undefined} 
                 icon={<Sigma className="w-4 h-4 text-brand-600" />} 
             />
         )}
@@ -568,7 +566,6 @@ const ResultsStep: React.FC<ResultsStepProps> = ({ results: currentResults, onRe
                 </div>
                 <div className={`text-base xl:text-lg 2xl:text-xl font-mono font-bold text-right mb-6 break-all ${isExceeded ? 'text-red-700' : 'text-brand-700'}`}>
                     {isAttribute ? `${extrapolation.ub.toFixed(2)}%` : formatMoney(extrapolation.ub)}
-                    {!isAttribute && <span className="text-sm font-medium opacity-60 ml-1">{currency}</span>}
                 </div>
                 <div className="mt-auto pt-4 border-t border-white/50 flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
                     <span className={`${isExceeded ? 'text-red-400' : 'text-brand-400'}`}>
@@ -651,7 +648,7 @@ const TableCard = ({ activeTab, setActiveTab, currentResults, lang, renderTable,
     );
 };
 
-const StatCard = ({ label, value, subValue, icon, currency }: { label: string, value: string | number, subValue: string, icon: React.ReactNode, currency?: string }) => (
+const StatCard = ({ label, value, subValue, icon }: { label: string, value: string | number, subValue: string, icon: React.ReactNode }) => (
     <div className="bg-white p-6 rounded-[1.5rem] border border-slate-200 shadow-sm flex flex-col relative overflow-hidden group hover:shadow-md transition-all">
       <div className="text-brand-600 text-[10px] font-black uppercase tracking-[0.15em] mb-4 flex items-center gap-2">
         {icon}
@@ -659,7 +656,6 @@ const StatCard = ({ label, value, subValue, icon, currency }: { label: string, v
       </div>
       <div className="text-base xl:text-lg 2xl:text-xl font-mono font-bold text-neutral-900 text-right mb-6 group-hover:text-brand-600 transition-colors break-all">
           {value}
-          {currency && <span className="text-sm font-medium text-slate-400 ml-1">{currency}</span>}
       </div>
       <div className="mt-auto pt-4 border-t border-slate-50 flex justify-end text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">
          {subValue}

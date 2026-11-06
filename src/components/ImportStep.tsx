@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, Download, AlertTriangle, CheckCircle, FileSpreadsheet, Database, Info, Settings2, ChevronDown, ChevronUp, XCircle } from 'lucide-react';
-import { TransactionItem, ValidationResult, Language, Currency, ColumnIndices } from '../types';
+import { TransactionItem, ValidationResult, Language, ColumnIndices } from '../types';
 import { t } from '../utils/translations';
 import { formatMoney, formatDate } from '../utils/samplingEngine';
 import WebImportWorker from './ImportWorker?worker';
@@ -12,8 +12,6 @@ interface ImportStepProps {
   onLoadingStateChange?: (isLoading: boolean, progress: { pct: number, stage: string } | null) => void;
   onImportProject?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   lang: Language;
-  currency: Currency;
-  setCurrency: (c: Currency) => void;
 }
 
 const parseExcelRawDate = (rawVal: any): string | null => {
@@ -113,7 +111,7 @@ const detectTableStructure = (rawData: any[][]): { startRow: number, indices: Co
     return { startRow: 6, indices: { id: 0, amount: 1, date: 2 } };
 };
 
-const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onProjectRecovered, onLoadingStateChange, onImportProject, lang, currency, setCurrency }) => {
+const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onProjectRecovered, onLoadingStateChange, onImportProject, lang }) => {
   const [dragActive, setDragActive] = useState(false);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -379,7 +377,7 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onProjectRecovere
             </div>
             <div className="flex items-center gap-3">
                {/* Project Import Buttons */}
-               <div className="flex gap-2 mr-4">
+               <div className="flex gap-2">
                    {onImportProject && (
                        <label className="cursor-pointer flex items-center gap-3 text-[11px] text-brand-600 font-black uppercase tracking-widest bg-brand-100 hover:bg-brand-200 px-7 py-3 rounded-xl transition-all active:scale-95">
                            <Download className="w-4 h-4 stroke-[3px]" />
@@ -389,17 +387,6 @@ const ImportStep: React.FC<ImportStepProps> = ({ onDataLoaded, onProjectRecovere
                    )}
                </div>
 
-               <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-                  {(['UAH', 'USD', 'EUR'] as Currency[]).map((curr) => (
-                    <button 
-                      key={curr}
-                      onClick={() => setCurrency(curr)}
-                      className={`px-5 py-2 text-[11px] font-black rounded-lg transition-all ${currency === curr ? 'bg-white text-brand-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                    >
-                      {curr}
-                    </button>
-                  ))}
-               </div>
             </div>
           </div>
 
